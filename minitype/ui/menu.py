@@ -25,13 +25,15 @@ Styles:
 import os
 import textwrap
 from dataclasses import dataclass
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Optional, Tuple
 
 from ..terminal import console, keys
 from ..terminal.style import INV, RESET
 
 SIDEBAR_MIN_WIDTH = 60
 HELP_INDENT = 6           # lines help text up with the labels: " >k  label"
+                          # without hotkeys labels start at 3 (" > label");
+                          # help goes 2 further in so it doesn't look like a row
 TAB_PREV = (keys.SHIFT_TAB, keys.PGUP, "[")
 TAB_NEXT = (keys.TAB, keys.PGDN, "]")
 
@@ -46,9 +48,22 @@ class Item:
     help: str = ""                              # shown while the item is selected
     section: str = ""
     enter: Optional[Callable[[], Any]] = None   # enter / hotkey, when it differs from action
+    tags: Tuple[str, ...] = ()                  # extra words a #tag search finds it by
 
     def activate(self):
         return (self.enter or self.action)()
+
+    def matches(self, query):
+        """Every word of the query must be in the label; words starting
+        with # must instead be in one of the tags or the section name."""
+        for word in query.lower().split():
+            if word.startswith("#"):
+                tag = word[1:]
+                if tag and not any(tag in t for t in (self.section,) + self.tags):
+                    return False
+            elif word not in self.label.lower():
+                return False
+        return True
 
 
 class Menu:
@@ -60,7 +75,21 @@ class Menu:
         self.horizontal = horizontal
         self.style = style
         self.sidebar_tabs = "off"
+        self.query = ""          # only items matching it are shown
+        self.show_keys = any(it.key for it in items)
         self.cursor = min(self.memory.get(name, 0), len(items) - 1)
+
+    def set_query(self, query):
+        """Filter the items. If the selection is filtered out, select the
+        first one left."""
+        self.query = query
+        vis = self.visible()
+        if vis and self.cursor not in vis:
+            self._move_to(vis[0])
+
+    def visible(self):
+        """Indices of the items that match the current query."""
+        return [i for i, it in enumerate(self.items) if it.matches(self.query)]
 
     @property
     def paged(self):
@@ -75,27 +104,26 @@ class Menu:
         return self.items[self.cursor]
 
     def sections(self):
-        return list(dict.fromkeys(it.section for it in self.items))
+        return list(dict.fromkeys(self.items[i].section for i in self.visible()))
 
     def _in_section(self, section):
-        return [i for i, it in enumerate(self.items) if it.section == section]
+        return [i for i in self.visible() if self.items[i].section == section]
 
     def _move_to(self, i):
         self.cursor = i % len(self.items)
         self.memory[self.name] = self.cursor
 
     def _step(self, d):
-        """Move up or down; when paged, only within the current section."""
-        if not self.paged:
-            self._move_to(self.cursor + d)
-            return
-        idx = self._in_section(self.selected.section)
-        pos = idx.index(self.cursor)
+        """Move up or down through the visible items; when paged, only
+        within the current section."""
+        idx = self._in_section(self.selected.section) if self.paged \
+            else self.visible()
+        pos = idx.index(self.cursor) if self.cursor in idx else -d
         self._move_to(idx[(pos + d) % len(idx)])
 
     def _switch_tab(self, d):
         secs = self.sections()
-        cur = secs.index(self.selected.section)
+        cur = secs.index(self.selected.section) if self.selected.section in secs else 0
         self._move_to(self._in_section(secs[(cur + d) % len(secs)])[0])
 
     def handle(self, key):
@@ -103,6 +131,9 @@ class Menu:
         means nothing to this menu, result is whatever the action returned."""
         prev = (keys.UP, keys.LEFT) if self.horizontal else (keys.UP,)
         nxt = (keys.DOWN, keys.RIGHT) if self.horizontal else (keys.DOWN,)
+        vis = self.visible()
+        if not vis:
+            return False, None              # everything is filtered out
         item = self.selected
         sections = not self.horizontal and len(self.sections()) > 1
         if key in prev:
@@ -110,9 +141,9 @@ class Menu:
         elif key in nxt:
             self._step(1)
         elif key == keys.HOME:
-            self._move_to(0)
+            self._move_to(vis[0])
         elif key == keys.END:
-            self._move_to(len(self.items) - 1)
+            self._move_to(vis[-1])
         elif key == keys.ENTER:
             return True, item.activate()
         elif key == keys.RIGHT and item.value is not None:
@@ -124,10 +155,10 @@ class Menu:
         elif sections and (key in TAB_PREV or (self.paged and key == keys.LEFT)):
             self._switch_tab(-1)
         else:
-            for i, it in enumerate(self.items):
-                if it.key and it.key == key:
+            for i in vis:
+                if self.items[i].key and self.items[i].key == key:
                     self._move_to(i)
-                    return True, it.activate()
+                    return True, self.items[i].activate()
             return False, None
         return True, None
 
@@ -136,8 +167,11 @@ class Menu:
     def _row(self, st, item, sel, label_width, with_value=True):
         pointer = f"{st.title}>{RESET}" if sel else " "
         lab = st.title if sel else st.dim
-        key = f"{item.key:<1}" if len(item.key) <= 1 else item.key
-        line = f" {pointer}{st.title}{key}{RESET}  {lab}"
+        if self.show_keys:
+            key = f"{item.key:<1}" if len(item.key) <= 1 else item.key
+            line = f" {pointer}{st.title}{key}{RESET}  {lab}"
+        else:
+            line = f" {pointer} {lab}"
         if item.value is None or not with_value:
             return line + f"{item.label}{RESET}"
         w = max(label_width, len(item.label) + 2)
@@ -147,6 +181,8 @@ class Menu:
         """Lines for the menu and the index of the selected one."""
         width = console.size()[0]
         label_width = min(label_width, max(8, width // 3))
+        if not self.visible():
+            return [f"  {st.dim}nothing matches{RESET}"], 0
         if self.style == "sidebar" and width >= SIDEBAR_MIN_WIDTH:
             if self.sidebar_tabs == "top":
                 return self._render_sidebar_top(st, width, label_width)
@@ -155,7 +191,7 @@ class Menu:
             return self._render_sidebar(st, width, label_width)
         if self.paged:
             return self._render_tabs(st, label_width)
-        return self._rows(st, range(len(self.items)), label_width)
+        return self._rows(st, self.visible(), label_width)
 
     # -- pieces
 
@@ -164,16 +200,18 @@ class Menu:
         it stays next to the selection however far the menu has scrolled."""
         if not item.help:
             return []
-        return [" " * HELP_INDENT + f"{st.dim}{ln}{RESET}"
-                for ln in textwrap.wrap(item.help, max(10, width - HELP_INDENT - 2))]
+        indent = HELP_INDENT if self.show_keys else HELP_INDENT - 1
+        return [" " * indent + f"{st.dim}{ln}{RESET}"
+                for ln in textwrap.wrap(item.help, max(10, width - indent - 2))]
 
     def _rows(self, st, indices, label_width, with_value=True, inline_help=True,
-              width=None):
+              width=None, headings=True):
         """Rows for the given items, with a heading wherever the section
-        changes. Returns (lines, index of the selected row)."""
+        changes (if the menu has sections at all). Returns (lines, index of
+        the selected row)."""
         width = width or console.size()[0]
         lines, focus, section = [], 0, None
-        headings = len({self.items[i].section for i in indices}) > 1
+        headings = headings and len({it.section for it in self.items}) > 1
         for i in indices:
             item = self.items[i]
             if headings and item.section != section:
@@ -223,23 +261,24 @@ class Menu:
 
     def _render_tabs(self, st, label_width):
         rows, focus = self._rows(st, self._in_section(self.selected.section),
-                                 label_width)
+                                 label_width, headings=False)
         return [self._tab_bar(st), ""] + rows, focus + 2
 
-    def _sidebar(self, st, width, label_width, indices):
+    def _sidebar(self, st, width, label_width, indices, headings=True):
         lw = min(40, max(18, width // 2 - 2))
         left, focus = self._rows(st, indices, min(label_width, lw - 15),
-                                 inline_help=False)
+                                 inline_help=False, headings=headings)
         # the panel starts level with the selected row, so it scrolls with it
         right = [""] * focus + self._panel(st, self.selected, width - lw - 5)
         return self._beside(st, left, right, lw), focus
 
     def _render_sidebar(self, st, width, label_width):
-        return self._sidebar(st, width, label_width, range(len(self.items)))
+        return self._sidebar(st, width, label_width, self.visible())
 
     def _render_sidebar_top(self, st, width, label_width):
         lines, focus = self._sidebar(st, width, label_width,
-                                     self._in_section(self.selected.section))
+                                     self._in_section(self.selected.section),
+                                     headings=False)
         return [self._tab_bar(st), ""] + lines, focus + 2
 
     def _render_sidebar_left(self, st, width, label_width):
@@ -251,7 +290,7 @@ class Menu:
         left = [f"  {st.title}{INV} {s or '-'} {RESET}" if s == cur
                 else f"   {st.dim}{s or '-'}{RESET}" for s in secs]
         right, focus = self._rows(st, self._in_section(cur), label_width,
-                                  width=width - lw - 3)
+                                  width=width - lw - 3, headings=False)
         return self._beside(st, left, right, lw), focus
 
     def render_inline(self, st):

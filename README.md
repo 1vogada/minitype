@@ -23,6 +23,11 @@ minitype
 - **menus**: arrow keys move, enter selects or starts, left/right change a
   value, tab / shift-tab (or `[` `]`, PgUp / PgDn) jump between sections,
   esc goes back. Rows with a hotkey show it beside the label.
+- **settings**: just start typing to filter; only settings whose name
+  contains what you typed stay. Start a word with `#` to search tags and
+  sections instead (`#colour`, `#mistakes`, `#look`). A plain search isn't
+  shown and backspace clears it; once it has a `#` the search bar appears
+  and backspace deletes one character. Esc clears the search, then leaves.
 - **during a test**: esc menu, tab restart, ctrl-backspace deletes a word;
   in zen mode enter finishes
 - **anywhere**: ctrl-q wipes the screen and exits
