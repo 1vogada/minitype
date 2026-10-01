@@ -1,5 +1,9 @@
 from .config import BAD_KEYS_TRACKED, KEY_STATES, KEYS
 
+PUNCT_STRIP = ".,;:!?'\"()"
+WORD_SMOOTH = 0.4      # weight of the newest timing of a word
+MAX_WORDS = 1500       # word timings kept
+
 
 class SessionStats:
     """Everything remembered about your typing for this session."""
@@ -10,12 +14,36 @@ class SessionStats:
         self.key_state = {}   # char -> "on" / "off"; absent means auto
         self.history = []     # wpm of completed runs
         self.ghost = []       # (elapsed, chars) samples from the last completed run
+        self.word_speed = {}  # word -> [smoothed ms per char, times typed]
 
     def miss_key(self, c):
         self.errors[c] = self.errors.get(c, 0) + 1
 
     def miss_word(self, w):
         self.missed[w] = self.missed.get(w, 0) + 1
+
+    def word_time(self, word, ms_per_char):
+        """Record how fast a word was typed correctly. Words are stored
+        bare and lowercase so punctuation and capitals don't split them."""
+        w = word.strip(PUNCT_STRIP).lower()
+        if len(w) < 2 or not w.isalpha():
+            return
+        s = self.word_speed.get(w)
+        if s is None:
+            self.word_speed[w] = [ms_per_char, 1]
+        else:
+            s[0] += WORD_SMOOTH * (ms_per_char - s[0])
+            s[1] += 1
+        if len(self.word_speed) > MAX_WORDS:
+            # forget the words seen least
+            for k, _ in sorted(self.word_speed.items(), key=lambda kv: kv[1][1])[
+                    :len(self.word_speed) - MAX_WORDS]:
+                del self.word_speed[k]
+
+    def slowest(self, n):
+        """The n words you type slowest, slowest first."""
+        ranked = sorted(self.word_speed.items(), key=lambda kv: -kv[1][0])
+        return [w for w, _ in ranked[:n]]
 
     def reset_errors(self):
         self.errors.clear()

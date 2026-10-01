@@ -16,9 +16,9 @@ def main():
     app = App()
     app.load()
     console.clear()
-    print(f"\n  {app.styles().dim}loading word list...{RESET}")
-    console.flush()
-    app.bank.load(app.bank.source)
+    console.present(["", f"  {app.styles().dim}loading "
+                         f"{app.settings.word_source}...{RESET}"])
+    app.load_words(app.settings.word_source)
     try:
         state = MENU
         while state != QUIT:

@@ -14,18 +14,37 @@ def _day_start(now=None):
 class History:
     def __init__(self):
         self.runs = []   # {"t", "mode", "wpm", "acc", "secs", "failed"}
+        self.pbs = {}    # mode -> {"wpm", "acc", "t"}
+
+    @staticmethod
+    def mode(result):
+        """What a run is compared against: its mode, plus the difficulty
+        when that isn't normal."""
+        spec = result.spec
+        m = "learn" if spec.source == "learn" else spec.label
+        return m if result.difficulty == "normal" else f"{m} ({result.difficulty})"
+
+    def pb(self, result):
+        """The personal best for this run's mode, 0 if there's none yet."""
+        return self.pbs.get(self.mode(result), {}).get("wpm", 0.0)
 
     def add(self, result):
-        spec = result.spec
+        """Log a run. Returns True if it set a new personal best."""
+        mode = self.mode(result)
         self.runs.append({
             "t": round(time.time()),
-            "mode": "learn" if spec.source == "learn" else spec.label,
+            "mode": mode,
             "wpm": round(result.wpm, 1),
             "acc": round(result.acc, 1),
             "secs": round(result.elapsed, 1),
             "failed": result.failed,
         })
         del self.runs[:-MAX_RUNS]
+        if result.failed or result.wpm <= self.pb(result):
+            return False
+        self.pbs[mode] = {"wpm": round(result.wpm, 1), "acc": round(result.acc, 1),
+                          "t": round(time.time())}
+        return True
 
     def completed(self):
         return [r for r in self.runs if not r["failed"]]
@@ -43,8 +62,11 @@ class History:
             best[r["mode"]] = max(best.get(r["mode"], 0), r["wpm"])
         return best
 
-    def apply(self, runs):
+    def apply(self, runs, pbs=None):
         keys = {"t", "mode", "wpm", "acc", "secs", "failed"}
         if isinstance(runs, list):
             self.runs = [r for r in runs if isinstance(r, dict) and keys <= set(r)]
             del self.runs[:-MAX_RUNS]
+        if isinstance(pbs, dict):
+            self.pbs = {m: v for m, v in pbs.items()
+                        if isinstance(v, dict) and isinstance(v.get("wpm"), (int, float))}

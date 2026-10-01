@@ -2,16 +2,30 @@
 
 DIFFICULTIES = ["normal", "expert", "master"]
 STOP_MODES = ["off", "letter", "word"]
+BACKSPACE_MODES = ["normal", "off", "freedom"]
 PACES = [0, 40, 60, 80, 100, 120]
-PCTS = [20, 40, 60, 80, 100]
+PCTS = [20, 40, 50, 60, 80, 100]
 GOALS = [0, 5, 10, 15, 20, 30, 45, 60]   # daily goal, minutes
+MIN_WPMS = [0, 20, 30, 40, 50, 60, 70, 80, 100, 120]
+MIN_ACCS = [0, 80, 85, 90, 95, 98, 100]
+MEMORY_SECS = [0, 2, 3, 5, 10]
+FUNBOXES = ["off", "reversed", "caps", "random case", "mirror"]
+TIMES = [15, 30, 60, 120]
+WORD_COUNTS = [10, 25, 50, 100]
+QUOTE_LENGTHS = ["all", "short", "medium", "long"]
+QUOTE_SOURCES = ["built-in", "online"]
+CODE_LANGS = ["python", "javascript"]
 CARETS = ["block", "underline"]
 KEYBOARD_MODES = ["off", "learn", "always"]
+THEME_NAMES = ["default", "ocean", "forest", "sunset", "mono"]
+LOWKEY_MODES = ["off", "minimal", "disguised"]
+UI_STYLES = ["list", "sidebar", "tabs"]
 BAD_KEYS_TRACKED = 6      # how many of your worst keys feed the pool
 
 PUNCT = ",,,...;:!?"
 MAX_EXTRA = 10            # extra chars allowed past the end of a word
 VIEW_LINES = 3            # lines of words visible during a test
+RULE_GRACE = 3.0          # seconds before min speed / accuracy are enforced
 
 KEYS = "abcdefghijklmnopqrstuvwxyz0123456789"
 # "auto" follows your error counts, "on" always drills, "off" never does.

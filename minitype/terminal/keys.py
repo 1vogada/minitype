@@ -7,6 +7,7 @@ a POSIX backend would only need to replace `key_ready` and `_getch`.
 """
 
 import msvcrt
+import time
 
 from . import console
 
@@ -17,6 +18,8 @@ ENTER, TAB, ESC = "enter", "tab", "esc"
 BACKSPACE, CTRL_BACKSPACE = "backspace", "ctrl-backspace"
 CTRL_C, CTRL_D, CTRL_Q, CTRL_W = "ctrl-c", "ctrl-d", "ctrl-q", "ctrl-w"
 UNKNOWN = "unknown"
+RESIZE = "resize"   # not a key: the terminal changed size while waiting
+POLL = 0.05
 
 _CONTROL = {
     "\r": ENTER,
@@ -46,9 +49,16 @@ def _getch():
     return msvcrt.getwch()
 
 
-def read_key(panic=True):
+def read_key(panic=True, resize=True):
     """Block for one key press. Ctrl-q is the global panic key: it wipes the
-    screen and exits from anywhere unless panic is False."""
+    screen and exits from anywhere unless panic is False. While waiting, a
+    change of terminal size returns RESIZE so the caller can redraw."""
+    if resize:
+        start = console.size()
+        while not key_ready():
+            time.sleep(POLL)
+            if console.size() != start:
+                return RESIZE
     c = _getch()
     if c in ("\x00", "\xe0"):
         key = _EXTENDED.get(_getch(), UNKNOWN)
