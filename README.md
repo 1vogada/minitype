@@ -28,12 +28,22 @@ minitype
 ## Features
 
 - word, time, number and custom-text tests
-- **learn** mode: keybr-style lessons that unlock letters as each one reaches a target speed
+- **learn** mode: keybr-style lessons that unlock letters as each one reaches
+  a target speed, with optional capitals and punctuation
+- **stop on error**: *letter* (a wrong key doesn't move the cursor) or *word*
+  (you can't leave a wrong word)
 - difficulties: *expert* (a wrong word ends the test) and *master* (a wrong key ends it)
-- punctuation, numbers, blind mode
+- on-screen keyboard highlighting the next key, in qwerty, colemak, dvorak,
+  qwertz or azerty; in learn mode keys are coloured by speed
+- **profile**: totals, top and average speed, a speed chart, best per mode
+- daily goal in minutes, shown on the menu and results
+- punctuation, numbers, blind mode, block or underline caret, visible spaces,
+  error beep
 - drills for your weak keys and words you got wrong
 - ghost caret (your last run) and pace caret (fixed wpm)
 - built-in word list, or Monkeytype's 200 / 1k / 5k English lists online
+- opt-in saving of settings, history and learn progress to
+  `%LOCALAPPDATA%\minitype\save.json` (settings → save to disk)
 
 ## Layout
 
@@ -45,6 +55,8 @@ minitype/
   config.py        fixed tuning values
   settings.py      user settings
   stats.py         per-session error, word and history tracking
+  history.py       every finished test, for the profile and daily goal
+  storage.py       the opt-in save file
   terminal/        console output, key decoding (arrows included), colours
   words/           word lists, online loading, word generation
   engine/          test spec, typing rules, scoring, rendering, results

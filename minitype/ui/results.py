@@ -2,6 +2,7 @@ from ..nav import MENU, QUIT
 from ..terminal import console, keys
 from ..terminal.style import RESET
 from .menu import Item, Menu
+from .profile import goal_line
 
 
 def draw(app, r):
@@ -38,6 +39,10 @@ def draw(app, r):
     if stats.history:
         recent = "  ".join(f"{v:.0f}" for v in stats.history[-5:])
         print(f"\n  {dim}session  {recent}   best {stats.best():.0f}{RESET}")
+
+    goal = goal_line(app, st)
+    if goal:
+        print(f"  {goal}")
 
     print("\n")   # blank line, then the row the choices are drawn over
 

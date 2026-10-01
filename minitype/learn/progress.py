@@ -1,6 +1,5 @@
 from ..util import cycle
 from ..words.builtin import BUILTIN
-from . import storage
 
 TARGETS = [20, 25, 30, 35, 40, 50, 60, 80]
 LENGTHS = [10, 15, 20, 30, 50]
@@ -32,6 +31,8 @@ class LearnProgress:
             "letters": 6,       # manual floor for how many letters are in play
             "words": 15,        # words per lesson
             "natural": True,    # real words where enough exist, made-up ones otherwise
+            "capitals": False,  # capitalise some words
+            "punctuation": False,  # end some words with punctuation
             "earned": 0,        # most letters ever unlocked by progress alone
         }
         self.stats = {}         # char -> [smoothed ms per press, presses, misses]
@@ -92,7 +93,6 @@ class LearnProgress:
     def finish(self, n_before):
         n = self.unlocked()
         self.note = ORDER[n_before:n] if n > n_before else ""
-        self.save()
 
     def report(self):
         n = self.unlocked()
@@ -120,8 +120,8 @@ class LearnProgress:
         n = self.config["letters"] + delta
         self.config["letters"] = max(START_LETTERS, min(len(ORDER), n))
 
-    def toggle_natural(self):
-        self.config["natural"] = not self.config["natural"]
+    def toggle(self, name):
+        self.config[name] = not self.config[name]
 
     def reset(self):
         self.stats.clear()
@@ -129,22 +129,8 @@ class LearnProgress:
 
     # ---------------------------------------------------------------- disk
 
-    def saving(self):
-        return storage.enabled()
-
-    def toggle_saving(self):
-        storage.toggle(self.to_dict())
-
-    def to_dict(self):
-        return {"learn": self.config, "stats": self.stats}
-
-    def save(self):
-        storage.write(self.to_dict())
-
-    def load(self):
-        d = storage.read()
-        if d is None:
-            return
+    def apply(self, d):
+        """Take learn progress from a loaded save file."""
         try:
             for k, v in d.get("learn", {}).items():
                 if k in self.config and type(v) is type(self.config[k]):

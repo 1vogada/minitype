@@ -1,9 +1,11 @@
 import time
 
 from ..config import MAX_EXTRA
+from ..learn.progress import ORDER
 from ..learn.wordgen import lesson_words
 from ..nav import MENU, QUIT
 from ..terminal import console, keys
+from . import keyboard
 from .render import draw
 from .result import TestResult
 from .scoring import score
@@ -19,6 +21,7 @@ class TypingTest:
         self.app = app
         self.spec = spec
         self.diff = app.settings.difficulty
+        self.stop = app.settings.stop_on_error
         self.learning = spec.source == "learn"
         if spec.source == "custom":
             words = list(spec.words)
@@ -36,6 +39,7 @@ class TypingTest:
         self.start = None
         self.failed = False
         self.done = False       # ended from inside a key press
+        self.wrong = False      # last key was rejected by stop on error
         self.prev_t = None
         self.n_before = app.learn.unlocked() if self.learning else 0
 
@@ -60,6 +64,13 @@ class TypingTest:
         return score(self.words, self.typed, self.wi, self.keys,
                      self.bad_keys, self.spaces, elapsed)
 
+    def next_char(self):
+        """The key you should press next, " " for space, None at the end."""
+        if self.wi >= len(self.words):
+            return None
+        w, t = self.words[self.wi], self.typed[self.wi]
+        return w[len(t)] if len(t) < len(w) else " "
+
     def status(self, now):
         """Header line and caret marks for the current frame."""
         s = self.app.settings
@@ -83,6 +94,7 @@ class TypingTest:
             if s.pace:
                 marks.add(int(s.pace * 5 / 60 * el))
         flags = [f for f in (self.diff if self.diff != "normal" else "",
+                             f"stop {self.stop}" if self.stop != "off" else "",
                              "blind" if s.blind else "") if f]
         if flags:
             head += "   [" + " ".join(flags) + "]"
@@ -123,6 +135,7 @@ class TypingTest:
     def _backspace(self):
         if self.diff != "normal":
             return
+        self.wrong = False
         if self.typed[self.wi]:
             self.typed[self.wi] = self.typed[self.wi][:-1]
         elif self.wi > 0 and self.typed[self.wi - 1] != self.words[self.wi - 1]:
@@ -131,19 +144,43 @@ class TypingTest:
     def _wipe_word(self):
         if self.diff != "normal":
             return
+        self.wrong = False
         if self.typed[self.wi]:
             self.typed[self.wi] = ""
         elif self.wi > 0:
             self.wi -= 1                        # step back and wipe that word
             self.typed[self.wi] = ""
 
-    def _space(self, el):
-        word = self.words[self.wi]
-        if not self.typed[self.wi]:
-            return                              # ignore leading spaces
+    def _press(self, el):
         self.keys += 1
         self.samples.append((el, self.keys))
-        if self.typed[self.wi] != word:
+
+    def _miss(self, want):
+        self.bad_keys += 1
+        self.combo = 0
+        self.misses[want] = self.misses.get(want, 0) + 1
+        self.app.stats.miss_key(want)
+        if self.app.settings.sound:
+            console.bell()
+
+    def _hit(self):
+        self.wrong = False
+        self.combo += 1
+        self.best_combo = max(self.best_combo, self.combo)
+
+    def _space(self, el):
+        word, typed = self.words[self.wi], self.typed[self.wi]
+        if not typed:
+            return                              # ignore leading spaces
+        if typed != word and self.stop != "off" and self.diff != "master":
+            # stop on error: the space is a wrong key and the cursor stays put
+            self._press(el)
+            j = len(typed)
+            self._miss(word[j] if self.stop == "letter" and j < len(word) else " ")
+            self.wrong = True
+            return
+        self._press(el)
+        if typed != word:
             self.bad_keys += 1
             self.combo = 0
             if not self.learning:
@@ -161,9 +198,7 @@ class TypingTest:
         if len(self.typed[self.wi]) >= len(word) + MAX_EXTRA:
             return
         j = len(self.typed[self.wi])
-        self.typed[self.wi] += ch
-        self.keys += 1
-        self.samples.append((el, self.keys))
+        self._press(el)
         if self.learning and j < len(word):
             if ch == word[j]:
                 if dt is not None and 0.03 < dt < 2.0:
@@ -171,29 +206,27 @@ class TypingTest:
             else:
                 self.app.learn.hit(word[j], None)
         if j >= len(word) or ch != word[j]:
-            self.bad_keys += 1
-            self.combo = 0
-            want = word[j] if j < len(word) else "+"
-            self.misses[want] = self.misses.get(want, 0) + 1
-            self.app.stats.miss_key(want)
+            self._miss(word[j] if j < len(word) else "+")
             if self.diff == "master":
                 self.failed = self.done = True
                 return
+            if self.stop == "letter":
+                self.wrong = True
+                return                          # the key never lands
         else:
             self._hit()
+        self.typed[self.wi] += ch
         # the last word of a word test ends as soon as it's long enough
         if self.spec.kind == "words" and self.wi == len(self.words) - 1 \
                 and len(self.typed[self.wi]) >= len(word):
             if self.typed[self.wi] != word:
+                if self.stop == "word":
+                    return                      # fix it before you can finish
                 self.bad_keys += 1
                 if not self.learning:
                     self.app.stats.miss_word(word)
             self.wi += 1
             self.done = True
-
-    def _hit(self):
-        self.combo += 1
-        self.best_combo = max(self.best_combo, self.combo)
 
     # ---------------------------------------------------------------- end
 
@@ -209,8 +242,33 @@ class TypingTest:
         if not self.failed:
             self.app.stats.ghost[:] = self.samples
             self.app.stats.history.append(wpm)
-        return TestResult(self.spec, wpm, raw, acc, elapsed, self.bad_keys,
-                          self.best_combo, self.misses, self.failed, self.diff)
+        result = TestResult(self.spec, wpm, raw, acc, elapsed, self.bad_keys,
+                            self.best_combo, self.misses, self.failed, self.diff)
+        self.app.history.add(result)
+        self.app.save()
+        return result
+
+
+def keyboard_lines(app, test):
+    """The on-screen keyboard for this frame, if it's switched on. In learn
+    mode keys are coloured by confidence and locked ones stay dim; otherwise
+    your bad keys show red."""
+    s = app.settings
+    if s.keyboard == "off" or (s.keyboard == "learn" and not test.learning):
+        return ()
+    st = app.styles()
+    if test.learning:
+        learn = app.learn
+        colors = {}
+        for c in ORDER[:learn.unlocked()]:
+            v = learn.conf(c)
+            colors[c] = st.title if v is None else st.conf_color(v) or st.title
+        foc = learn.focus_key()
+        under = (foc,) if foc else ()
+    else:
+        colors = {c: st.bad for c in app.stats.bad_keys()}
+        under = ()
+    return keyboard.render(st, s.layout, test.next_char(), colors, under)
 
 
 def run_test(app, spec):
@@ -224,8 +282,9 @@ def run_test(app, spec):
         now = time.time()
         if dirty or now - last_draw > REDRAW_EVERY:
             head, marks = test.status(now)
-            draw(app.styles(), app.settings.blind, head, test.words, test.typed,
-                 test.wi, width, FOOTER, marks)
+            draw(app.styles(), app.settings, head, test.words, test.typed,
+                 test.wi, width, FOOTER, marks, test.wrong,
+                 keyboard_lines(app, test))
             last_draw = now
             dirty = False
 

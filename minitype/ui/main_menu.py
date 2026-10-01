@@ -6,6 +6,7 @@ from ..terminal import console, keys
 from ..terminal.style import RESET
 from .learn_menu import learn_menu
 from .menu import Item, Menu
+from .profile import goal_line, profile_screen
 from .prompt import prompt
 from .settings_menu import settings_menu
 
@@ -58,6 +59,7 @@ def build_items(app):
         Item("7", "numbers", _preset(TestSpec("25 numbers", "words", 25, "numbers"))),
         Item("8", "custom text", ask_text),
         Item("9", "learn", lambda: learn_menu(app)),
+        Item("p", "profile", lambda: profile_screen(app), group=1),
         Item("s", "settings", lambda: settings_menu(app),
              value=lambda: " ".join(app.settings.flags()), group=1),
         Item("q", "quit", lambda: QUIT, group=1),
@@ -75,6 +77,9 @@ def draw(app, menu):
     best = app.stats.best()
     if best is not None:
         print(f"  {st.dim}best {best:.0f} wpm this session{RESET}")
+    goal = goal_line(app, st)
+    if goal:
+        print(f"  {goal}")
     print(f"  {st.dim}arrows move   enter select   ctrl-q hide{RESET}")
 
 

@@ -67,6 +67,15 @@ def lesson(app):
     return TestSpec("learn", "words", app.learn.config["words"], "learn")
 
 
+def _toggle_item(key, label, learn, name, help):
+    def flip():
+        learn.toggle(name)
+
+    return Item(key, label, flip,
+                lambda: "on" if learn.config[name] else "off",
+                back=flip, help=help)
+
+
 def build_items(app, view):
     learn = app.learn
     cfg = learn.config
@@ -78,10 +87,10 @@ def build_items(app, view):
         return "on" if v else "off"
 
     return [
-        Item("s", "start", lambda: lesson(app),
+        Item("s", "start", lambda: lesson(app), group=-1,
              help="type the lesson; every word contains your focus key"),
         Item("t", "target", learn.cycle_target, lambda: f"{cfg['target']} wpm",
-             back=lambda: learn.cycle_target(-1), group=1,
+             back=lambda: learn.cycle_target(-1),
              help="speed every key must reach before the next letter unlocks"),
         Item("+", "letters", lambda: learn.add_letters(1),
              lambda: f"at least {cfg['letters']}",
@@ -90,15 +99,18 @@ def build_items(app, view):
         Item("l", "length", learn.cycle_length, lambda: f"{cfg['words']} words",
              back=lambda: learn.cycle_length(-1),
              help="words per lesson"),
-        Item("n", "natural", learn.toggle_natural, lambda: on_off(cfg["natural"]),
-             back=learn.toggle_natural,
-             help="real words where enough fit, made-up ones otherwise"),
+        _toggle_item("n", "natural", learn, "natural",
+                     "real words where enough fit, made-up ones otherwise"),
+        _toggle_item("c", "capitals", learn, "capitals",
+                     "capitalise some words; capitals aren't timed"),
+        _toggle_item("u", "punctuation", learn, "punctuation",
+                     "end some words with punctuation; it isn't timed"),
         Item("d", "details", flip_details, lambda: on_off(view["details"]),
              back=flip_details, help="per-key speed table"),
-        Item("p", "save to disk", learn.toggle_saving,
-             lambda: on_off(learn.saving()), back=learn.toggle_saving,
-             help="keep progress between sessions"),
-        Item("x", "reset", lambda: confirm_reset(app), group=2,
+        Item("p", "save to disk", app.toggle_saving,
+             lambda: on_off(app.saving()), back=app.toggle_saving,
+             help="keep progress, settings and history between sessions"),
+        Item("x", "reset", lambda: confirm_reset(app), group=1,
              help="forget all learn progress"),
     ]
 
@@ -119,7 +131,7 @@ def learn_menu(app):
         if key == " ":
             return lesson(app)
         if key in (keys.ESC, keys.CTRL_C):
-            learn.save()
+            app.save()
             return None
         if key in extra:
             extra[key]()
@@ -127,4 +139,4 @@ def learn_menu(app):
             _, result = menu.handle(key)
             if result is not None:
                 return result
-        learn.save()
+        app.save()

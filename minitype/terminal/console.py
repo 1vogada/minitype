@@ -53,3 +53,7 @@ def bail():
     cursor(True)
     flush()
     raise SystemExit
+
+
+def bell():
+    write("\a")

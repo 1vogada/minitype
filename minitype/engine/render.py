@@ -21,10 +21,20 @@ def wrap(display, width):
     return lines
 
 
-def draw(st, blind, header, words, typed, wi, width, footer, marks=()):
+SPACE_DOT = "·"
+
+
+def draw(st, settings, header, words, typed, wi, width, footer, marks=(),
+         wrong=False, below=()):
     """Redraw the test screen in place. marks are global char offsets to
-    underline (ghost and pace carets)."""
+    underline (ghost and pace carets). wrong turns the caret red after a
+    rejected key. below are extra lines drawn under the words."""
     dim, ok, bad, extra = st.dim, st.ok, st.bad, st.extra
+    blind = settings.blind
+    caret = INV if settings.caret == "block" else UND + ok
+    if wrong and not blind:
+        caret = bad + INV
+    gap = dim + SPACE_DOT + RESET if settings.show_spaces else " "
     display = [w + typed[i][len(w):] for i, w in enumerate(words)]
     lines = wrap(display, width)
 
@@ -45,18 +55,18 @@ def draw(st, blind, header, words, typed, wi, width, footer, marks=()):
             if i > a:
                 sp = offs[i] - 1
                 if i - 1 == wi and len(typed[wi]) >= len(display[wi]):
-                    buf.append(INV + " " + RESET)
+                    buf.append(caret + " " + RESET)
                 elif sp in marks:
                     buf.append(dim + UND + " " + RESET)
                 else:
-                    buf.append(" ")
+                    buf.append(gap)
             w, t = words[i], typed[i]
             for j in range(max(len(w), len(t))):
                 wc = w[j] if j < len(w) else None
                 tc = t[j] if j < len(t) else None
                 c = wc if wc is not None else tc
                 if i == wi and j == len(t):
-                    buf.append(INV + c + RESET)
+                    buf.append(caret + c + RESET)
                     continue
                 if tc is None:
                     s = bad if (i < wi and not blind) else dim
@@ -75,6 +85,9 @@ def draw(st, blind, header, words, typed, wi, width, footer, marks=()):
         out.append("".join(buf) + RESET + "\x1b[K\n")
     for _ in range(VIEW_LINES - len(view)):
         out.append("\x1b[K\n")
+    if below:
+        out.append("\x1b[K\n")
+        out.extend(line + "\x1b[K\n" for line in below)
     out.append("\x1b[K\n" + dim + footer + RESET + "\x1b[K\n\x1b[J")
     console.write("".join(out))
     console.flush()

@@ -73,10 +73,29 @@ def natural_pool(bank, allowed, focus):
             and (focus is None or focus in w)]
 
 
+LESSON_PUNCT = ",,,..;:!?"
+CAPITAL_RATE = 0.25
+PUNCT_RATE = 0.2
+
+
+def decorate(words, capitals, punctuation):
+    """Capitalise and punctuate some lesson words. Only plain lowercase
+    letters are timed, so this adds practice without skewing key speeds."""
+    out = []
+    for w in words:
+        if capitals and random.random() < CAPITAL_RATE:
+            w = w.capitalize()
+        if punctuation and random.random() < PUNCT_RATE:
+            w += random.choice(LESSON_PUNCT)
+        out.append(w)
+    return out
+
+
 def lesson_words(progress, bank, n):
+    cfg = progress.config
     allowed = set(ORDER[:progress.unlocked()])
     foc = progress.focus_key()
-    nat = natural_pool(bank, allowed, foc) if progress.config["natural"] else []
+    nat = natural_pool(bank, allowed, foc) if cfg["natural"] else []
     p = min(1.0, len(nat) / 20)         # few real words -> lean on made-up ones
     out = []
     for _ in range(n):
@@ -88,4 +107,4 @@ def lesson_words(progress, bank, n):
             if not out or w != out[-1]:
                 break
         out.append(w)
-    return out
+    return decorate(out, cfg["capitals"], cfg["punctuation"])

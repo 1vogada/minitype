@@ -14,7 +14,7 @@ def main():
     console.set_title("cmd")
     console.cursor(False)
     app = App()
-    app.learn.load()
+    app.load()
     console.clear()
     print(f"\n  {app.styles().dim}loading word list...{RESET}")
     console.flush()
@@ -31,7 +31,7 @@ def main():
     except (KeyboardInterrupt, SystemExit):
         pass
     finally:
-        app.learn.save()
+        app.save()
         console.cursor(True)
         console.clear()
 
