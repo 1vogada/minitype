@@ -2,9 +2,10 @@
 
 There are no hotkeys here: typing filters the list instead. Plain words
 must appear in a setting's name; words starting with # match its tags or
-its section ("#colour", "#look"). A plain search stays out of sight and
-backspace clears it in one go; once it has a # in it the search bar shows
-and backspace deletes a character at a time.
+its section ("#colour", "#look"). The search bar shows whenever there's a
+search. Backspace clears a plain search in one go; once it has a # in it,
+backspace deletes a character at a time. [ and ] aren't typed into the
+search: they switch sections, like tab and shift-tab.
 """
 
 from ..config import (BACKSPACE_MODES, CARETS, DIFFICULTIES, FUNBOXES, GOALS,
@@ -20,8 +21,9 @@ from .menu import Item, Menu, title_lines
 from .screen import menu_loop
 
 HINTS = ("type to search   #tag   arrows move   left/right change   "
-         "tab next section   esc back")
+         "tab / [ ] section   esc back")
 BACK = object()     # returned from the key handler to leave the menu
+NOT_SEARCHABLE = ("[", "]")   # these switch sections instead
 
 
 class Builder:
@@ -229,6 +231,8 @@ def build_items(app):
 def search_keys(menu, key):
     """Typing goes into the search; returns (handled, result) for menu_loop."""
     q = menu.query
+    if key in NOT_SEARCHABLE:
+        return False, None                  # left to the menu: switch tabs
     if keys.is_char(key):
         if key != " " or q:                 # a leading space does nothing
             menu.set_query(q + key)
@@ -248,8 +252,8 @@ def search_keys(menu, key):
 
 
 def search_bar(st, menu):
-    """Shown only once the search has a # in it."""
-    if "#" not in menu.query:
+    """Shown whenever there's something in the search."""
+    if not menu.query:
         return []
     n = len(menu.visible())
     return [f"  {st.dim}search{RESET}  {menu.query}{INV} {RESET}"

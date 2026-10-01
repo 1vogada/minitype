@@ -6,8 +6,10 @@ character, so `is_char` tells the two apart. Only this module touches msvcrt;
 a POSIX backend would only need to replace `key_ready` and `_getch`.
 """
 
+import ctypes
 import msvcrt
 import time
+from ctypes import wintypes
 
 from . import console
 
@@ -41,6 +43,27 @@ _EXTENDED = {
     "\x0f": SHIFT_TAB,
 }
 
+# final byte of an "ESC [ x" sequence, for consoles that send VT codes
+_CSI = {
+    "A": UP, "B": DOWN, "C": RIGHT, "D": LEFT,
+    "H": HOME, "F": END, "Z": SHIFT_TAB,
+}
+
+VK_TAB = 0x09
+VK_SHIFT = 0x10
+SHIFT_PRESSED = 0x0010
+KEY_EVENT = 0x0001
+
+
+class _KeyRecord(ctypes.Structure):
+    _fields_ = [("down", wintypes.BOOL), ("repeat", wintypes.WORD),
+                ("vk", wintypes.WORD), ("scan", wintypes.WORD),
+                ("char", wintypes.WCHAR), ("state", wintypes.DWORD)]
+
+
+class _InputRecord(ctypes.Structure):
+    _fields_ = [("type", wintypes.WORD), ("key", _KeyRecord)]
+
 
 def key_ready():
     return msvcrt.kbhit()
@@ -48,6 +71,41 @@ def key_ready():
 
 def _getch():
     return msvcrt.getwch()
+
+
+def _tab_with_shift():
+    """Whether the next Tab waiting in the console input has Shift held.
+
+    Shift-Tab arrives in three ways depending on the console: as the
+    extended code 0x0f, as "ESC [ Z", or as a plain Tab whose key event
+    has Shift set. The last one can only be seen by peeking at the raw
+    input event before msvcrt reads it."""
+    try:
+        k32 = ctypes.windll.kernel32
+        recs = (_InputRecord * 32)()
+        n = wintypes.DWORD()
+        if k32.PeekConsoleInputW(k32.GetStdHandle(-10), recs, 32, ctypes.byref(n)):
+            for r in recs[:n.value]:
+                if r.type == KEY_EVENT and r.key.down and r.key.vk == VK_TAB:
+                    return bool(r.key.state & SHIFT_PRESSED)
+    except (AttributeError, OSError):
+        pass
+    try:
+        return bool(ctypes.windll.user32.GetAsyncKeyState(VK_SHIFT) & 0x8000)
+    except (AttributeError, OSError):
+        return False
+
+
+def _escape_sequence():
+    """After ESC: decode "ESC [ x" if one is arriving, otherwise it was a
+    plain Esc press. Anything else read ahead is put back."""
+    if not key_ready():
+        return ESC
+    c = _getch()
+    if c != "[":
+        msvcrt.ungetwch(c)
+        return ESC
+    return _CSI.get(_getch(), UNKNOWN)
 
 
 def read_key(panic=True, resize=True):
@@ -60,9 +118,14 @@ def read_key(panic=True, resize=True):
             time.sleep(POLL)
             if console.size() != start:
                 return RESIZE
+    shift_tab = _tab_with_shift()      # must be read before the key is consumed
     c = _getch()
     if c in ("\x00", "\xe0"):
         key = _EXTENDED.get(_getch(), UNKNOWN)
+    elif c == "\t":
+        key = SHIFT_TAB if shift_tab else TAB
+    elif c == "\x1b":
+        key = _escape_sequence()
     elif c in _CONTROL:
         key = _CONTROL[c]
     elif c < " ":
