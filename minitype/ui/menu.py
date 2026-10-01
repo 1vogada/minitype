@@ -84,7 +84,8 @@ class Menu:
         self.style = style
         self.sidebar_tabs = "off"
         self.query = ""          # only items matching it are shown
-        self.on_sections = False  # two-column layout: focus on the section buttons
+        self.on_sections = True   # two-column layout: focus on the section buttons,
+                                  # where you start
         self.set_items(items)
 
     def set_items(self, items):
