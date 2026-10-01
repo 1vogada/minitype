@@ -61,7 +61,7 @@ def draw(app, st, menu, view):
     lines.append("")
     body, focus = menu.render(st, label_width=14)
     focus += len(lines)
-    return lines + body + menu.help_lines(st), focus
+    return lines + body, focus
 
 
 def confirm_reset(app):

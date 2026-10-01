@@ -114,7 +114,6 @@ def draw(app, st, menu):
     body, focus = menu.render(st, label_width=15)
     focus += len(lines)
     lines += body
-    lines += menu.help_lines(st)
     notes = []
     if app.notice:
         notes.append(f"{st.title}{app.notice}{RESET}")

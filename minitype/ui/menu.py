@@ -27,6 +27,7 @@ from ..terminal import console, keys
 from ..terminal.style import INV, RESET
 
 SIDEBAR_MIN_WIDTH = 60
+HELP_INDENT = 6           # lines help text up with the labels: " >k  label"
 TAB_PREV = (keys.PGUP, "[")
 TAB_NEXT = (keys.PGDN, "]")
 
@@ -139,19 +140,30 @@ class Menu:
             return self._render_sidebar(st, width, label_width)
         return self._render_list(st, label_width)
 
-    def _render_list(self, st, label_width, with_value=True, headings=True):
+    def _help_under(self, st, item):
+        """The item's help, wrapped and indented to sit under its label, so
+        it stays next to the selection however far the menu has scrolled."""
+        if not item.help:
+            return []
+        width = max(10, console.size()[0] - HELP_INDENT - 2)
+        return [" " * HELP_INDENT + f"{st.dim}{ln}{RESET}"
+                for ln in textwrap.wrap(item.help, width)]
+
+    def _render_list(self, st, label_width, with_value=True, inline_help=True):
         lines, focus, section = [], 0, None
         for i, item in enumerate(self.items):
             if item.section != section:
                 if section is not None:
                     lines.append("")
                 section = item.section
-                if headings and section:
+                if section:
                     lines.append(f"  {st.dim}{section}{RESET}")
-            if i == self.cursor:
+            sel = i == self.cursor
+            if sel:
                 focus = len(lines)
-            lines.append(self._row(st, item, i == self.cursor, label_width,
-                                   with_value))
+            lines.append(self._row(st, item, sel, label_width, with_value))
+            if sel and inline_help:
+                lines += self._help_under(st, item)
         return lines, focus
 
     def _render_tabs(self, st, label_width):
@@ -164,14 +176,18 @@ class Menu:
         lines = ["  " + "".join(tabs), ""]
         focus = 0
         for i in self._in_section(cur):
-            if i == self.cursor:
+            sel = i == self.cursor
+            if sel:
                 focus = len(lines)
-            lines.append(self._row(st, self.items[i], i == self.cursor, label_width))
+            lines.append(self._row(st, self.items[i], sel, label_width))
+            if sel:
+                lines += self._help_under(st, self.items[i])
         return lines, focus
 
     def _render_sidebar(self, st, width, label_width):
         lw = min(40, max(18, width // 2 - 2))
-        left, focus = self._render_list(st, min(label_width, lw - 16))
+        left, focus = self._render_list(st, min(label_width, lw - 15),
+                                        inline_help=False)
         item = self.selected
         rw = width - lw - 5
         right = [f"{st.title}{item.label}{RESET}"]
@@ -182,6 +198,8 @@ class Menu:
         if item.help:
             right.append("")
             right += [f"{st.dim}{ln}{RESET}" for ln in textwrap.wrap(item.help, rw)]
+        # the panel starts level with the selected row, so it scrolls with it
+        right = [""] * focus + right
         lines = []
         for k in range(max(len(left), len(right))):
             a = left[k] if k < len(left) else ""
@@ -198,15 +216,6 @@ class Menu:
             else:
                 cells.append(f"{st.dim} {item.key} {item.label}{RESET}")
         return "  " + "  ".join(cells)
-
-    def help_lines(self, st):
-        """The selected item's help, wrapped (the sidebar shows it already)."""
-        width = console.size()[0]
-        if not self.selected.help or (self.style == "sidebar"
-                                      and width >= SIDEBAR_MIN_WIDTH):
-            return []
-        return [""] + [f"  {st.dim}{ln}{RESET}"
-                       for ln in textwrap.wrap(self.selected.help, max(10, width - 4))]
 
 
 class Hints:

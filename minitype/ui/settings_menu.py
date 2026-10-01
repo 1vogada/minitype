@@ -169,7 +169,7 @@ def draw(app, st, menu):
     lines = title_lines(app, st, "settings")
     body, focus = menu.render(st, label_width=15)
     focus += len(lines)
-    lines += body + menu.help_lines(st)
+    lines += body
     if app.bank.note:
         lines += ["", f"  {st.dim}{app.bank.note}{RESET}"]
     return lines, focus
