@@ -14,7 +14,7 @@ def prompt(label, initial=""):
         if key in (keys.ESC, keys.CTRL_C):
             console.cursor(False)
             return None
-        if key == keys.ENTER:
+        if key in (keys.ENTER, keys.SHIFT_ENTER):
             break
         if key == keys.BACKSPACE:
             if buf:

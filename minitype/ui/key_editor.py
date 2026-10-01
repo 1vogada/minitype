@@ -55,7 +55,7 @@ def key_editor(app):
             return None
         elif key in moves:
             cursor = (cursor + moves[key]) % len(KEYS)
-        elif key in (keys.ENTER, " "):
+        elif key in (keys.ENTER, keys.SHIFT_ENTER, " "):
             app.stats.cycle_key(KEYS[cursor])
         elif keys.is_char(key) and key.lower() in KEYS:
             cursor = KEYS.index(key.lower())

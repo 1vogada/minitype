@@ -22,7 +22,11 @@ minitype
 
 - **menus**: arrow keys move, enter selects or starts, left/right change a
   value, tab / shift-tab (or `[` `]`, PgUp / PgDn) jump between sections,
-  esc goes back. Rows with a hotkey show it beside the label.
+  esc goes back. Rows with a hotkey show it beside the label. Shift+enter
+  steps a value backwards.
+- **sidebar with section buttons on the left**: left / right move between
+  the buttons and the rows. On the buttons, up / down pick a section and
+  right or enter steps into it; on a row, right changes the value.
 - **settings**: just start typing to filter; only settings whose name
   contains what you typed stay. Start a word with `#` to search tags and
   sections instead (`#colour`, `#mistakes`, `#look`). The search bar shows

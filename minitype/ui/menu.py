@@ -9,6 +9,10 @@ into actions:
     enter            activate the selected item (start, for a mode row)
     right / left     step an item's value forward / back; on a row with no
                      value, switch section when one section shows at a time
+    shift-enter      step the value back, in every style
+    two columns      (sidebar with section buttons on the left) left / right
+                     move between the buttons and the rows; right on a row
+                     changes its value, as there's nowhere further right
     tab / shift-tab  next / previous section, in every style
     [ ] pgup pgdn    the same
     hotkey           jump to that item and activate it
@@ -80,6 +84,7 @@ class Menu:
         self.style = style
         self.sidebar_tabs = "off"
         self.query = ""          # only items matching it are shown
+        self.on_sections = False  # two-column layout: focus on the section buttons
         self.set_items(items)
 
     def set_items(self, items):
@@ -107,6 +112,22 @@ class Menu:
             return False
         return self.style == "tabs" or (self.style == "sidebar"
                                         and self.sidebar_tabs != "off")
+
+    @property
+    def columns(self):
+        """Section buttons in one column and the rows in another (sidebar
+        style with sidebar tabs on the left, when the terminal is wide
+        enough to draw it). Left and right then move between the columns."""
+        return (not self.horizontal and self.style == "sidebar"
+                and self.sidebar_tabs == "left"
+                and console.size()[0] >= SIDEBAR_MIN_WIDTH)
+
+    def nav_hint(self):
+        """The movement keys, for the hint line; they depend on the layout."""
+        if self.columns:
+            return ("arrows move   left/right column   right change   "
+                    "shift-enter back")
+        return "arrows move   left/right change   shift-enter back"
 
     @property
     def selected(self):
@@ -145,6 +166,10 @@ class Menu:
             return False, None              # everything is filtered out
         item = self.selected
         sections = not self.horizontal and len(self.sections()) > 1
+        if self.columns:
+            done = self._handle_columns(key, item, sections)
+            if done is not None:
+                return done
         if key in prev:
             self._step(-1)
         elif key in nxt:
@@ -155,6 +180,8 @@ class Menu:
             self._move_to(vis[-1])
         elif key == keys.ENTER:
             return True, item.activate()
+        elif key == keys.SHIFT_ENTER:
+            return True, (item.back() if item.back is not None else None)
         elif key == keys.RIGHT and item.value is not None:
             return True, item.action()
         elif key == keys.LEFT and item.back is not None:
@@ -167,15 +194,45 @@ class Menu:
             for i in vis:
                 if self.items[i].key and self.items[i].key == key:
                     self._move_to(i)
+                    self.on_sections = False
                     return True, self.items[i].activate()
             return False, None
         return True, None
 
+    def _handle_columns(self, key, item, sections):
+        """Keys that mean something different in the two-column layout.
+        Returns None for keys that work the same as anywhere else.
+
+        On the section buttons: up/down pick a section, right or enter
+        steps into its rows. On the rows: left steps back to the
+        sections, and right, with nowhere further right to go, changes
+        the value."""
+        if self.on_sections:
+            if key in (keys.UP, keys.DOWN):
+                if sections:
+                    self._switch_tab(-1 if key == keys.UP else 1)
+                return True, None
+            if key in (keys.RIGHT, keys.ENTER, keys.SHIFT_ENTER):
+                self.on_sections = False
+                return True, None
+            if key == keys.LEFT:
+                return True, None
+            return None
+        if key == keys.LEFT:
+            self.on_sections = True
+            return True, None
+        if key == keys.RIGHT:
+            return True, (item.action() if item.value is not None else None)
+        return None
+
     # ---------------------------------------------------------------- drawing
 
-    def _row(self, st, item, sel, label_width, with_value=True):
-        pointer = f"{st.title}>{RESET}" if sel else " "
-        lab = st.title if sel else st.dim
+    def _row(self, st, item, sel, label_width, with_value=True, active=True):
+        """One row. `active` is False when focus is in the other column:
+        the selection still shows, but dimmed."""
+        lit = st.title if active else st.dim
+        pointer = f"{lit}>{RESET}" if sel else " "
+        lab = lit if sel else st.dim
         if self.show_keys:
             key = f"{item.key:<1}" if len(item.key) <= 1 else item.key
             line = f" {pointer}{st.title}{key}{RESET}  {lab}"
@@ -215,7 +272,7 @@ class Menu:
                 for ln in textwrap.wrap(text, max(10, width - indent - 2))]
 
     def _rows(self, st, indices, label_width, with_value=True, inline_help=True,
-              width=None, headings=True):
+              width=None, headings=True, active=True):
         """Rows for the given items, with a heading wherever the section
         changes (if the menu has sections at all). Returns (lines, index of
         the selected row)."""
@@ -233,7 +290,7 @@ class Menu:
             sel = i == self.cursor
             if sel:
                 focus = len(lines)
-            lines.append(self._row(st, item, sel, label_width, with_value))
+            lines.append(self._row(st, item, sel, label_width, with_value, active))
             if sel and inline_help:
                 lines += self._help_under(st, item, width)
         return lines, focus
@@ -298,10 +355,21 @@ class Menu:
         cur = self.selected.section
         secs = self.sections()
         lw = max(len(s or "-") for s in secs) + 5
-        left = [f"  {st.title}{INV} {s or '-'} {RESET}" if s == cur
-                else f"   {st.dim}{s or '-'}{RESET}" for s in secs]
+        on = self.on_sections
+        left = []
+        for s in secs:
+            name = s or "-"
+            if s != cur:
+                left.append(f"   {st.dim}{name}{RESET}")
+            elif on:                          # focus here: pointer and bright
+                left.append(f" {st.title}>{INV} {name} {RESET}")
+            else:
+                left.append(f"  {st.title}{INV} {name} {RESET}")
         right, focus = self._rows(st, self._in_section(cur), label_width,
-                                  width=width - lw - 3, headings=False)
+                                  width=width - lw - 3, headings=False,
+                                  active=not on)
+        if on:
+            focus = secs.index(cur)
         return self._beside(st, left, right, lw), focus
 
     def render_inline(self, st):

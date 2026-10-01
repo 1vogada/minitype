@@ -16,7 +16,8 @@ from . import console
 UP, DOWN, LEFT, RIGHT = "up", "down", "left", "right"
 HOME, END, PGUP, PGDN = "home", "end", "pgup", "pgdn"
 INSERT, DELETE = "insert", "delete"
-ENTER, TAB, SHIFT_TAB, ESC = "enter", "tab", "shift-tab", "esc"
+ENTER, SHIFT_ENTER = "enter", "shift-enter"
+TAB, SHIFT_TAB, ESC = "tab", "shift-tab", "esc"
 BACKSPACE, CTRL_BACKSPACE = "backspace", "ctrl-backspace"
 CTRL_C, CTRL_D, CTRL_Q, CTRL_W = "ctrl-c", "ctrl-d", "ctrl-q", "ctrl-w"
 UNKNOWN = "unknown"
@@ -50,6 +51,7 @@ _CSI = {
 }
 
 VK_TAB = 0x09
+VK_RETURN = 0x0D
 VK_SHIFT = 0x10
 SHIFT_PRESSED = 0x0010
 KEY_EVENT = 0x0001
@@ -73,20 +75,21 @@ def _getch():
     return msvcrt.getwch()
 
 
-def _tab_with_shift():
-    """Whether the next Tab waiting in the console input has Shift held.
+def _with_shift(vk):
+    """Whether the next key `vk` waiting in the console input has Shift
+    held.
 
-    Shift-Tab arrives in three ways depending on the console: as the
-    extended code 0x0f, as "ESC [ Z", or as a plain Tab whose key event
-    has Shift set. The last one can only be seen by peeking at the raw
-    input event before msvcrt reads it."""
+    msvcrt gives Tab and Enter the same character with or without Shift
+    (some consoles send Shift-Tab as the extended code 0x0f or "ESC [ Z",
+    but not all). The Shift flag is on the raw key event, which can be
+    peeked at before msvcrt reads it."""
     try:
         k32 = ctypes.windll.kernel32
         recs = (_InputRecord * 32)()
         n = wintypes.DWORD()
         if k32.PeekConsoleInputW(k32.GetStdHandle(-10), recs, 32, ctypes.byref(n)):
             for r in recs[:n.value]:
-                if r.type == KEY_EVENT and r.key.down and r.key.vk == VK_TAB:
+                if r.type == KEY_EVENT and r.key.down and r.key.vk == vk:
                     return bool(r.key.state & SHIFT_PRESSED)
     except (AttributeError, OSError):
         pass
@@ -118,12 +121,16 @@ def read_key(panic=True, resize=True):
             time.sleep(POLL)
             if console.size() != start:
                 return RESIZE
-    shift_tab = _tab_with_shift()      # must be read before the key is consumed
+    # shift has to be read off the raw event before msvcrt consumes the key
+    shift_tab = _with_shift(VK_TAB)
+    shift_enter = _with_shift(VK_RETURN)
     c = _getch()
     if c in ("\x00", "\xe0"):
         key = _EXTENDED.get(_getch(), UNKNOWN)
     elif c == "\t":
         key = SHIFT_TAB if shift_tab else TAB
+    elif c == "\r":
+        key = SHIFT_ENTER if shift_enter else ENTER
     elif c == "\x1b":
         key = _escape_sequence()
     elif c in _CONTROL:

@@ -191,7 +191,7 @@ class TypingTest:
             if self._can_backspace():
                 self._wipe_word()
             return None
-        if key == keys.ENTER and self.spec.kind == "zen":
+        if key in (keys.ENTER, keys.SHIFT_ENTER) and self.spec.kind == "zen":
             self.done = True
             return None
         if not keys.is_char(key):

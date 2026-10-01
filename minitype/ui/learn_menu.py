@@ -6,7 +6,7 @@ from ..terminal.style import RESET
 from .menu import Item, Menu, title_lines
 from .screen import menu_loop
 
-HINTS = "arrows move   left/right change   space start   tab next section   esc back"
+HINTS = "space start   tab next section   esc back"
 
 
 def letter_strip(app, st):

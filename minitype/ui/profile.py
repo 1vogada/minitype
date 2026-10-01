@@ -97,7 +97,7 @@ def profile_screen(app):
         lines = draw(app, st)
         console.present(lines, top, hints.lines(st, "up/down scroll   " + HINTS))
         key = keys.read_key()
-        if key in (keys.ESC, keys.CTRL_C, keys.ENTER, "p"):
+        if key in (keys.ESC, keys.CTRL_C, keys.ENTER, keys.SHIFT_ENTER, "p"):
             return None
         handled = key in (keys.UP, keys.DOWN, keys.RESIZE)
         if key == keys.DOWN:

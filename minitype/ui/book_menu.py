@@ -19,7 +19,7 @@ from .menu import Item, Menu, title_lines
 from .prompt import prompt
 from .screen import menu_loop
 
-HINTS = ("enter read   left/right page   pgup/pgdn 10 pages   g go to page   "
+HINTS = ("enter read   pgup/pgdn 10 pages   g go to page   "
          "o open folder   r refresh   esc back")
 JUMP = 10
 LIBRARY = "library"     # section holding the book rows

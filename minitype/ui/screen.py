@@ -20,7 +20,8 @@ def menu_loop(app, menu, draw, hint_text, extra=None, on_back=None,
         menu.style = app.settings.ui_style
         menu.sidebar_tabs = app.settings.sidebar_tabs
         lines, focus = draw(st, menu)
-        console.present(lines, focus, hints.lines(st, hint_text))
+        console.present(lines, focus,
+                        hints.lines(st, f"{menu.nav_hint()}   {hint_text}"))
         key = keys.read_key()
         if key == keys.RESIZE:
             continue

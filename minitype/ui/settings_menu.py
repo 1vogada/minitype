@@ -22,8 +22,7 @@ from .key_editor import key_editor
 from .menu import Item, Menu, title_lines
 from .screen import menu_loop
 
-HINTS = ("type to search   #tag   arrows move   left/right change   "
-         "tab / [ ] section   esc back")
+HINTS = "type to search   #tag   tab / [ ] section   esc back"
 BACK = object()     # returned from the key handler to leave the menu
 NOT_SEARCHABLE = ("[", "]")   # these switch sections instead
 
