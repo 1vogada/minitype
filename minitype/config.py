@@ -12,6 +12,7 @@ MEMORY_SECS = [0, 2, 3, 5, 10]
 FUNBOXES = ["off", "reversed", "caps", "random case", "mirror"]
 TIMES = [15, 30, 60, 120]
 BOOK_PAGES = [25, 50, 100, 200, 400]     # words per book page
+BOOK_SCRIPTS = ["cyrillic", "shlokavitsa"]   # how Bulgarian books are typed
 WORD_COUNTS = [10, 25, 50, 100]
 QUOTE_LENGTHS = ["all", "short", "medium", "long"]
 QUOTE_SOURCES = ["built-in", "online"]

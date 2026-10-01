@@ -2,14 +2,18 @@
 
 Each book is a row. Left/right turn one page, pgup/pgdn ten, g asks for a
 page number, and enter types the page you're on. The page's opening words
-show under the row so you can see where you are.
+show under the row so you can see where you are. Bulgarian books can be
+typed in Cyrillic or in шльокавица (the options under the books).
 """
 
 import os
 
+from ..config import BOOK_SCRIPTS
 from ..terminal import keys
 from ..terminal.style import RESET
+from ..util import cycle
 from ..words import books
+from ..words.shlokavitsa import STYLE_NAMES
 from .menu import Item, Menu, title_lines
 from .prompt import prompt
 from .screen import menu_loop
@@ -25,8 +29,15 @@ def _turn(app, title, step):
 
 
 def _page_label(app, title):
-    total = books.page_count(len(books.words(title)), app.settings.book_page)
-    return f"page {books.page_of(app, title) + 1}/{total}"
+    total = books.page_count(len(books.words(app, title)), app.settings.book_page)
+    script = books.script_label(app, title)
+    return f"page {books.page_of(app, title) + 1}/{total}" + \
+        (f"   {script}" if script else "")
+
+
+def _cycle(app, name, seq, step):
+    s = app.settings
+    setattr(s, name, cycle(seq, getattr(s, name), step=step))
 
 
 def _open_folder(app):
@@ -40,7 +51,7 @@ def build_items(app, refresh):
     items = []
     for title in books.titles():
         try:
-            if not books.words(title):
+            if not books.source_words(title):
                 continue                     # nothing typeable in it
         except OSError:
             continue
@@ -52,6 +63,26 @@ def build_items(app, refresh):
             enter=lambda t=title: books.page_spec(app, t),
             help=lambda t=title: books.preview(app, t),
             section=LIBRARY))
+    s = app.settings
+    items += [
+        Item("", "bulgarian books",
+             lambda: _cycle(app, "book_script", BOOK_SCRIPTS, 1),
+             lambda: s.book_script,
+             back=lambda: _cycle(app, "book_script", BOOK_SCRIPTS, -1),
+             help="cyrillic: type Bulgarian books as written. shlokavitsa: "
+                  "type them in Latin letters; the converted book is saved "
+                  f"in {os.path.join(books.folder(), books.CONVERTED)}. Your "
+                  "page is the same in both",
+             section="options"),
+        Item("", "shlokavitsa style",
+             lambda: _cycle(app, "shlokavitsa_style", STYLE_NAMES, 1),
+             lambda: s.shlokavitsa_style,
+             back=lambda: _cycle(app, "shlokavitsa_style", STYLE_NAMES, -1),
+             help="classic: ч 4, ш 6, щ 6t, я q, ж j. letters: ч ch, ш sh, "
+                  "щ sht, я ya, ж zh. official: the 2009 transliteration, "
+                  "ц ts, ъ a",
+             section="options"),
+    ]
     items += [
         Item("o", "open books folder", lambda: _open_folder(app),
              help=f"drop .txt files in {books.folder()}", section="folder"),
@@ -63,7 +94,7 @@ def build_items(app, refresh):
 
 def go_to_page(app, item):
     title = item.label
-    total = books.page_count(len(books.words(title)), app.settings.book_page)
+    total = books.page_count(len(books.words(app, title)), app.settings.book_page)
     v = prompt(f"go to page (1-{total}) of {title}:")
     if v and v.isdigit():
         books.set_page(app, title, int(v) - 1)

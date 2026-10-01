@@ -62,6 +62,20 @@ accented letters become their ASCII forms, markdown-style formatting and
 divider lines are dropped, line breaks become spaces, and a Project
 Gutenberg licence header and footer are cut off.
 
+Bulgarian books work too: Cyrillic is kept as it is, and older files saved
+in Windows-1251 are read correctly. Under the book list, "bulgarian books"
+picks how they're typed:
+
+- **cyrillic**: as written
+- **shlokavitsa** (шльокавица): converted to Latin letters. The converted
+  book is saved as its own `.txt` in `books/shlokavitsa/` and reused until
+  the original changes. Three styles: *classic* (ч 4, ш 6, щ 6t, я q,
+  ж j), *letters* (ч ch, ш sh, щ sht, я ya, ж zh) and *official* (the 2009
+  transliteration: ц ts, ъ a)
+
+Converting doesn't change the number of words, so your page is the same in
+both modes.
+
 Each book is split into pages (50 words by default; settings → words →
 book page). Finishing a page moves your bookmark on, and bookmarks are
 kept in `settings.json`.

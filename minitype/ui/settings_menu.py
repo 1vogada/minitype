@@ -8,7 +8,8 @@ backspace deletes a character at a time. [ and ] aren't typed into the
 search: they switch sections, like tab and shift-tab.
 """
 
-from ..config import (BACKSPACE_MODES, BOOK_PAGES, CARETS, DIFFICULTIES, FUNBOXES, GOALS,
+from ..words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
+from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICULTIES, FUNBOXES, GOALS,
                       KEYBOARD_MODES, LAYOUTS, LOWKEY_MODES, MEMORY_SECS,
                       MIN_ACCS, MIN_WPMS, PACES, PCTS, QUOTE_SOURCES,
                       SIDEBAR_TABS, STOP_MODES, THEME_NAMES, UI_STYLES)
@@ -160,6 +161,17 @@ def build_items(app):
                  help="words per page in book mode; your place in each book "
                       "is kept when you change it",
                  tags=("book", "page", "length", "text")),
+        b.choice("bulgarian books", "book_script", BOOK_SCRIPTS,
+                 help="cyrillic: type Bulgarian books as written. "
+                      "shlokavitsa: type them in Latin letters (the converted "
+                      "book is saved next to the original)",
+                 tags=("book", "bulgarian", "cyrillic", "shlokavitsa",
+                       "latin", "language")),
+        b.choice("shlokavitsa style", "shlokavitsa_style", SHLOKAVITSA_STYLES,
+                 help="classic: ч 4, ш 6, щ 6t, я q, ж j. letters: ч ch, ш sh, "
+                      "щ sht, я ya, ж zh. official: the 2009 transliteration, "
+                      "ц ts, ъ a",
+                 tags=("book", "bulgarian", "shlokavitsa", "latin", "language")),
     ]
     b.section = "look"
     items += [

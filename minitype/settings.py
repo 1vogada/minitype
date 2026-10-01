@@ -1,10 +1,12 @@
 from dataclasses import asdict, dataclass, field, fields
 
-from .config import (BACKSPACE_MODES, BOOK_PAGES, CARETS, CODE_LANGS, DIFFICULTIES,
+from .config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS,
+                     CODE_LANGS, DIFFICULTIES,
                      FUNBOXES, GOALS, KEYBOARD_MODES, LAYOUTS, LOWKEY_MODES,
                      MEMORY_SECS, MIN_ACCS, MIN_WPMS, PACES, QUOTE_LENGTHS,
                      QUOTE_SOURCES, SIDEBAR_TABS, STOP_MODES, THEME_NAMES,
                      UI_STYLES)
+from .words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 
 # fields whose value must be one of a fixed set
 CHOICES = {
@@ -28,6 +30,8 @@ CHOICES = {
     "sidebar_tabs": SIDEBAR_TABS,
     "daily_goal": GOALS,
     "book_page": BOOK_PAGES,
+    "book_script": BOOK_SCRIPTS,
+    "shlokavitsa_style": SHLOKAVITSA_STYLES,
 }
 
 
@@ -61,6 +65,8 @@ class Settings:
     quote_source: str = "built-in"
     code_lang: str = "python"
     book_page: int = 50          # words per page in book mode
+    book_script: str = "cyrillic"            # Bulgarian books: cyrillic or shlokavitsa
+    shlokavitsa_style: str = "classic"       # classic / letters / official
     book_marks: dict = field(default_factory=dict)   # book title -> word position
 
     # ---- look and feel
