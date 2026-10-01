@@ -41,6 +41,7 @@ class Settings:
     difficulty: str = "normal"   # expert: a wrong word ends it. master: a wrong key ends it.
     stop_on_error: str = "off"   # letter: wrong keys don't move the cursor. word: can't leave a wrong word
     backspace: str = "normal"    # off: no corrections at all. freedom: back into correct words too
+    keep_errors: bool = False    # mistyped letters stay red once fixed; backspace does nothing
     punctuation: bool = False
     numbers: bool = False        # sprinkle numbers into normal word tests
     blind: bool = False          # no feedback until the results screen
@@ -67,6 +68,7 @@ class Settings:
     book_page: int = 50          # words per page in book mode
     book_script: str = "cyrillic"            # Bulgarian books: cyrillic or shlokavitsa
     shlokavitsa_style: str = "classic"       # classic / letters / official
+    book_filter: str = ""        # characters removed from books; "punct" for all punctuation
     book_marks: dict = field(default_factory=dict)   # book title -> word position
 
     # ---- look and feel
@@ -115,6 +117,8 @@ class Settings:
             flags.append(f"stop-{self.stop_on_error}")
         if self.backspace != "normal":
             flags.append("no-bksp" if self.backspace == "off" else "freedom")
+        if self.keep_errors:
+            flags.append("keep-errors")
         for on, name in ((self.punctuation, "punct"), (self.numbers, "num"),
                          (self.blind, "blind"), (self.ghost, "ghost"),
                          (self.tape, "tape")):

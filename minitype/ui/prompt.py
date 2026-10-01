@@ -1,13 +1,14 @@
 from ..terminal import console, keys
 
 
-def prompt(label):
-    """Single line of input. Returns None on escape."""
+def prompt(label, initial=""):
+    """Single line of input, starting with `initial` already typed.
+    Returns None on escape."""
     console.cursor(True)
     console.clear()
-    console.write(f"\n  {label} ")
+    console.write(f"\n  {label} {initial}")
     console.flush()
-    buf = []
+    buf = list(initial)
     while True:
         key = keys.read_key()
         if key in (keys.ESC, keys.CTRL_C):

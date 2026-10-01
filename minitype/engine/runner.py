@@ -48,6 +48,7 @@ class TypingTest:
         self.fail_reason = ""
         self.done = False       # ended from inside a key press
         self.wrong = False      # last key was rejected by stop on error
+        self.err_marks = set()  # (word, letter) positions that had a wrong key
         self.prev_t = None
         self.word_start = None  # when the first char of the current word landed
         self.popped_hints = False
@@ -208,7 +209,12 @@ class TypingTest:
         return None
 
     def _can_backspace(self):
-        return self.diff == "normal" and self.app.settings.backspace != "off"
+        s = self.app.settings
+        return self.diff == "normal" and s.backspace != "off" and not s.keep_errors
+
+    def error_marks(self):
+        """Letters to keep red after they were fixed (keep errors)."""
+        return self.err_marks if self.app.settings.keep_errors else ()
 
     def _back_ok(self, i):
         """Whether backspacing out of the current word may enter word i."""
@@ -265,6 +271,8 @@ class TypingTest:
             self._press(el, False)
             j = len(typed)
             self._miss(word[j] if self.stop == "letter" and j < len(word) else " ")
+            if j < len(word):
+                self.err_marks.add((self.wi, j))
             self.wrong = True
             return
         self._press(el, typed == word)
@@ -306,6 +314,8 @@ class TypingTest:
                 self.app.learn.hit(word[j], None)
         if not ok:
             self._miss(want)
+            if j < len(word):
+                self.err_marks.add((self.wi, j))
             if self.diff == "master":
                 self._fail("wrong key")
                 return
@@ -448,7 +458,8 @@ def run_test(app, spec):
             head, marks = test.status(now)
             draw(app.styles(), app.settings, head, test.words, test.typed,
                  test.wi, max(10, size[0] - 4), test.footer(), marks, test.wrong,
-                 keyboard_lines(app, test), test.hidden(now))
+                 keyboard_lines(app, test), test.hidden(now),
+                 test.error_marks())
             last_draw = now
             dirty = False
 

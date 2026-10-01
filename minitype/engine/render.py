@@ -35,9 +35,11 @@ def wrap(display, width):
 class Painter:
     """Turns words and what's been typed into styled cells."""
 
-    def __init__(self, st, settings, words, typed, wi, marks, wrong, hidden):
+    def __init__(self, st, settings, words, typed, wi, marks, wrong, hidden,
+                 errors=()):
         self.st, self.words, self.typed, self.wi = st, words, typed, wi
         self.marks, self.hidden = marks, hidden
+        self.errors = errors
         self.blind = settings.blind
         self.mirror = settings.funbox == "mirror"
         self.caret = INV if settings.caret == "block" else UND + (st.ok or "")
@@ -71,7 +73,7 @@ class Painter:
             elif wc is None:
                 s = st.extra
             elif tc == wc:
-                s = st.ok
+                s = st.bad if (i, j) in self.errors else st.ok
             else:
                 s = st.bad
             if off in self.marks:
@@ -131,15 +133,16 @@ def tape_line(p, width):
 
 
 def draw(st, settings, header, words, typed, wi, width, footer, marks=(),
-         wrong=False, below=(), hidden=False):
+         wrong=False, below=(), hidden=False, errors=()):
     """Redraw the test screen in place.
 
     marks:  global char offsets to underline (ghost and pace carets)
     wrong:  turns the caret red after a rejected key
     below:  extra lines under the words (the on-screen keyboard)
     hidden: memory mode, untyped characters are blanked out
+    errors: (word, letter) positions to keep red even once typed right
     """
-    p = Painter(st, settings, words, typed, wi, marks, wrong, hidden)
+    p = Painter(st, settings, words, typed, wi, marks, wrong, hidden, errors)
     out = []
     if header:
         out += [st.dim + header + RESET, ""]

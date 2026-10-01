@@ -62,6 +62,12 @@ accented letters become their ASCII forms, markdown-style formatting and
 divider lines are dropped, line breaks become spaces, and a Project
 Gutenberg licence header and footer are cut off.
 
+To strip more out, set a **filter** (in the book list, or settings → words
+→ book filter): the symbols you type there are removed from every book,
+for example `,.;:!?"'`. Type `punct` for all punctuation. Quotes and
+dashes are already plain `"` `'` `-` by then, so filtering those catches
+the curly ones too.
+
 Bulgarian books work too: Cyrillic is kept as it is, and older files saved
 in Windows-1251 are read correctly. Under the book list, "bulgarian books"
 picks how they're typed:
@@ -92,6 +98,8 @@ Skipping pages:
 - stop on error: *letter* (a wrong key doesn't move the cursor) or *word*
   (you can't leave a wrong word)
 - backspace: *off* (confidence mode) or *freedom* (back into correct words)
+- keep errors: letters you mistyped stay red even after you get them right,
+  and backspace does nothing. Pairs well with stop on error: letter
 - minimum speed and minimum accuracy: fall below and the test fails
 - funbox: reversed words, CAPS, rAnDoM case, mirrored text
 - memory: the words disappear a few seconds in

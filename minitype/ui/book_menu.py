@@ -7,6 +7,7 @@ typed in Cyrillic or in шльокавица (the options under the books).
 """
 
 import os
+import string
 
 from ..config import BOOK_SCRIPTS
 from ..terminal import keys
@@ -40,6 +41,22 @@ def _cycle(app, name, seq, step):
     setattr(s, name, cycle(seq, getattr(s, name), step=step))
 
 
+def filter_label(spec):
+    chars = books.filter_chars(spec)
+    if not chars:
+        return "none"
+    return "all punctuation" if chars == string.punctuation else chars
+
+
+def edit_book_filter(app):
+    """Ask for the characters to remove from books. Esc keeps the old ones."""
+    s = app.settings
+    v = prompt("symbols to remove from books (punct = all punctuation, "
+               "empty = none):", s.book_filter)
+    if v is not None:
+        s.book_filter = v
+
+
 def _open_folder(app):
     try:
         os.startfile(books.folder())
@@ -65,6 +82,12 @@ def build_items(app, refresh):
             section=LIBRARY))
     s = app.settings
     items += [
+        Item("", "filter", lambda: edit_book_filter(app),
+             lambda: filter_label(s.book_filter),
+             help="symbols to remove from every book, e.g. ,.;:!?\"' - enter "
+                  "to edit, type punct for all punctuation, leave it empty "
+                  "for none",
+             section="options"),
         Item("", "bulgarian books",
              lambda: _cycle(app, "book_script", BOOK_SCRIPTS, 1),
              lambda: s.book_script,

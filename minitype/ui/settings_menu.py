@@ -17,6 +17,7 @@ from .. import storage
 from ..terminal import console, keys
 from ..terminal.style import INV, RESET
 from ..util import cycle
+from .book_menu import edit_book_filter, filter_label
 from .key_editor import key_editor
 from .menu import Item, Menu, title_lines
 from .screen import menu_loop
@@ -98,6 +99,10 @@ def build_items(app):
                  help="off: no corrections at all (confidence mode). "
                       "freedom: you can go back into correct words too",
                  tags=("confidence", "freedom", "corrections", "delete", "mistakes")),
+        b.flag("keep errors", "keep_errors",
+               "letters you mistyped stay red even after you type them right, "
+               "and backspace does nothing. Best with stop on error: letter",
+               tags=("mistakes", "errors", "red", "backspace", "strict", "delete")),
         b.flag("punctuation", "punctuation",
                "capitals, commas, full stops and quotes",
                tags=("text", "symbols", "capitals")),
@@ -161,6 +166,12 @@ def build_items(app):
                  help="words per page in book mode; your place in each book "
                       "is kept when you change it",
                  tags=("book", "page", "length", "text")),
+        b.item("book filter", lambda: edit_book_filter(app),
+               lambda: filter_label(s.book_filter),
+               help="symbols to remove from every book, e.g. ,.;:!?\"' - "
+                    "enter to edit, type punct for all punctuation, leave "
+                    "it empty for none",
+               tags=("book", "filter", "punctuation", "symbols", "remove", "text")),
         b.choice("bulgarian books", "book_script", BOOK_SCRIPTS,
                  help="cyrillic: type Bulgarian books as written. "
                       "shlokavitsa: type them in Latin letters (the converted "

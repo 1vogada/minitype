@@ -11,6 +11,9 @@ A Bulgarian book can be typed in Cyrillic, or converted to шльокавица
 (see shlokavitsa.py). The converted text is saved as its own .txt in
 books/shlokavitsa/, one per style, and reused until the book changes.
 
+The book filter (a setting) removes chosen characters from every book,
+punctuation for instance, after cleaning and before converting.
+
 A book is split into pages of a fixed number of words. Your place in each
 book is kept as a word position, so changing the page size doesn't lose
 it. Converting doesn't change the number of words, so the same place
@@ -184,13 +187,42 @@ def converted_words(title, style):
     return ws
 
 
+def filter_chars(spec):
+    """The characters a book filter removes. "punct" means all ASCII
+    punctuation; anything else is taken literally (spaces ignored)."""
+    if spec.strip().lower() in ("punct", "punctuation"):
+        return string.punctuation
+    return "".join(dict.fromkeys(c for c in spec if not c.isspace()))
+
+
+def apply_filter(ws, chars):
+    """Remove the characters from every word. A word left with nothing in
+    it is dropped."""
+    table = str.maketrans("", "", chars)
+    return [t for t in (w.translate(table) for w in ws) if t]
+
+
 def words(app, title):
     """The words to type: the book as written, or in шльокавица when that
-    mode is on and the book is Bulgarian."""
+    mode is on and the book is Bulgarian, minus the book filter's
+    characters. The filter is applied before converting, so filtering
+    digits out of a book doesn't eat the 4s and 6s of шльокавица."""
     s = app.settings
-    if s.book_script == "shlokavitsa" and is_bulgarian(title):
-        return converted_words(title, s.shlokavitsa_style)
-    return source_words(title)
+    shlok = s.book_script == "shlokavitsa" and is_bulgarian(title)
+    chars = filter_chars(s.book_filter)
+    if not chars:
+        return converted_words(title, s.shlokavitsa_style) if shlok \
+            else source_words(title)
+    src = os.path.join(folder(), title + ".txt")
+    key = ("filtered", src, os.path.getmtime(src), chars,
+           s.shlokavitsa_style if shlok else None)
+    hit = _cache.get(key)
+    if hit is None:
+        hit = apply_filter(source_words(title), chars)
+        if shlok:
+            hit = shlokavitsa.convert(hit, s.shlokavitsa_style)
+        _cache[key] = hit
+    return hit
 
 
 def script_label(app, title):
