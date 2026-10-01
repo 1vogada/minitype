@@ -58,6 +58,21 @@ def _off_or(v, fmt):
     return lambda: fmt.format(v()) if v() else "off"
 
 
+def _then(item, after):
+    """Run `after` whenever the item's value changes, in either direction."""
+    action, back = item.action, item.back
+
+    def forward():
+        action()
+        after()
+
+    def backward():
+        back()
+        after()
+    item.action, item.back = forward, backward
+    return item
+
+
 def build_items(app):
     s = app.settings
     b = Builder(s)
@@ -132,8 +147,10 @@ def build_items(app):
         b.item("word list", lambda: load_list(1), lambda: app.bank.source,
                back=lambda: load_list(-1),
                help="built-in and themed lists work offline; the online "
-                    "ones come from monkeytype",
-               tags=("source", "language", "english", "online", "vocabulary", "text")),
+                    "ones come from monkeytype. left hand, right hand and "
+                    "home row follow your keyboard layout",
+               tags=("source", "language", "english", "online", "vocabulary",
+                     "text", "hand", "one hand", "left", "right")),
         b.choice("quotes from", "quote_source", QUOTE_SOURCES,
                  help="built-in: a small public-domain set. online: "
                       "monkeytype's collection (needs internet)",
@@ -165,9 +182,13 @@ def build_items(app):
         b.choice("keyboard", "keyboard", KEYBOARD_MODES,
                  help="on-screen keyboard highlighting the next key",
                  tags=("keys", "keyboard", "learn", "appearance")),
-        b.choice("layout", "layout", list(LAYOUTS),
-                 help="layout of the on-screen keyboard",
-                 tags=("keyboard", "qwerty", "colemak", "dvorak", "azerty", "qwertz")),
+        _then(b.choice("layout", "layout", list(LAYOUTS),
+                       help="your keyboard layout: the on-screen keyboard, and "
+                            "which keys the left hand, right hand and home "
+                            "row word lists use",
+                       tags=("keyboard", "qwerty", "colemak", "dvorak", "azerty",
+                             "qwertz", "hand")),
+              app.layout_changed),
         b.flag("ghost", "ghost", "replays your last run as a dim caret",
                tags=("caret", "race", "replay")),
         b.choice("pace caret", "pace", PACES, _off_or(lambda: s.pace, "{} wpm"),

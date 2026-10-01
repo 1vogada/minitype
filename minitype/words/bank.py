@@ -2,7 +2,7 @@ import json
 import urllib.request
 
 from .builtin import BUILTIN
-from .themed import THEMED
+from .themed import LAYOUT_DEPENDENT, THEMED
 
 MONKEYTYPE = ("https://raw.githubusercontent.com/monkeytypegame/monkeytype"
               "/master/frontend/static/")
@@ -26,6 +26,7 @@ SOURCES = {
 }
 NAMES = list(SOURCES)
 DEFAULT_SOURCE = "online 1k"
+MIN_THEMED = 10       # fewer words than this and a themed list isn't usable
 
 
 def fetch_json(url, timeout=5):
@@ -57,17 +58,24 @@ class WordBank:
         self.source = "built-in"
         self.note = note
 
-    def load(self, name, timeout=5):
+    def load(self, name, timeout=5, layout="qwerty"):
         """Swap in a word list. Falls back to the built-in list on any failure
-        and leaves a note explaining why. Returns True if it worked."""
+        and leaves a note explaining why. Returns True if it worked. layout
+        decides which keys count as one hand or the home row."""
         self.version += 1
         url = SOURCES.get(name)
         if name not in SOURCES or url is None:
             self._builtin(f"{len(BUILTIN)} words, built-in")
             return name == "built-in"
         if url == "themed":
-            self.words = THEMED[name]()
-            self.source, self.note = name, f"{len(self.words)} words, {name}"
+            self.words = THEMED[name](layout, self._cache.values())
+            self.source = name
+            on = f" on {layout}" if name in LAYOUT_DEPENDENT else ""
+            self.note = f"{len(self.words)} words, {name}{on}"
+            if len(self.words) < MIN_THEMED:
+                self._builtin(f"only {len(self.words)} {name} words{on} "
+                              "- using built-in")
+                return False
             return True
         try:
             if url not in self._cache:

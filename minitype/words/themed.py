@@ -1,5 +1,11 @@
-"""Built-in themed word lists, available offline."""
+"""Built-in themed word lists, available offline.
 
+The one-hand and home-row lists follow the keyboard layout setting: they
+keep every known word typed with only those keys on that layout.
+"""
+
+from ..config import LAYOUTS
+from . import hand_words
 from .builtin import BUILTIN
 
 PROGRAMMING = """function variable class object array string integer boolean float
@@ -46,25 +52,51 @@ saga sag salad salsa sash shall flash dash gash hag haggard flak gasks alfalfa
 shag slag slash ash dahl""".split()
 
 
-def _only(letters):
-    return [w for w in BUILTIN if set(w) <= set(letters)]
+def hand_letters(layout, side):
+    """Letters typed by one hand on a layout: the left or right five
+    columns of the three letter rows."""
+    rows = LAYOUTS.get(layout, LAYOUTS["qwerty"])[1:]
+    keys = "".join(row[:5] if side == "left" else row[5:] for row in rows)
+    return {c for c in keys if c.isalpha()}
 
 
-def left_hand():
-    return sorted(set(LEFT_HAND + _only("qwertasdfgzxcvb")))
+def home_letters(layout):
+    rows = LAYOUTS.get(layout, LAYOUTS["qwerty"])
+    return {c for c in rows[2] if c.isalpha()}
 
 
-def right_hand():
-    return sorted(set(RIGHT_HAND + _only("yuiophjklnm")))
+def _pool(extra):
+    """Every word we know: the one-hand lists, the built-in list, and any
+    online lists already downloaded this session. For qwerty the one-hand
+    lists alone are plenty; other layouts lean on the rest."""
+    words = (hand_words.LEFT + hand_words.RIGHT + LEFT_HAND + RIGHT_HAND
+             + HOME_ROW + list(BUILTIN))
+    for ws in extra:
+        words += [w.lower() for w in ws if w.isalpha()]
+    return words
 
 
-def home_row():
-    return sorted(set(HOME_ROW + _only("asdfghjkl")))
+def _only(letters, extra=()):
+    return list(dict.fromkeys(w for w in _pool(extra)
+                              if len(w) >= 2 and set(w) <= letters))
+
+
+def left_hand(layout="qwerty", extra=()):
+    return _only(hand_letters(layout, "left"), extra)
+
+
+def right_hand(layout="qwerty", extra=()):
+    return _only(hand_letters(layout, "right"), extra)
+
+
+def home_row(layout="qwerty", extra=()):
+    return _only(home_letters(layout), extra)
 
 
 THEMED = {
-    "programming": lambda: list(dict.fromkeys(PROGRAMMING)),
+    "programming": lambda layout="qwerty", extra=(): list(dict.fromkeys(PROGRAMMING)),
     "left hand": left_hand,
     "right hand": right_hand,
     "home row": home_row,
 }
+LAYOUT_DEPENDENT = ("left hand", "right hand", "home row")

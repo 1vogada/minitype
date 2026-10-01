@@ -7,6 +7,7 @@ from .terminal.style import Styles
 from .words.bank import WordBank
 from .words.generator import WordGenerator
 from .words.quotes import QuoteBank
+from .words.themed import LAYOUT_DEPENDENT
 
 
 class App:
@@ -27,10 +28,17 @@ class App:
         return Styles(self.settings.theme, self.settings.lowkey)
 
     def load_words(self, name):
-        """Switch word list and remember the choice."""
-        ok = self.bank.load(name)
-        self.settings.word_source = self.bank.source
+        """Switch word list and remember the choice. The choice is kept even
+        when the list falls back to built-in (no internet, or too few words
+        on this layout), so it comes back once it can."""
+        ok = self.bank.load(name, layout=self.settings.layout)
+        self.settings.word_source = name
         return ok
+
+    def layout_changed(self):
+        """One-hand and home-row lists depend on the layout: rebuild them."""
+        if self.settings.word_source in LAYOUT_DEPENDENT:
+            self.load_words(self.settings.word_source)
 
     # ---------------------------------------------------------------- disk
 
