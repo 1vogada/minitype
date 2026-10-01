@@ -12,11 +12,13 @@ def menu_loop(app, menu, draw, hint_text, extra=None, on_back=None,
 
     The ui style is re-read every frame, so changing it in settings takes
     effect immediately, and a resize simply redraws at the new size.
+    Settings are written to disk after every key that did something.
     """
     hints = Hints(app)
     while True:
         st = app.styles()
         menu.style = app.settings.ui_style
+        menu.sidebar_tabs = app.settings.sidebar_tabs
         lines, focus = draw(st, menu)
         console.present(lines, focus, hints.lines(st, hint_text))
         key = keys.read_key()
@@ -28,5 +30,7 @@ def menu_loop(app, menu, draw, hint_text, extra=None, on_back=None,
         if not handled:
             handled, result = menu.handle(key)
         hints.note(key, handled)
+        if handled:
+            app.save_settings()
         if result is not None:
             return result

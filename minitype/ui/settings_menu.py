@@ -1,7 +1,8 @@
 from ..config import (BACKSPACE_MODES, CARETS, DIFFICULTIES, FUNBOXES, GOALS,
                       KEYBOARD_MODES, LAYOUTS, LOWKEY_MODES, MEMORY_SECS,
                       MIN_ACCS, MIN_WPMS, PACES, PCTS, QUOTE_SOURCES,
-                      STOP_MODES, THEME_NAMES, UI_STYLES)
+                      SIDEBAR_TABS, STOP_MODES, THEME_NAMES, UI_STYLES)
+from .. import storage
 from ..terminal import console
 from ..terminal.style import RESET
 from ..util import cycle
@@ -9,7 +10,7 @@ from .key_editor import key_editor
 from .menu import Item, Menu, title_lines
 from .screen import menu_loop
 
-HINTS = "arrows move   left/right change   [ ] tabs   esc back"
+HINTS = "arrows move   left/right change   tab next section   esc back"
 
 
 class Builder:
@@ -112,6 +113,10 @@ def build_items(app):
         b.choice("u", "ui style", "ui_style", UI_STYLES,
                  help="list: one column. sidebar: details beside the menu. "
                       "tabs: one section at a time"),
+        b.choice("", "sidebar tabs", "sidebar_tabs", SIDEBAR_TABS,
+                 help="sidebar style only. top: a tab bar above it, one "
+                      "section at a time. left: section buttons down the "
+                      "left, that section's settings on the right"),
         b.choice("o", "lowkey", "lowkey", LOWKEY_MODES,
                  help="minimal: only the words during a test. disguised: "
                       "no colour, looks like a plain command prompt"),
@@ -156,8 +161,10 @@ def build_items(app):
                  help="minutes of typing to aim for each day"),
         Item("", "save to disk", app.toggle_saving,
              lambda: "on" if app.saving() else "off", back=app.toggle_saving,
-             help="keep settings, history, personal bests and learn "
-                  "progress between sessions", section=b.section),
+             help="keep history, personal bests, word timings and learn "
+                  f"progress in {storage.path()}. Settings are always "
+                  f"saved, in {storage.path(storage.SETTINGS)}",
+             section=b.section),
         Item("x", "reset", app.stats.reset_errors,
              lambda: f"{len(app.stats.missed)} bad words remembered",
              help="forget all key errors and bad words", section=b.section),

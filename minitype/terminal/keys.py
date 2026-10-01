@@ -14,7 +14,7 @@ from . import console
 UP, DOWN, LEFT, RIGHT = "up", "down", "left", "right"
 HOME, END, PGUP, PGDN = "home", "end", "pgup", "pgdn"
 INSERT, DELETE = "insert", "delete"
-ENTER, TAB, ESC = "enter", "tab", "esc"
+ENTER, TAB, SHIFT_TAB, ESC = "enter", "tab", "shift-tab", "esc"
 BACKSPACE, CTRL_BACKSPACE = "backspace", "ctrl-backspace"
 CTRL_C, CTRL_D, CTRL_Q, CTRL_W = "ctrl-c", "ctrl-d", "ctrl-q", "ctrl-w"
 UNKNOWN = "unknown"
@@ -38,6 +38,7 @@ _EXTENDED = {
     "H": UP, "P": DOWN, "K": LEFT, "M": RIGHT,
     "G": HOME, "O": END, "I": PGUP, "Q": PGDN,
     "R": INSERT, "S": DELETE,
+    "\x0f": SHIFT_TAB,
 }
 
 

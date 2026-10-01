@@ -1,3 +1,4 @@
+from .. import storage
 from ..engine.spec import TestSpec
 from ..learn.progress import ORDER
 from ..terminal import console, keys
@@ -5,7 +6,7 @@ from ..terminal.style import RESET
 from .menu import Item, Menu, title_lines
 from .screen import menu_loop
 
-HINTS = "arrows move   left/right change   space start   [ ] tabs   esc back"
+HINTS = "arrows move   left/right change   space start   tab next section   esc back"
 
 
 def letter_strip(app, st):
@@ -119,7 +120,7 @@ def build_items(app, view):
         Item("p", "save to disk", app.toggle_saving,
              lambda: "on" if app.saving() else "off", back=app.toggle_saving,
              section="progress",
-             help="keep progress, settings and history between sessions"),
+             help=f"keep learn progress and history in {storage.path()}"),
         Item("x", "reset", lambda: confirm_reset(app), section="progress",
              help="forget all learn progress"),
     ]

@@ -51,6 +51,7 @@ def key_editor(app):
             app.stats.key_state.clear()
         elif key in (keys.ESC, keys.CTRL_C):
             app.cursors["keys"] = cursor
+            app.save_settings()
             return None
         elif key in moves:
             cursor = (cursor + moves[key]) % len(KEYS)

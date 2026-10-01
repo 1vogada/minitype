@@ -3,7 +3,8 @@ from dataclasses import asdict, dataclass, fields
 from .config import (BACKSPACE_MODES, CARETS, CODE_LANGS, DIFFICULTIES,
                      FUNBOXES, GOALS, KEYBOARD_MODES, LAYOUTS, LOWKEY_MODES,
                      MEMORY_SECS, MIN_ACCS, MIN_WPMS, PACES, QUOTE_LENGTHS,
-                     QUOTE_SOURCES, STOP_MODES, THEME_NAMES, UI_STYLES)
+                     QUOTE_SOURCES, SIDEBAR_TABS, STOP_MODES, THEME_NAMES,
+                     UI_STYLES)
 
 # fields whose value must be one of a fixed set
 CHOICES = {
@@ -24,6 +25,7 @@ CHOICES = {
     "theme": THEME_NAMES,
     "lowkey": LOWKEY_MODES,
     "ui_style": UI_STYLES,
+    "sidebar_tabs": SIDEBAR_TABS,
     "daily_goal": GOALS,
 }
 
@@ -62,6 +64,7 @@ class Settings:
     theme: str = "default"
     lowkey: str = "off"          # minimal: just the words. disguised: looks like a plain prompt
     ui_style: str = "list"       # how menus are laid out
+    sidebar_tabs: str = "off"    # sidebar style: tab bar on top, or section buttons on the left
     tape: bool = False           # one scrolling line instead of a block of lines
     caret: str = "block"
     show_spaces: bool = False    # draw spaces between words as dots

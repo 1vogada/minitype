@@ -35,15 +35,19 @@ class App:
     # ---------------------------------------------------------------- disk
 
     def to_dict(self):
+        """What goes in save.json (opt-in progress)."""
         return {
             "learn": self.learn.config,
             "stats": self.learn.stats,
-            "settings": self.settings.to_dict(),
             "history": self.history.runs,
             "pbs": self.history.pbs,
-            "key_state": self.stats.key_state,
             "word_speed": self.stats.word_speed,
         }
+
+    def settings_dict(self):
+        """What goes in settings.json (always saved): every setting, plus
+        which keys you pinned or muted in the bad-key editor."""
+        return dict(self.settings.to_dict(), key_state=self.stats.key_state)
 
     def saving(self):
         return storage.enabled()
@@ -51,20 +55,25 @@ class App:
     def toggle_saving(self):
         storage.toggle(self.to_dict())
 
+    def save_settings(self):
+        storage.write_settings(self.settings_dict())
+
     def save(self):
+        self.save_settings()
         storage.write(self.to_dict())
 
     def load(self):
-        d = storage.read()
-        if d is None:
-            return
-        self.learn.apply(d)
-        self.settings.apply(d.get("settings"))
-        self.history.apply(d.get("history"), d.get("pbs"))
-        ks = d.get("key_state")
+        s = storage.read_settings()
+        d = storage.read() or {}
+        if s is None:
+            s = dict(d.get("settings") or {}, key_state=d.get("key_state"))
+        self.settings.apply(s)
+        ks = s.get("key_state")
         if isinstance(ks, dict):
             self.stats.key_state.update(
                 {c: v for c, v in ks.items() if v in ("on", "off")})
+        self.learn.apply(d)
+        self.history.apply(d.get("history"), d.get("pbs"))
         ws = d.get("word_speed")
         if isinstance(ws, dict):
             self.stats.word_speed.update(

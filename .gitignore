@@ -7,3 +7,8 @@ dist/
 venv/
 .idea/
 .vscode/
+
+# your own settings and progress, kept next to the app
+/settings.json
+/save.json
+/*.json.tmp

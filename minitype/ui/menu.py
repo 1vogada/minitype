@@ -7,14 +7,18 @@ into actions:
     up / down        move (left / right too, in a horizontal menu)
     home / end       jump to the first / last item
     enter            activate the selected item (start, for a mode row)
-    right / left     step an item's value forward / back
-    [ ] pgup pgdn    switch section (tabs style)
+    right / left     step an item's value forward / back; on a row with no
+                     value, switch section when one section shows at a time
+    tab / shift-tab  next / previous section, in every style
+    [ ] pgup pgdn    the same
     hotkey           jump to that item and activate it
 
 Styles:
     list     every item in one column under section headings
-    sidebar  items on the left, details of the selected one on the right
-             (falls back to list when the terminal is narrow)
+    sidebar  items on the left, details of the selected one on the right;
+             with sidebar tabs "top" a tab bar shows one section at a time,
+             with "left" the sections are buttons down the left side
+             (narrow terminals fall back to list, or tabs with sidebar tabs)
     tabs     one section at a time, with a tab bar to switch between them
 """
 
@@ -28,8 +32,8 @@ from ..terminal.style import INV, RESET
 
 SIDEBAR_MIN_WIDTH = 60
 HELP_INDENT = 6           # lines help text up with the labels: " >k  label"
-TAB_PREV = (keys.PGUP, "[")
-TAB_NEXT = (keys.PGDN, "]")
+TAB_PREV = (keys.SHIFT_TAB, keys.PGUP, "[")
+TAB_NEXT = (keys.TAB, keys.PGDN, "]")
 
 
 @dataclass
@@ -55,7 +59,16 @@ class Menu:
         self.name = name
         self.horizontal = horizontal
         self.style = style
+        self.sidebar_tabs = "off"
         self.cursor = min(self.memory.get(name, 0), len(items) - 1)
+
+    @property
+    def paged(self):
+        """Whether one section is shown at a time, so up/down stay in it."""
+        if self.horizontal:
+            return False
+        return self.style == "tabs" or (self.style == "sidebar"
+                                        and self.sidebar_tabs != "off")
 
     @property
     def selected(self):
@@ -72,8 +85,8 @@ class Menu:
         self.memory[self.name] = self.cursor
 
     def _step(self, d):
-        """Move up or down; in tabs style, only within the current tab."""
-        if self.style != "tabs" or self.horizontal:
+        """Move up or down; when paged, only within the current section."""
+        if not self.paged:
             self._move_to(self.cursor + d)
             return
         idx = self._in_section(self.selected.section)
@@ -91,7 +104,7 @@ class Menu:
         prev = (keys.UP, keys.LEFT) if self.horizontal else (keys.UP,)
         nxt = (keys.DOWN, keys.RIGHT) if self.horizontal else (keys.DOWN,)
         item = self.selected
-        tabs = self.style == "tabs" and not self.horizontal
+        sections = not self.horizontal and len(self.sections()) > 1
         if key in prev:
             self._step(-1)
         elif key in nxt:
@@ -106,9 +119,9 @@ class Menu:
             return True, item.action()
         elif key == keys.LEFT and item.back is not None:
             return True, item.back()
-        elif tabs and (key in TAB_NEXT or key == keys.RIGHT):
+        elif sections and (key in TAB_NEXT or (self.paged and key == keys.RIGHT)):
             self._switch_tab(1)
-        elif tabs and (key in TAB_PREV or key == keys.LEFT):
+        elif sections and (key in TAB_PREV or (self.paged and key == keys.LEFT)):
             self._switch_tab(-1)
         else:
             for i, it in enumerate(self.items):
@@ -134,25 +147,36 @@ class Menu:
         """Lines for the menu and the index of the selected one."""
         width = console.size()[0]
         label_width = min(label_width, max(8, width // 3))
-        if self.style == "tabs" and not self.horizontal:
-            return self._render_tabs(st, label_width)
         if self.style == "sidebar" and width >= SIDEBAR_MIN_WIDTH:
+            if self.sidebar_tabs == "top":
+                return self._render_sidebar_top(st, width, label_width)
+            if self.sidebar_tabs == "left":
+                return self._render_sidebar_left(st, width, label_width)
             return self._render_sidebar(st, width, label_width)
-        return self._render_list(st, label_width)
+        if self.paged:
+            return self._render_tabs(st, label_width)
+        return self._rows(st, range(len(self.items)), label_width)
 
-    def _help_under(self, st, item):
+    # -- pieces
+
+    def _help_under(self, st, item, width):
         """The item's help, wrapped and indented to sit under its label, so
         it stays next to the selection however far the menu has scrolled."""
         if not item.help:
             return []
-        width = max(10, console.size()[0] - HELP_INDENT - 2)
         return [" " * HELP_INDENT + f"{st.dim}{ln}{RESET}"
-                for ln in textwrap.wrap(item.help, width)]
+                for ln in textwrap.wrap(item.help, max(10, width - HELP_INDENT - 2))]
 
-    def _render_list(self, st, label_width, with_value=True, inline_help=True):
+    def _rows(self, st, indices, label_width, with_value=True, inline_help=True,
+              width=None):
+        """Rows for the given items, with a heading wherever the section
+        changes. Returns (lines, index of the selected row)."""
+        width = width or console.size()[0]
         lines, focus, section = [], 0, None
-        for i, item in enumerate(self.items):
-            if item.section != section:
+        headings = len({self.items[i].section for i in indices}) > 1
+        for i in indices:
+            item = self.items[i]
+            if headings and item.section != section:
                 if section is not None:
                     lines.append("")
                 section = item.section
@@ -163,49 +187,72 @@ class Menu:
                 focus = len(lines)
             lines.append(self._row(st, item, sel, label_width, with_value))
             if sel and inline_help:
-                lines += self._help_under(st, item)
+                lines += self._help_under(st, item, width)
         return lines, focus
 
-    def _render_tabs(self, st, label_width):
+    def _tab_bar(self, st):
         cur = self.selected.section
         tabs = []
         for sec in self.sections():
             name = sec or "-"
             tabs.append(f"{st.title}{INV} {name} {RESET}" if sec == cur
                         else f"{st.dim} {name} {RESET}")
-        lines = ["  " + "".join(tabs), ""]
-        focus = 0
-        for i in self._in_section(cur):
-            sel = i == self.cursor
-            if sel:
-                focus = len(lines)
-            lines.append(self._row(st, self.items[i], sel, label_width))
-            if sel:
-                lines += self._help_under(st, self.items[i])
-        return lines, focus
+        return "  " + "".join(tabs)
+
+    def _panel(self, st, item, width):
+        """Details of the selected item, for the sidebar."""
+        lines = [f"{st.title}{item.label}{RESET}"]
+        if item.value is not None:
+            lines.append(f"{st.dim}value  {RESET}{item.value()}")
+            if item.back is not None:
+                lines.append(f"{st.dim}left/right to change{RESET}")
+        if item.help:
+            lines.append("")
+            lines += [f"{st.dim}{ln}{RESET}"
+                      for ln in textwrap.wrap(item.help, max(10, width))]
+        return lines
+
+    @staticmethod
+    def _beside(st, left, right, lw):
+        """Two columns, the left one padded to lw, split by a bar."""
+        return [console.pad(left[k] if k < len(left) else "", lw)
+                + f" {st.dim}|{RESET} " + (right[k] if k < len(right) else "")
+                for k in range(max(len(left), len(right)))]
+
+    # -- layouts
+
+    def _render_tabs(self, st, label_width):
+        rows, focus = self._rows(st, self._in_section(self.selected.section),
+                                 label_width)
+        return [self._tab_bar(st), ""] + rows, focus + 2
+
+    def _sidebar(self, st, width, label_width, indices):
+        lw = min(40, max(18, width // 2 - 2))
+        left, focus = self._rows(st, indices, min(label_width, lw - 15),
+                                 inline_help=False)
+        # the panel starts level with the selected row, so it scrolls with it
+        right = [""] * focus + self._panel(st, self.selected, width - lw - 5)
+        return self._beside(st, left, right, lw), focus
 
     def _render_sidebar(self, st, width, label_width):
-        lw = min(40, max(18, width // 2 - 2))
-        left, focus = self._render_list(st, min(label_width, lw - 15),
-                                        inline_help=False)
-        item = self.selected
-        rw = width - lw - 5
-        right = [f"{st.title}{item.label}{RESET}"]
-        if item.value is not None:
-            right.append(f"{st.dim}value  {RESET}{item.value()}")
-            if item.back is not None:
-                right.append(f"{st.dim}left/right to change{RESET}")
-        if item.help:
-            right.append("")
-            right += [f"{st.dim}{ln}{RESET}" for ln in textwrap.wrap(item.help, rw)]
-        # the panel starts level with the selected row, so it scrolls with it
-        right = [""] * focus + right
-        lines = []
-        for k in range(max(len(left), len(right))):
-            a = left[k] if k < len(left) else ""
-            b = right[k] if k < len(right) else ""
-            lines.append(console.pad(a, lw) + f" {st.dim}|{RESET} " + b)
-        return lines, focus
+        return self._sidebar(st, width, label_width, range(len(self.items)))
+
+    def _render_sidebar_top(self, st, width, label_width):
+        lines, focus = self._sidebar(st, width, label_width,
+                                     self._in_section(self.selected.section))
+        return [self._tab_bar(st), ""] + lines, focus + 2
+
+    def _render_sidebar_left(self, st, width, label_width):
+        """Section buttons down the left; the chosen section's rows, with
+        the selected row's help under it, on the right."""
+        cur = self.selected.section
+        secs = self.sections()
+        lw = max(len(s or "-") for s in secs) + 5
+        left = [f"  {st.title}{INV} {s or '-'} {RESET}" if s == cur
+                else f"   {st.dim}{s or '-'}{RESET}" for s in secs]
+        right, focus = self._rows(st, self._in_section(cur), label_width,
+                                  width=width - lw - 3)
+        return self._beside(st, left, right, lw), focus
 
     def render_inline(self, st):
         """All items on one line, for short choice rows."""

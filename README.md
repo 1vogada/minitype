@@ -21,8 +21,8 @@ minitype
 ## Controls
 
 - **menus**: arrow keys move, enter selects or starts, left/right change a
-  value, `[` `]` switch tabs, esc goes back. Rows with a hotkey show it beside
-  the label.
+  value, tab / shift-tab (or `[` `]`, PgUp / PgDn) jump between sections,
+  esc goes back. Rows with a hotkey show it beside the label.
 - **during a test**: esc menu, tab restart, ctrl-backspace deletes a word;
   in zen mode enter finishes
 - **anywhere**: ctrl-q wipes the screen and exits
@@ -61,7 +61,9 @@ clipped to the width.
 ## Look and feel
 
 - three menu styles: **list**, **sidebar** (details beside the menu) and
-  **tabs** (one section at a time)
+  **tabs** (one section at a time). The sidebar can also show a tab bar on
+  top, or the sections as buttons down the left (settings → look → sidebar
+  tabs)
 - themes: default, ocean, forest, sunset, mono
 - lowkey: *minimal* shows only the words during a test; *disguised* drops all
   colour and looks like a plain command prompt
@@ -78,8 +80,20 @@ clipped to the width.
 - personal bests per mode, with a banner when you beat one
 - **profile**: totals, top and average speed, a speed chart, all your PBs
 - daily goal in minutes, shown on the menu and results
-- opt-in saving of settings, history, PBs, word timings and learn progress to
-  `%LOCALAPPDATA%\minitype\save.json` (settings → progress → save to disk)
+
+## Your files
+
+Both live in the app folder, next to this README, and git ignores them:
+
+- `settings.json`: every setting and your pinned or muted keys. Always kept
+  up to date, saved as you change things.
+- `save.json`: history, personal bests, word timings and learn progress.
+  Only written once you switch on settings → progress → save to disk;
+  switching it off deletes the file.
+
+Set `MINITYPE_DIR` to keep them somewhere else. If the app folder isn't
+writable they go to `%LOCALAPPDATA%\minitype`. A save from an older version
+in `%LOCALAPPDATA%\minitype` is moved into the app folder automatically.
 
 ## Word lists
 
@@ -98,7 +112,7 @@ minitype/
   settings.py      user settings
   stats.py         per-session errors, bad words, word timings
   history.py       every finished test and personal bests
-  storage.py       the opt-in save file
+  storage.py       settings.json and the opt-in save.json
   terminal/        frame drawing and clipping, key decoding, themes
   words/           word lists, quotes, code snippets, funbox, generation
   engine/          test spec, typing rules, scoring, rendering, keyboard

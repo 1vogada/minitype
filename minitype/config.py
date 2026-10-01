@@ -20,6 +20,7 @@ KEYBOARD_MODES = ["off", "learn", "always"]
 THEME_NAMES = ["default", "ocean", "forest", "sunset", "mono"]
 LOWKEY_MODES = ["off", "minimal", "disguised"]
 UI_STYLES = ["list", "sidebar", "tabs"]
+SIDEBAR_TABS = ["off", "top", "left"]
 BAD_KEYS_TRACKED = 6      # how many of your worst keys feed the pool
 
 PUNCT = ",,,...;:!?"
