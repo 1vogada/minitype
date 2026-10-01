@@ -47,10 +47,30 @@ clipped to the width.
   or Monkeytype's online collection
 - **zen**: no target text, type whatever you like
 - **code**: Python or JavaScript snippets
+- **book**: type through your own books, a page at a time (see below)
 - **numbers**, and **custom text** from a paste or a file
 - **learn**: keybr-style lessons that unlock letters as each one reaches a
   target speed, with optional capitals and punctuation
 - **slow words**: a drill built from the words you type slowest
+
+## Book mode
+
+Drop `.txt` files into the `books` folder in the app folder (main menu →
+book → open books folder opens it; git ignores it). On import the text is
+cleaned down to plain keyboard characters: curly quotes, dashes and
+accented letters become their ASCII forms, markdown-style formatting and
+divider lines are dropped, line breaks become spaces, and a Project
+Gutenberg licence header and footer are cut off.
+
+Each book is split into pages (50 words by default; settings → words →
+book page). Finishing a page moves your bookmark on, and bookmarks are
+kept in `settings.json`.
+
+Skipping pages:
+- in the book list: left / right one page, PgUp / PgDn ten, `g` to type a
+  page number, enter to read
+- while typing: PgDn next page, PgUp previous page
+- on the results screen: `n` next page
 
 ## Rules and challenges
 
@@ -89,10 +109,11 @@ clipped to the width.
 
 ## Your files
 
-Both live in the app folder, next to this README, and git ignores them:
+Both live in the app folder, next to this README, and git ignores them
+(and the `books` folder):
 
-- `settings.json`: every setting and your pinned or muted keys. Always kept
-  up to date, saved as you change things.
+- `settings.json`: every setting, your pinned or muted keys and your place
+  in each book. Always kept up to date, saved as you change things.
 - `save.json`: history, personal bests, word timings and learn progress.
   Only written once you switch on settings → progress → save to disk;
   switching it off deletes the file.

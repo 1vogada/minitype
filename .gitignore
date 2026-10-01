@@ -12,3 +12,4 @@ venv/
 /settings.json
 /save.json
 /*.json.tmp
+/books/

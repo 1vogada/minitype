@@ -21,7 +21,7 @@ class History:
         """What a run is compared against: its mode, plus the difficulty
         when that isn't normal."""
         spec = result.spec
-        m = "learn" if spec.source == "learn" else spec.label
+        m = spec.source if spec.source in ("learn", "book") else spec.label
         return m if result.difficulty == "normal" else f"{m} ({result.difficulty})"
 
     def pb(self, result):

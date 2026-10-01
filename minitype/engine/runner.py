@@ -7,7 +7,7 @@ from ..learn.progress import ORDER
 from ..learn.wordgen import lesson_words
 from ..nav import MENU, QUIT
 from ..terminal import console, keys
-from ..words import code, funbox
+from ..words import books, code, funbox
 from . import keyboard
 from .render import draw
 from .result import TestResult
@@ -15,6 +15,8 @@ from .scoring import score
 
 FOOTER = "esc menu   tab restart   ctrl-bksp word   ctrl-q hide"
 ZEN_FOOTER = "enter finish   esc menu   ctrl-q hide"
+BOOK_FOOTER = ("esc menu   tab restart   pgdn next page   pgup previous page   "
+               "ctrl-q hide")
 REDRAW_EVERY = 0.1
 SLOW_WORDS = 20       # how many of your slowest words a drill draws from
 MIN_SLOW_WORDS = 5    # tracked words needed before the drill is offered
@@ -56,7 +58,7 @@ class TypingTest:
     def _make_words(self):
         app, spec = self.app, self.spec
         src = spec.source
-        if src == "custom":
+        if src in ("custom", "book"):
             words = list(spec.words)
         elif src == "learn":
             return lesson_words(app.learn, app.bank, spec.amount)
@@ -160,7 +162,7 @@ class TypingTest:
         s = self.app.settings
         if (not s.hints or s.lowkey != "off") and not self.popped_hints:
             return ""
-        return self.HINTS
+        return BOOK_FOOTER if self.spec.source == "book" else self.HINTS
 
     # ---------------------------------------------------------------- input
 
@@ -176,6 +178,10 @@ class TypingTest:
             return self.spec
         if key in (keys.CTRL_C, keys.CTRL_D):
             return QUIT
+        if self.spec.source == "book" and key in (keys.PGDN, keys.PGUP):
+            # skip a page without finishing this one
+            return books.neighbour(self.app, self.spec,
+                                   1 if key == keys.PGDN else -1)
         if key == keys.BACKSPACE:
             if self._can_backspace():
                 self._backspace()
@@ -337,6 +343,8 @@ class TypingTest:
         if not self.failed:
             self.app.stats.ghost[:] = self.samples
             self.app.stats.history.append(wpm)
+            if self.spec.source == "book":
+                books.finished_page(self.app, self.spec)
         result = TestResult(self.spec, wpm, raw, acc, elapsed, self.bad_keys,
                             self.best_combo, self.misses, self.failed, self.diff,
                             self.fail_reason, self.note, self.events, self.presses)

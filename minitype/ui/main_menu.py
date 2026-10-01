@@ -6,6 +6,8 @@ from ..engine.spec import TestSpec
 from ..nav import QUIT
 from ..terminal.style import RESET
 from ..util import cycle
+from ..words import books
+from .book_menu import book_menu
 from .learn_menu import learn_menu
 from .menu import Item, Menu, title_lines
 from .profile import goal_line, profile_screen
@@ -48,6 +50,11 @@ def ask_text():
                     "custom", tuple(words))
 
 
+def _book_count():
+    n = len(books.titles())
+    return f"{n} book{'' if n == 1 else 's'}" if n else "drop .txt files in books/"
+
+
 def _mode(key, label, value, seq, attr, start, s, help):
     """A mode row: left/right pick its option, enter starts it."""
     def step(d):
@@ -83,6 +90,11 @@ def build_items(app):
         _mode("5", "code", lambda: s.code_lang, CODE_LANGS, "code_lang",
               lambda: TestSpec(f"code {s.code_lang}", "words", 0, "code"),
               s, "type a code snippet: symbols, brackets and keywords"),
+        Item("b", "book", lambda: book_menu(app),
+             lambda: _book_count(),
+             help="type through a .txt book from the books folder, a page "
+                  "at a time; skip pages whenever you like",
+             section="test"),
         _mode("6", "numbers", lambda: f"{s.word_amount}", WORD_COUNTS, "word_amount",
               lambda: TestSpec(f"{s.word_amount} numbers", "words",
                                s.word_amount, "numbers"),

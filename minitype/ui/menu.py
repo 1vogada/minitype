@@ -45,13 +45,17 @@ class Item:
     action: Callable[[], Any]                   # non-None return leaves the menu with that value
     value: Optional[Callable[[], str]] = None   # current setting, shown beside the label
     back: Optional[Callable[[], Any]] = None    # left arrow: step the value backwards
-    help: str = ""                              # shown while the item is selected
+    help: Any = ""                              # shown while selected; a str, or a
+                                                # function returning one
     section: str = ""
     enter: Optional[Callable[[], Any]] = None   # enter / hotkey, when it differs from action
     tags: Tuple[str, ...] = ()                  # extra words a #tag search finds it by
 
     def activate(self):
         return (self.enter or self.action)()
+
+    def help_text(self):
+        return self.help() if callable(self.help) else self.help
 
     def matches(self, query):
         """Every word of the query must be in the label; words starting
@@ -76,8 +80,13 @@ class Menu:
         self.style = style
         self.sidebar_tabs = "off"
         self.query = ""          # only items matching it are shown
+        self.set_items(items)
+
+    def set_items(self, items):
+        """Replace the items (a refreshed list), keeping the cursor in range."""
+        self.items = items
         self.show_keys = any(it.key for it in items)
-        self.cursor = min(self.memory.get(name, 0), len(items) - 1)
+        self.cursor = max(0, min(self.memory.get(self.name, 0), len(items) - 1))
 
     def set_query(self, query):
         """Filter the items. If the selection is filtered out, select the
@@ -198,11 +207,12 @@ class Menu:
     def _help_under(self, st, item, width):
         """The item's help, wrapped and indented to sit under its label, so
         it stays next to the selection however far the menu has scrolled."""
-        if not item.help:
+        text = item.help_text()
+        if not text:
             return []
         indent = HELP_INDENT if self.show_keys else HELP_INDENT - 1
         return [" " * indent + f"{st.dim}{ln}{RESET}"
-                for ln in textwrap.wrap(item.help, max(10, width - indent - 2))]
+                for ln in textwrap.wrap(text, max(10, width - indent - 2))]
 
     def _rows(self, st, indices, label_width, with_value=True, inline_help=True,
               width=None, headings=True):
@@ -244,10 +254,11 @@ class Menu:
             lines.append(f"{st.dim}value  {RESET}{item.value()}")
             if item.back is not None:
                 lines.append(f"{st.dim}left/right to change{RESET}")
-        if item.help:
+        text = item.help_text()
+        if text:
             lines.append("")
             lines += [f"{st.dim}{ln}{RESET}"
-                      for ln in textwrap.wrap(item.help, max(10, width))]
+                      for ln in textwrap.wrap(text, max(10, width))]
         return lines
 
     @staticmethod

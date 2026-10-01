@@ -8,7 +8,7 @@ backspace deletes a character at a time. [ and ] aren't typed into the
 search: they switch sections, like tab and shift-tab.
 """
 
-from ..config import (BACKSPACE_MODES, CARETS, DIFFICULTIES, FUNBOXES, GOALS,
+from ..config import (BACKSPACE_MODES, BOOK_PAGES, CARETS, DIFFICULTIES, FUNBOXES, GOALS,
                       KEYBOARD_MODES, LAYOUTS, LOWKEY_MODES, MEMORY_SECS,
                       MIN_ACCS, MIN_WPMS, PACES, PCTS, QUOTE_SOURCES,
                       SIDEBAR_TABS, STOP_MODES, THEME_NAMES, UI_STYLES)
@@ -155,6 +155,11 @@ def build_items(app):
                  help="built-in: a small public-domain set. online: "
                       "monkeytype's collection (needs internet)",
                  tags=("quote", "source", "online", "text")),
+        b.choice("book page", "book_page", BOOK_PAGES,
+                 lambda: f"{s.book_page} words",
+                 help="words per page in book mode; your place in each book "
+                      "is kept when you change it",
+                 tags=("book", "page", "length", "text")),
     ]
     b.section = "look"
     items += [

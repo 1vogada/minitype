@@ -4,6 +4,7 @@ from ..engine.scoring import speed_series
 from ..nav import MENU, QUIT
 from ..terminal import console, keys
 from ..terminal.style import RESET
+from ..words import books
 from .menu import Hints, Item, Menu, title_lines
 from .profile import goal_line, sparkline
 
@@ -107,12 +108,31 @@ def draw(app, st, r, menu):
     return lines, ["", menu.render_inline(st)]
 
 
-def show_results(app, result):
-    menu = Menu([
-        Item(keys.TAB, "restart", lambda: result.spec),
+def choice_items(app, result):
+    spec = result.spec
+    items = [
+        Item(keys.TAB, "restart", lambda: spec),
         Item("m", "menu", lambda: MENU),
         Item("q", "quit", lambda: QUIT),
-    ], horizontal=True)
+    ]
+    if spec.source == "book":
+        def again():
+            books.set_page(app, spec.book, spec.page)   # retyping: back to this page
+            return spec
+
+        def next_page():
+            nxt = books.neighbour(app, spec, 1)
+            if nxt is None:
+                app.notice = f"that was the last page of {spec.book}"
+                return MENU
+            return nxt
+        items[0] = Item(keys.TAB, "restart", again)
+        items.insert(0, Item("n", "next page", next_page))
+    return items
+
+
+def show_results(app, result):
+    menu = Menu(choice_items(app, result), horizontal=True)
     hints = Hints(app)
     while True:
         st = app.styles()
