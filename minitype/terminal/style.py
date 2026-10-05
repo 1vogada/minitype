@@ -61,6 +61,13 @@ THEMES = {
     "amber": _t(94, 214, 196, 88, 220, 214, 208),
     "paper": _t(246, 235, 124, 88, 25, 28, 130),      # for light terminals
     "high contrast": _t(250, 231, 196, 160, 226, 46, 226),
+    # more high contrast: bright white text, pure red errors, one strong
+    # accent each; the light one is black on a light terminal
+    "high contrast cyan": _t(250, 231, 196, 160, 51, 46, 226),
+    "high contrast magenta": _t(250, 231, 196, 160, 201, 46, 226),
+    "high contrast green": _t(250, 231, 196, 160, 46, 51, 226),
+    "high contrast orange": _t(250, 231, 196, 160, 208, 46, 226),
+    "high contrast light": _t(242, 16, 160, 88, 19, 22, 94),
     "mono": None,
 }
 
@@ -123,7 +130,7 @@ class Styles:
     """Colour codes for the current theme. The mono theme, and the disguised
     lowkey mode, use only dim/underline so nothing on screen is coloured."""
 
-    def __init__(self, theme="default", lowkey="off"):
+    def __init__(self, theme="default", lowkey="off", accent_text=False):
         self.lowkey = lowkey
         self.quiet = theme == "mono" or lowkey == "disguised"
         if self.quiet:
@@ -133,6 +140,8 @@ class Styles:
         else:
             (self.dim, self.ok, self.bad, self.extra,
              self.title, self.good, self.warn) = _palette(theme)
+            if accent_text:
+                self.ok = self.title     # typed letters in the accent colour
 
     def conf_color(self, v):
         """Good at target, warning getting there, bad far off."""

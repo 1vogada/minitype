@@ -76,6 +76,7 @@ class Settings:
 
     # ---- look and feel
     theme: str = "default"
+    accent_text: bool = False    # typed letters in the theme's accent colour
     lowkey: str = "off"          # minimal: just the words. disguised: looks like a plain prompt
     ui_style: str = "list"       # how menus are laid out
     sidebar_tabs: str = "off"    # sidebar style: tab bar on top, or section buttons on the left

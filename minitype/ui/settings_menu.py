@@ -194,6 +194,11 @@ def build_items(app):
                                  if custom_error() else ""),
                  tags=("colour", "color", "appearance", "dark", "light", "mono",
                        "theme", "custom")),
+        b.flag("accent letters", "accent_text",
+               "letters you've typed take the theme's accent colour instead "
+               "of its text colour (no effect with mono or disguised)",
+               tags=("colour", "color", "appearance", "theme", "accent",
+                     "text", "letters")),
         b.choice("ui style", "ui_style", UI_STYLES,
                  help="list: one column. sidebar: details beside the menu. "
                       "tabs: one section at a time",

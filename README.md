@@ -142,7 +142,9 @@ Skipping pages:
   tabs)
 - themes: default, ocean, forest, sunset, dracula, nord, gruvbox,
   solarized, monokai, catppuccin, rose pine, matrix, amber, paper (for
-  light terminals), high contrast, mono. Make your own: copy
+  light terminals), mono, and high contrast in yellow, cyan, magenta,
+  green, orange and light (black on a light terminal). "Accent letters"
+  makes the letters you type take the theme's accent colour. Make your own: copy
   `themes.example.json` to `themes.json` next to the app and edit it.
   Colours are 256-colour numbers (0-255) or `"#rrggbb"` for true colour.
   New themes show up in the list the next time you open settings; if one

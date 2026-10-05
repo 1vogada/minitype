@@ -25,7 +25,8 @@ class App:
         self.notice = ""    # one-off message for the next menu draw
 
     def styles(self):
-        return Styles(self.settings.theme, self.settings.lowkey)
+        s = self.settings
+        return Styles(s.theme, s.lowkey, s.accent_text)
 
     def load_words(self, name):
         """Switch word list and remember the choice. The choice is kept even
