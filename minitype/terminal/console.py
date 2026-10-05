@@ -12,6 +12,7 @@ RESET = "\x1b[0m"
 MIN_W, MIN_H = 20, 5
 
 _last_size = None
+_background = ""
 
 
 def enable_vt():
@@ -51,7 +52,7 @@ def cursor(show):
 
 
 def clear():
-    write("\x1b[2J\x1b[H")
+    write(RESET + "\x1b[2J\x1b[H")
 
 
 def bell():
@@ -116,9 +117,21 @@ def present(lines, focus=None, pinned=()):
     view = lines[top:top + body_h]
     view += [""] * (body_h - len(view)) if pinned else []
     view += pinned
-    out = "\x1b[K\n".join(clip(line, w - 1) + RESET for line in view)
-    write("\x1b[H" + out + "\x1b[K\x1b[J")
+    bg = _background
+    # with a theme background, every reset puts the background straight
+    # back, and the line ends (and the rest of the screen) are cleared
+    # while it's active, which fills them with it
+    out = "\x1b[K\n".join(bg + clip(line, w - 1).replace(RESET, RESET + bg)
+                          + RESET + bg for line in view)
+    write("\x1b[H" + out + "\x1b[K\x1b[J" + (RESET if bg else ""))
     flush()
+
+
+def set_background(code):
+    """The theme's background escape code, "" for the terminal's own.
+    present() paints every frame with it."""
+    global _background
+    _background = code
 
 
 def bail():

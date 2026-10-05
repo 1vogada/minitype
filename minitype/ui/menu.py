@@ -55,6 +55,7 @@ class Item:
     section: str = ""
     enter: Optional[Callable[[], Any]] = None   # enter / hotkey, when it differs from action
     tags: Tuple[str, ...] = ()                  # extra words a #tag search finds it by
+    preview: Optional[Callable[[], list]] = None  # styled lines shown under the help
 
     def activate(self):
         return (self.enter or self.action)()
@@ -277,11 +278,13 @@ class Menu:
         """The item's help, wrapped and indented to sit under its label, so
         it stays next to the selection however far the menu has scrolled."""
         text = item.help_text()
-        if not text:
-            return []
         indent = HELP_INDENT if self.show_keys else HELP_INDENT - 1
-        return [" " * indent + f"{st.dim}{ln}{RESET}"
-                for ln in textwrap.wrap(text, max(10, width - indent - 2))]
+        lines = [" " * indent + f"{st.dim}{ln}{RESET}"
+                 for ln in textwrap.wrap(text, max(10, width - indent - 2))] \
+            if text else []
+        if item.preview:
+            lines += [" " * indent + ln for ln in item.preview()]
+        return lines
 
     def _rows(self, st, indices, label_width, with_value=True, inline_help=True,
               width=None, headings=True, active=True):
@@ -328,6 +331,8 @@ class Menu:
             lines.append("")
             lines += [f"{st.dim}{ln}{RESET}"
                       for ln in textwrap.wrap(text, max(10, width))]
+        if item.preview:
+            lines += [""] + item.preview()
         return lines
 
     @staticmethod

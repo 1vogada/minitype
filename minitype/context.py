@@ -3,6 +3,7 @@ from .history import History
 from .learn.progress import LearnProgress
 from .settings import Settings
 from .stats import SessionStats
+from .terminal import console
 from .terminal.style import Styles
 from .words.bank import WordBank
 from .words.generator import WordGenerator
@@ -25,8 +26,12 @@ class App:
         self.notice = ""    # one-off message for the next menu draw
 
     def styles(self):
+        """The current theme's colours. Every screen draws through this, so
+        it's also where the theme's background is handed to the console."""
         s = self.settings
-        return Styles(s.theme, s.lowkey, s.accent_text)
+        st = Styles(s.theme, s.lowkey, s.accent_text)
+        console.set_background(st.background)
+        return st
 
     def load_words(self, name):
         """Switch word list and remember the choice. The choice is kept even

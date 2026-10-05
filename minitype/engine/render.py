@@ -36,10 +36,11 @@ class Painter:
     """Turns words and what's been typed into styled cells."""
 
     def __init__(self, st, settings, words, typed, wi, marks, wrong, hidden,
-                 errors=()):
+                 errors=(), combo=0, now=0.0):
         self.st, self.words, self.typed, self.wi = st, words, typed, wi
         self.marks, self.hidden = marks, hidden
         self.errors = errors
+        self.combo, self.now = combo, now      # for theme heat and flow
         self.blind = settings.blind
         self.mirror = settings.funbox == "mirror"
         wrong = wrong and not self.blind
@@ -80,7 +81,8 @@ class Painter:
             elif wc is None:
                 s = st.extra
             elif tc == wc:
-                s = st.bad if (i, j) in self.errors else st.ok
+                s = st.bad if (i, j) in self.errors \
+                    else st.typed(off, i, self.combo, self.now)
             else:
                 s = st.bad
             if off in self.marks:
@@ -146,7 +148,7 @@ def tape_line(p, width):
 
 
 def draw(st, settings, header, words, typed, wi, width, footer, marks=(),
-         wrong=False, below=(), hidden=False, errors=()):
+         wrong=False, below=(), hidden=False, errors=(), combo=0, now=0.0):
     """Redraw the test screen in place.
 
     marks:  global char offsets to underline (ghost and pace carets)
@@ -155,7 +157,8 @@ def draw(st, settings, header, words, typed, wi, width, footer, marks=(),
     hidden: memory mode, untyped characters are blanked out
     errors: (word, letter) positions to keep red even once typed right
     """
-    p = Painter(st, settings, words, typed, wi, marks, wrong, hidden, errors)
+    p = Painter(st, settings, words, typed, wi, marks, wrong, hidden, errors,
+                combo, now)
     out = []
     if header:
         out += [st.dim + header + RESET, ""]

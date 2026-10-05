@@ -140,15 +140,42 @@ Skipping pages:
   **tabs** (one section at a time). The sidebar can also show a tab bar on
   top, or the sections as buttons down the left (settings → look → sidebar
   tabs)
-- themes: default, ocean, forest, sunset, dracula, nord, gruvbox,
-  solarized, monokai, catppuccin, rose pine, matrix, amber, paper (for
-  light terminals), mono, and high contrast in yellow, cyan, magenta,
-  green, orange and light (black on a light terminal). "Accent letters"
-  makes the letters you type take the theme's accent colour. Make your own: copy
-  `themes.example.json` to `themes.json` next to the app and edit it.
-  Colours are 256-colour numbers (0-255) or `"#rrggbb"` for true colour.
-  New themes show up in the list the next time you open settings; if one
-  has a mistake, the theme row's help says what's wrong
+- 42 themes (settings → look → theme; a sample line under the row shows
+  each one as you flip through):
+  - plain: default, ocean, forest, sunset, dracula, nord, gruvbox,
+    solarized, monokai, catppuccin, rose pine, matrix, amber, paper (for
+    light terminals), mono
+  - nature: moss, pine, autumn, desert, meadow, jungle, cherry blossom,
+    lavender, tundra, coral reef, volcanic, bamboo
+  - high contrast in yellow, cyan, magenta, green, orange and light
+  - with effects: **rainbow** (a flowing rainbow across your letters),
+    **aurora** and **deep sea** (slow gradients word by word, on a dark
+    background), **synthwave** (bold neon gradient), **ember** (your text
+    heats up from grey to white hot as your combo grows, and cools on a
+    mistake), **phosphor** (green CRT), **vaporwave** (italic pastel neon),
+    **candy** (flowing pastels), **midnight** (a dark background theme)
+- "accent letters" makes the letters you type take the theme's accent colour
+
+### Your own themes
+
+Copy `themes.example.json` to `themes.json` next to the app and edit it.
+Each theme has seven colours (dim, text, error, extra, accent, good, warn),
+or `"base": "<built-in theme>"` plus just the ones you want to change.
+Colours are 256-colour numbers (0-255) or `"#rrggbb"`. Effects:
+
+| key | what it does |
+| --- | --- |
+| `background` | paints the whole screen in a colour |
+| `gradient` | list of colours your typed letters shade through |
+| `by` | `"letter"` or `"word"`: how the gradient steps |
+| `flow` | how many steps a second the gradient moves (0 = still) |
+| `heat` | list of colours, coolest first: typed text changes colour every 5 keys of combo |
+| `bold`, `italic` | `true` to draw typed letters that way |
+
+`#rrggbb` is sent as true colour where the terminal supports it (Windows,
+Termux, iTerm2, kitty, ...) and rounded to the nearest of 256 colours
+elsewhere (macOS Terminal). New themes show up the next time you open
+settings; if one has a mistake, the theme row's help says what's wrong.
 - lowkey: *minimal* shows only the words during a test; *disguised* drops all
   colour and looks like a plain command prompt
 - tape mode (one scrolling line); underline caret (the letter to type is

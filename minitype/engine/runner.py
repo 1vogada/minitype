@@ -459,7 +459,7 @@ def run_test(app, spec):
             draw(app.styles(), app.settings, head, test.words, test.typed,
                  test.wi, max(10, size[0] - 4), test.footer(), marks, test.wrong,
                  keyboard_lines(app, test), test.hidden(now),
-                 test.error_marks())
+                 test.error_marks(), test.combo, now)
             last_draw = now
             dirty = False
 

@@ -8,6 +8,8 @@ backspace deletes a character at a time. [ and ] aren't typed into the
 search: they switch sections, like tab and shift-tab.
 """
 
+import time
+
 from ..words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICULTIES, FUNBOXES, GOALS,
                       KEYBOARD_MODES, LAYOUTS, LOWKEY_MODES, MEMORY_SECS,
@@ -16,7 +18,7 @@ from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICU
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import storage
 from ..terminal import console, keys
-from ..terminal.style import INV, RESET
+from ..terminal.style import INV, RESET, UND
 from ..util import cycle
 from .book_menu import edit_book_filter, filter_label
 from .key_editor import key_editor
@@ -58,6 +60,38 @@ class Builder:
 
 def _off_or(v, fmt):
     return lambda: fmt.format(v()) if v() else "off"
+
+
+SAMPLE = "the quick brown fox jumps"
+SAMPLE_TYPED = 16          # letters of SAMPLE shown as typed
+SAMPLE_WRONG = 10          # one of them was a mistake
+
+
+def theme_sample(app):
+    """A line of the current theme as the typing screen draws it: typed
+    letters (with the theme's gradient, heat or style; the combo climbs
+    along the line so heat shows), a mistake, the caret and what's left."""
+    st = app.styles()
+    now = time.time()
+    out, word = [], 0
+    for k, c in enumerate(SAMPLE):
+        if c == " ":
+            word += 1
+            out.append(" ")
+        elif k == SAMPLE_WRONG:
+            out.append(st.bad + c + RESET)
+        elif k < SAMPLE_TYPED:
+            out.append(st.typed(k, word, combo=k * 2, now=now) + c + RESET)
+        elif k == SAMPLE_TYPED:
+            out.append(st.dim + UND + c + RESET)
+        else:
+            out.append(st.dim + c + RESET)
+    return ["".join(out)]
+
+
+def _preview(item, preview):
+    item.preview = preview
+    return item
 
 
 def _then(item, after):
@@ -186,14 +220,16 @@ def build_items(app):
     ]
     b.section = "look"
     items += [
-        b.choice("theme", "theme", theme_names(),
-                 help=lambda: "colour theme. Add your own in "
-                              f"{storage.path(CUSTOM_FILE)} (copy "
-                              "themes.example.json)"
-                              + (f". Problem: {custom_error()}"
-                                 if custom_error() else ""),
-                 tags=("colour", "color", "appearance", "dark", "light", "mono",
-                       "theme", "custom")),
+        _preview(b.choice("theme", "theme", theme_names(),
+                          help=lambda: "colour theme. Add your own in "
+                                       f"{storage.path(CUSTOM_FILE)} (copy "
+                                       "themes.example.json)"
+                                       + (f". Problem: {custom_error()}"
+                                          if custom_error() else ""),
+                          tags=("colour", "color", "appearance", "dark", "light",
+                                "mono", "theme", "custom", "gradient",
+                                "background")),
+                 lambda: theme_sample(app)),
         b.flag("accent letters", "accent_text",
                "letters you've typed take the theme's accent colour instead "
                "of its text colour (no effect with mono or disguised)",

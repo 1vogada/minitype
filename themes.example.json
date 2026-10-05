@@ -16,5 +16,22 @@
     "accent": "#7ad7f0",
     "good": "#8bd17c",
     "warn": "#f5c26b"
+  },
+  "nord with a gradient": {
+    "base": "nord",
+    "background": "#2e3440",
+    "gradient": ["#88c0d0", "#81a1c1", "#b48ead"],
+    "by": "word",
+    "flow": 1.5
+  },
+  "on fire": {
+    "base": "gruvbox",
+    "heat": ["#928374", "#fabd2f", "#fe8019", "#fb4934"],
+    "bold": true
+  },
+  "slanted": {
+    "base": "rose pine",
+    "accent": "#ebbcba",
+    "italic": true
   }
 }
