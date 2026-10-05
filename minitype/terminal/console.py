@@ -2,6 +2,7 @@
 frames clipped to whatever size the terminal currently is."""
 
 import ctypes
+import os
 import re
 import shutil
 import sys
@@ -14,7 +15,10 @@ _last_size = None
 
 
 def enable_vt():
-    """Turn on ANSI escape processing in the Windows console."""
+    """Turn on ANSI escape processing in the Windows console. Terminals on
+    Linux and macOS understand ANSI already."""
+    if os.name != "nt":
+        return
     k = ctypes.windll.kernel32
     h = k.GetStdHandle(-11)
     mode = ctypes.c_uint32()

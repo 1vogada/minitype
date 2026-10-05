@@ -2,113 +2,50 @@
 
 Every read goes through read_key(), which returns either a single printable
 character or one of the key names below. Names are always longer than one
-character, so `is_char` tells the two apart. Only this module touches msvcrt;
-a POSIX backend would only need to replace `key_ready` and `_getch`.
+character, so `is_char` tells the two apart.
+
+The reading itself is done by a back end: _windows (msvcrt) on Windows,
+_posix (termios) on Linux and macOS. Call setup() before reading keys and
+restore() when done; on Linux and macOS that switches the terminal into
+raw mode and back.
 """
 
-import ctypes
-import msvcrt
+import atexit
+import os
 import time
-from ctypes import wintypes
 
 from . import console
+from .keynames import (BACKSPACE, CTRL_BACKSPACE, CTRL_C, CTRL_D, CTRL_Q,
+                       CTRL_W, DELETE, DOWN, END, ENTER, ESC, HOME, INSERT,
+                       LEFT, PGDN, PGUP, RESIZE, RIGHT, SHIFT_ENTER, SHIFT_TAB,
+                       TAB, UNKNOWN, UP)
 
-UP, DOWN, LEFT, RIGHT = "up", "down", "left", "right"
-HOME, END, PGUP, PGDN = "home", "end", "pgup", "pgdn"
-INSERT, DELETE = "insert", "delete"
-ENTER, SHIFT_ENTER = "enter", "shift-enter"
-TAB, SHIFT_TAB, ESC = "tab", "shift-tab", "esc"
-BACKSPACE, CTRL_BACKSPACE = "backspace", "ctrl-backspace"
-CTRL_C, CTRL_D, CTRL_Q, CTRL_W = "ctrl-c", "ctrl-d", "ctrl-q", "ctrl-w"
-UNKNOWN = "unknown"
-RESIZE = "resize"   # not a key: the terminal changed size while waiting
+__all__ = [
+    "UP", "DOWN", "LEFT", "RIGHT", "HOME", "END", "PGUP", "PGDN", "INSERT",
+    "DELETE", "ENTER", "SHIFT_ENTER", "TAB", "SHIFT_TAB", "ESC", "BACKSPACE",
+    "CTRL_BACKSPACE", "CTRL_C", "CTRL_D", "CTRL_Q", "CTRL_W", "UNKNOWN",
+    "RESIZE", "setup", "restore", "key_ready", "read_key", "is_char",
+]
+
+if os.name == "nt":
+    from . import _windows as backend
+else:
+    from . import _posix as backend
+
 POLL = 0.05
 
-_CONTROL = {
-    "\r": ENTER,
-    "\t": TAB,
-    "\x1b": ESC,
-    "\x08": BACKSPACE,
-    "\x7f": CTRL_BACKSPACE,
-    "\x03": CTRL_C,
-    "\x04": CTRL_D,
-    "\x11": CTRL_Q,
-    "\x17": CTRL_W,
-}
 
-# second code after a "\x00" / "\xe0" prefix
-_EXTENDED = {
-    "H": UP, "P": DOWN, "K": LEFT, "M": RIGHT,
-    "G": HOME, "O": END, "I": PGUP, "Q": PGDN,
-    "R": INSERT, "S": DELETE,
-    "\x0f": SHIFT_TAB,
-}
-
-# final byte of an "ESC [ x" sequence, for consoles that send VT codes
-_CSI = {
-    "A": UP, "B": DOWN, "C": RIGHT, "D": LEFT,
-    "H": HOME, "F": END, "Z": SHIFT_TAB,
-}
-
-VK_TAB = 0x09
-VK_RETURN = 0x0D
-VK_SHIFT = 0x10
-SHIFT_PRESSED = 0x0010
-KEY_EVENT = 0x0001
+def setup():
+    backend.setup()
+    atexit.register(backend.restore)
 
 
-class _KeyRecord(ctypes.Structure):
-    _fields_ = [("down", wintypes.BOOL), ("repeat", wintypes.WORD),
-                ("vk", wintypes.WORD), ("scan", wintypes.WORD),
-                ("char", wintypes.WCHAR), ("state", wintypes.DWORD)]
-
-
-class _InputRecord(ctypes.Structure):
-    _fields_ = [("type", wintypes.WORD), ("key", _KeyRecord)]
+def restore():
+    backend.restore()
 
 
 def key_ready():
-    return msvcrt.kbhit()
-
-
-def _getch():
-    return msvcrt.getwch()
-
-
-def _with_shift(vk):
-    """Whether the next key `vk` waiting in the console input has Shift
-    held.
-
-    msvcrt gives Tab and Enter the same character with or without Shift
-    (some consoles send Shift-Tab as the extended code 0x0f or "ESC [ Z",
-    but not all). The Shift flag is on the raw key event, which can be
-    peeked at before msvcrt reads it."""
-    try:
-        k32 = ctypes.windll.kernel32
-        recs = (_InputRecord * 32)()
-        n = wintypes.DWORD()
-        if k32.PeekConsoleInputW(k32.GetStdHandle(-10), recs, 32, ctypes.byref(n)):
-            for r in recs[:n.value]:
-                if r.type == KEY_EVENT and r.key.down and r.key.vk == vk:
-                    return bool(r.key.state & SHIFT_PRESSED)
-    except (AttributeError, OSError):
-        pass
-    try:
-        return bool(ctypes.windll.user32.GetAsyncKeyState(VK_SHIFT) & 0x8000)
-    except (AttributeError, OSError):
-        return False
-
-
-def _escape_sequence():
-    """After ESC: decode "ESC [ x" if one is arriving, otherwise it was a
-    plain Esc press. Anything else read ahead is put back."""
-    if not key_ready():
-        return ESC
-    c = _getch()
-    if c != "[":
-        msvcrt.ungetwch(c)
-        return ESC
-    return _CSI.get(_getch(), UNKNOWN)
+    return backend.ready()
 
 
 def read_key(panic=True, resize=True):
@@ -121,24 +58,7 @@ def read_key(panic=True, resize=True):
             time.sleep(POLL)
             if console.size() != start:
                 return RESIZE
-    # shift has to be read off the raw event before msvcrt consumes the key
-    shift_tab = _with_shift(VK_TAB)
-    shift_enter = _with_shift(VK_RETURN)
-    c = _getch()
-    if c in ("\x00", "\xe0"):
-        key = _EXTENDED.get(_getch(), UNKNOWN)
-    elif c == "\t":
-        key = SHIFT_TAB if shift_tab else TAB
-    elif c == "\r":
-        key = SHIFT_ENTER if shift_enter else ENTER
-    elif c == "\x1b":
-        key = _escape_sequence()
-    elif c in _CONTROL:
-        key = _CONTROL[c]
-    elif c < " ":
-        key = UNKNOWN
-    else:
-        key = c
+    key = backend.read()
     if panic and key == CTRL_Q:
         console.bail()
     return key

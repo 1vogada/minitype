@@ -12,7 +12,8 @@ from ..words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICULTIES, FUNBOXES, GOALS,
                       KEYBOARD_MODES, LAYOUTS, LOWKEY_MODES, MEMORY_SECS,
                       MIN_ACCS, MIN_WPMS, PACES, PCTS, QUOTE_SOURCES,
-                      SIDEBAR_TABS, STOP_MODES, THEME_NAMES, UI_STYLES)
+                      SIDEBAR_TABS, STOP_MODES, UI_STYLES)
+from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import storage
 from ..terminal import console, keys
 from ..terminal.style import INV, RESET
@@ -185,8 +186,14 @@ def build_items(app):
     ]
     b.section = "look"
     items += [
-        b.choice("theme", "theme", THEME_NAMES, help="colour theme",
-                 tags=("colour", "color", "appearance", "dark", "mono")),
+        b.choice("theme", "theme", theme_names(),
+                 help=lambda: "colour theme. Add your own in "
+                              f"{storage.path(CUSTOM_FILE)} (copy "
+                              "themes.example.json)"
+                              + (f". Problem: {custom_error()}"
+                                 if custom_error() else ""),
+                 tags=("colour", "color", "appearance", "dark", "light", "mono",
+                       "theme", "custom")),
         b.choice("ui style", "ui_style", UI_STYLES,
                  help="list: one column. sidebar: details beside the menu. "
                       "tabs: one section at a time",

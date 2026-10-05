@@ -3,13 +3,32 @@
 A minimal CLI typing test inspired by [keybr](https://www.keybr.com/) and
 [Monkeytype](https://monkeytype.com/). Pure Python, no dependencies.
 
-> Windows only for now: input uses `msvcrt`.
+Runs on Windows, Linux and macOS (Python 3.8+).
 
 ## Run
 
 ```
 python -m minitype
 ```
+
+(`python3` on Linux and macOS.)
+
+### Linux and macOS
+
+minitype switches the terminal into raw mode while it runs and puts it
+back on exit. If it ever doesn't (a crash in the middle of something), type
+`reset` and press enter to get your terminal back.
+
+A few keys depend on the terminal:
+
+- **shift+enter**: most terminals send the same thing for enter and
+  shift+enter. It works in terminals that report modified keys: kitty,
+  wezterm, foot, iTerm2 with "report modifiers" on, or xterm with
+  `modifyOtherKeys`. Elsewhere use left on the row instead.
+- **ctrl+backspace** deletes a word where the terminal sends it as `^H`;
+  option+backspace (macOS) or alt+backspace does the same everywhere.
+- **ctrl+q** (hide) works because flow control is switched off while
+  minitype runs.
 
 or install it and use the `minitype` command:
 
@@ -117,7 +136,13 @@ Skipping pages:
   **tabs** (one section at a time). The sidebar can also show a tab bar on
   top, or the sections as buttons down the left (settings → look → sidebar
   tabs)
-- themes: default, ocean, forest, sunset, mono
+- themes: default, ocean, forest, sunset, dracula, nord, gruvbox,
+  solarized, monokai, catppuccin, rose pine, matrix, amber, paper (for
+  light terminals), high contrast, mono. Make your own: copy
+  `themes.example.json` to `themes.json` next to the app and edit it.
+  Colours are 256-colour numbers (0-255) or `"#rrggbb"` for true colour.
+  New themes show up in the list the next time you open settings; if one
+  has a mistake, the theme row's help says what's wrong
 - lowkey: *minimal* shows only the words during a test; *disguised* drops all
   colour and looks like a plain command prompt
 - tape mode (one scrolling line), block or underline caret, visible spaces
@@ -137,7 +162,7 @@ Skipping pages:
 ## Your files
 
 Both live in the app folder, next to this README, and git ignores them
-(and the `books` folder):
+(and the `books` folder and your `themes.json`):
 
 - `settings.json`: every setting, your pinned or muted keys and your place
   in each book. Always kept up to date, saved as you change things.
@@ -180,7 +205,8 @@ minitype/
   stats.py         per-session errors, bad words, word timings
   history.py       every finished test and personal bests
   storage.py       settings.json and the opt-in save.json
-  terminal/        frame drawing and clipping, key decoding, themes
+  terminal/        frame drawing and clipping, key decoding (_windows.py
+                   with msvcrt, _posix.py with termios), themes
   words/           word lists, quotes, code snippets, funbox, generation
   engine/          test spec, typing rules, scoring, rendering, keyboard
   learn/           learn-mode progress and lesson words

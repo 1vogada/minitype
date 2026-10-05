@@ -13,3 +13,4 @@ venv/
 /save.json
 /*.json.tmp
 /books/
+/themes.json

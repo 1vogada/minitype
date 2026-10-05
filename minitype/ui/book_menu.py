@@ -8,6 +8,8 @@ typed in Cyrillic or in шльокавица (the options under the books).
 
 import os
 import string
+import subprocess
+import sys
 
 from ..config import BOOK_SCRIPTS
 from ..terminal import keys
@@ -58,10 +60,17 @@ def edit_book_filter(app):
 
 
 def _open_folder(app):
+    """Show the books folder in Explorer, Finder or the Linux file manager."""
+    d = books.folder()
     try:
-        os.startfile(books.folder())
+        if os.name == "nt":
+            os.startfile(d)
+        else:
+            opener = "open" if sys.platform == "darwin" else "xdg-open"
+            subprocess.Popen([opener, d], stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL)
     except OSError:
-        app.notice = f"couldn't open {books.folder()}"
+        app.notice = f"couldn't open {d}"
 
 
 def build_items(app, refresh):

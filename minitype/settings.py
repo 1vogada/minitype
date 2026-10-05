@@ -4,11 +4,12 @@ from .config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS,
                      CODE_LANGS, DIFFICULTIES,
                      FUNBOXES, GOALS, KEYBOARD_MODES, LAYOUTS, LOWKEY_MODES,
                      MEMORY_SECS, MIN_ACCS, MIN_WPMS, PACES, QUOTE_LENGTHS,
-                     QUOTE_SOURCES, SIDEBAR_TABS, STOP_MODES, THEME_NAMES,
-                     UI_STYLES)
+                     QUOTE_SOURCES, SIDEBAR_TABS, STOP_MODES, UI_STYLES)
+from .terminal.style import theme_names
 from .words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 
-# fields whose value must be one of a fixed set
+# fields whose value must be one of a set (a function when the set can
+# change while the app runs, like themes from themes.json)
 CHOICES = {
     "difficulty": DIFFICULTIES,
     "stop_on_error": STOP_MODES,
@@ -24,7 +25,7 @@ CHOICES = {
     "caret": CARETS,
     "keyboard": KEYBOARD_MODES,
     "layout": list(LAYOUTS),
-    "theme": THEME_NAMES,
+    "theme": theme_names,
     "lowkey": LOWKEY_MODES,
     "ui_style": UI_STYLES,
     "sidebar_tabs": SIDEBAR_TABS,
@@ -153,7 +154,10 @@ class Settings:
             v = d.get(f.name)
             if type(v) is not type(getattr(self, f.name)):
                 continue
-            if f.name in CHOICES and v not in CHOICES[f.name]:
+            allowed = CHOICES.get(f.name)
+            if callable(allowed):
+                allowed = allowed()
+            if allowed is not None and v not in allowed:
                 continue
             if f.name in ("time_amount", "word_amount") and not 0 < v <= 3600:
                 continue

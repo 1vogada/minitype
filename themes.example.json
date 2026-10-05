@@ -1,0 +1,20 @@
+{
+  "my theme": {
+    "dim": 240,
+    "text": 255,
+    "error": 203,
+    "extra": 131,
+    "accent": 81,
+    "good": 77,
+    "warn": 221
+  },
+  "true colour": {
+    "dim": "#5c6370",
+    "text": "#e6e6e6",
+    "error": "#ff6b6b",
+    "extra": "#a83a3a",
+    "accent": "#7ad7f0",
+    "good": "#8bd17c",
+    "warn": "#f5c26b"
+  }
+}
