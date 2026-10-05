@@ -1,15 +1,21 @@
 """ASCII art for the corner of the screen, one piece per theme.
 
 Every piece is plain ASCII so it draws the same in any terminal. Each comes
-in two sizes: a large, detailed one coloured from the theme's palette
+in several sizes, biggest first: the detailed ones (art_detailed.py, made
+by tools/make_art.py), some of which run across the whole bottom of the
+screen, then the "OG" ones: a large one coloured from the theme's palette
 (art_large.py) and the small one-colour one below (ART). The biggest that
-fits on screen is drawn. THEME_ART says which piece a built-in theme uses.
+fits on screen is drawn; the "art style" setting can leave the detailed
+ones out. THEME_ART says which piece a built-in theme uses.
 A theme in themes.json picks one with "art": a piece's name, or a list of
 its own lines; without "art" it uses its base theme's.
 """
 
 import re
+from functools import lru_cache
+from typing import NamedTuple
 
+from .art_detailed import DETAILED as _DETAILED
 from .art_large import LARGE as _LARGE
 
 
@@ -389,18 +395,60 @@ ART_NAMES = list(ART)
 LARGE = {name: (_art(text), colours) for name, (text, colours) in _LARGE.items()}
 
 PARTS = ("dim", "text", "error", "extra", "accent", "good", "warn")
+# the one-letter names art_detailed.py uses for them
+PART_LETTERS = dict(zip("dtexagw", PARTS))
+LETTER_OF = {part: letter for letter, part in PART_LETTERS.items()}
+
+ART_STYLES = ("detailed", "og")
 
 
-def resolve(value):
-    """A theme's "art" value as a list of versions, biggest first, each
-    (lines, colours): a name gives the large coloured picture and the small
-    one, a list of lines is a single version in the accent colour. None for
-    anything else (including "none")."""
+class Piece(NamedTuple):
+    """One size of a picture: its lines, a colour letter for every
+    character (" " for blanks), and for every row the column its focus
+    starts at. Text may cut into a row left of that, never past it. A
+    spanning piece can lose columns on its left to fit the screen."""
+    lines: tuple
+    parts: tuple
+    keep: tuple
+    span: bool = False
+
+
+def _unpack(span, size):
+    width, rows, keep = size
+    lines = tuple((" " * lead + text).ljust(width) for lead, text, _ in rows)
+    parts = tuple((" " * lead + colours).ljust(width) for lead, _, colours in rows)
+    return Piece(lines, parts, keep, span)
+
+
+@lru_cache(maxsize=None)
+def detailed(name):
+    """A picture's detailed sizes, biggest first ([] if it has none)."""
+    if name not in _DETAILED:
+        return []
+    span, sizes = _DETAILED[name]
+    return [_unpack(span, size) for size in sizes]
+
+
+def _og(lines, colours):
+    """An OG picture as a piece: all of it is focus."""
+    parts = tuple("".join(" " if ch == " " else LETTER_OF[part]
+                          for ch, part in zip(line, row))
+                  for line, row in zip(lines, _parts_of(lines, colours)))
+    return Piece(tuple(lines), parts, (0,) * len(lines))
+
+
+def resolve(value, style="detailed"):
+    """A theme's "art" value as a list of pieces, biggest first. A name
+    gives the detailed picture's sizes (unless style is "og") and then the
+    OG ones, large and coloured, then small; a list of lines is a single
+    piece in the accent colour. None for anything else (including "none")."""
     if isinstance(value, str) and value in ART:
-        small = (ART[value], {})
-        return [LARGE[value], small] if value in LARGE else [small]
+        pieces = list(detailed(value)) if style != "og" else []
+        if value in LARGE:
+            pieces.append(_og(*LARGE[value]))
+        return pieces + [_og(ART[value], {})]
     if isinstance(value, list) and value and all(isinstance(l, str) for l in value):
-        return [([l.rstrip() for l in value], {})]
+        return [_og([l.rstrip() for l in value], {})]
     return None
 
 
@@ -428,16 +476,37 @@ def _parts_of(lines, colours):
     return out
 
 
-def paint(lines, colours, palette, reset="\x1b[0m"):
-    """The picture as styled lines: palette maps each part (PARTS) to an
-    escape code. Runs of the same part share one code."""
-    styled = []
-    for line, parts in zip(lines, _parts_of(lines, colours)):
+class Picture:
+    """A piece painted in a theme's colours, ready for the screen."""
+
+    def __init__(self, piece, palette, reset):
+        self.lines, self.keep, self.span = piece.lines, piece.keep, piece.span
+        self.width = max(map(len, piece.lines), default=0)
+        self.height = len(piece.lines)
+        self._codes = [[palette.get(PART_LETTERS.get(p), "") for p in row]
+                       for row in piece.parts]
+        self._reset = reset
+
+    def row(self, r, start=0):
+        """Row r from column `start` on, styled; runs of one colour share
+        a code."""
         out, cur = [], None
-        for ch, part in zip(line, parts):
-            if ch != " " and part != cur:
-                out.append(reset + palette.get(part, ""))
-                cur = part
+        line, codes = self.lines[r], self._codes[r]
+        for c in range(start, len(line)):
+            ch = line[c]
+            if ch != " " and codes[c] != cur:
+                cur = codes[c]
+                out.append(self._reset + cur)
             out.append(ch)
-        styled.append("".join(out) + reset)
-    return styled
+        return "".join(out).rstrip() + self._reset
+
+
+@lru_cache(maxsize=64)
+def _paint(piece, palette, reset):
+    return Picture(piece, dict(palette), reset)
+
+
+def paint(piece, palette, reset="\x1b[0m"):
+    """The piece as a Picture: palette maps each part (PARTS) to an escape
+    code. The same piece and palette give the same Picture back."""
+    return _paint(piece, tuple(sorted(palette.items())), reset)

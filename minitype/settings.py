@@ -7,7 +7,7 @@ from .config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS,
                      QUOTE_SOURCES, SIDEBAR_TABS, STOP_MODES, UI_STYLES,
                      WORD_GAPS, FUN_BOUNCE, FUN_SWITCH, FUN_CARET,
                      EFFECT_SPEEDS, FLOW_DIRECTIONS, CORRECTED, TYPOS,
-                     BORDER_STYLES, ART_SCOPES)
+                     BORDER_STYLES, ART_SCOPES, ART_STYLES)
 from .terminal.style import theme_names
 from .words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 
@@ -30,6 +30,7 @@ CHOICES = {
     "corrected": CORRECTED,
     "border": BORDER_STYLES,
     "art": ART_SCOPES,
+    "art_style": ART_STYLES,
     "typos": TYPOS,
     "fun_bounce": FUN_BOUNCE,
     "fun_shake": FUN_SWITCH,
@@ -94,6 +95,7 @@ class Settings:
     accent_text: bool = False    # typed letters in the theme's accent colour
     border: str = "rounded"      # frame around the screen: off, ascii, line, rounded, double, heavy
     art: str = "menus"           # the theme's corner picture: off, menus, everywhere
+    art_style: str = "detailed"  # detailed / og (the original pictures)
     # a theme's effects, each of which can be switched off
     theme_background: bool = True
     theme_gradient: bool = True

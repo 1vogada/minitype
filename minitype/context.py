@@ -45,13 +45,13 @@ class App:
                     custom=custom)
         console.set_background(st.background)
         stealth = s.lowkey == "disguised"
-        versions = theme_art(s.theme) if art is None else art
+        versions = theme_art(s.theme, s.art_style) if art is None else art
         palette = st.art_palette()
         console.set_decor(
             border=None if stealth or s.border == "off" else s.border,
             border_style=st.title,
             art=None if stealth or s.art == "off" else
-            [paint_art(lines, colours, palette) for lines, colours in versions],
+            [paint_art(piece, palette) for piece in versions],
             art_scope=s.art)
         return st
 

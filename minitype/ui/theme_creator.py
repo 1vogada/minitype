@@ -346,7 +346,7 @@ def draw(app, d, menu):
     # the preview draws in the draft, which also gives the screen its background
     preview = theme_sample(app, built) if built else [f"  can't preview: {err}"]
     # last, so the screen's border colour and corner art are the draft's
-    st = app.styles(built, art=art_of_spec(d.spec)) if built else app.styles()
+    st = app.styles(built, art=art_of_spec(d.spec, app.settings.art_style)) if built else app.styles()
     lines = title_lines(app, st, f"theme creator - {d.name}")
     lines += ["  " + ln for ln in preview]
     strip = "  " + " ".join(f"{code}{SWATCH}{RESET}"

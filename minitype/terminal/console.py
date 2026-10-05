@@ -169,22 +169,39 @@ def present(lines, focus=None, pinned=(), scene="menu"):
 
 def overlay_art(rows, versions, width, pinned_n):
     """Put the art in the bottom-right corner, above any pinned lines with
-    a row to spare. `versions` are the picture's sizes, biggest first, as
-    styled lines; the first that fits without touching any text is drawn,
-    and if none does the frame is left without art rather than covered."""
+    a row to spare. `versions` are the picture's sizes, biggest first (art
+    Pictures); the first whose focus fits without touching any text, in
+    the right two-thirds of the screen, is drawn. A spanning picture loses
+    what doesn't fit on its left, and the background part of a row steps
+    back from text rather than cover it. If none fits the frame is left
+    without art."""
     bottom = len(rows) - pinned_n - (2 if pinned_n else 1)
-    for art in versions:
-        art_w, art_h = max(visible_len(l) for l in art), len(art)
-        top = bottom - art_h + 1
-        col = width - art_w - 1
-        if top < 1 or col < width // 3:
+    avail = width - 1
+    for pic in versions:
+        w = min(pic.width, avail) if pic.span else pic.width
+        skip = pic.width - w                 # columns cut off the left
+        top, col = bottom - pic.height + 1, avail - w
+        if top < 1 or col < 0:
             continue
-        if any(visible_len(rows[top + k]) > col - 2 for k in range(art_h)):
+        ends = [visible_len(rows[top + k]) for k in range(pic.height)]
+        starts = [col + pic.keep[k] - skip for k in range(pic.height)
+                  if pic.keep[k] < pic.width]
+        if not starts or min(starts) < width // 3 or any(
+                pic.keep[k] < pic.width and col + pic.keep[k] - skip < ends[k] + 2
+                for k in range(pic.height)):
             continue
+        # the background only runs the full width below the last text;
+        # beside text it keeps to the picture's own box
+        box = min(starts) - col
+        last_text = max((k for k in range(pic.height) if ends[k]), default=-1)
         rows = list(rows)
-        for k, line in enumerate(art):
+        for k in range(pic.height):
+            start = max(0, ends[k] + 2 - col, box if k <= last_text else 0)
+            if start >= w:
+                continue
             r = rows[top + k]
-            rows[top + k] = r + RESET + " " * (col - visible_len(r)) + line + RESET
+            rows[top + k] = (r + RESET + " " * (col + start - ends[k])
+                             + pic.row(k, skip + start))
         return rows
     return rows
 
@@ -205,7 +222,7 @@ def frame(rows, chars, style, inner):
 def set_decor(border=None, border_style="", art=None, art_scope="menus"):
     """The theme's frame and corner art for present(): border is a BORDERS
     key or None; art the picture's sizes, biggest first, each a list of
-    styled lines, or None; art_scope "menus" or "everywhere"."""
+    Pictures (see art.py), or None; art_scope "menus" or "everywhere"."""
     _decor.update(border=BORDERS.get(border), border_style=border_style,
                   art=art or None, art_scope=art_scope)
 

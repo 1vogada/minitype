@@ -512,26 +512,25 @@ def theme_names():
     return names + ["mono"] + list(custom_themes())
 
 
-def art_of_spec(spec, seen=()):
+def art_of_spec(spec, art_style="detailed", seen=()):
     """The corner art a theme spec asks for: its own "art", or its base
-    theme's when it doesn't say. A list of (lines, colours) versions,
-    biggest first; [] for none."""
+    theme's when it doesn't say. A list of art pieces, biggest first; []
+    for none. art_style "og" leaves the detailed pictures out."""
     art = spec.get("art")
     if art == "none":
         return []
     if art is not None:
-        return resolve_art(art) or []
-    return theme_art(spec.get("base", "default"), seen)
+        return resolve_art(art, art_style) or []
+    return theme_art(spec.get("base", "default"), art_style, seen)
 
 
-def theme_art(name, seen=()):
-    """A theme's corner art as (lines, colours) versions, biggest first;
-    [] for none."""
+def theme_art(name, art_style="detailed", seen=()):
+    """A theme's corner art as pieces, biggest first; [] for none."""
     if name in seen:
         return []                      # a base loop in themes.json
     if name in custom_specs():
-        return art_of_spec(custom_specs()[name], seen + (name,))
-    return resolve_art(THEME_ART.get(name)) or []
+        return art_of_spec(custom_specs()[name], art_style, seen + (name,))
+    return resolve_art(THEME_ART.get(name), art_style) or []
 
 
 def _with_modifiers(effects, settings):

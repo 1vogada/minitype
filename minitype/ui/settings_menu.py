@@ -15,7 +15,7 @@ from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICU
                       SIDEBAR_TABS, STOP_MODES, UI_STYLES, WORD_GAPS,
                       FUN_BOUNCE, FUN_SWITCH, FUN_CARET, EFFECT_SPEEDS,
                       FLOW_DIRECTIONS, CORRECTED, TYPOS, BORDER_STYLES,
-                      ART_SCOPES)
+                      ART_SCOPES, ART_STYLES)
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import storage
 from ..terminal import console, keys
@@ -346,6 +346,12 @@ def build_items(app):
                  help=follows + "letters further ahead flicker into symbols "
                       "now and then (never the next few)",
                  tags=fun_tags + ("glitch", "flicker")),
+        b.choice("art style", "art_style", ART_STYLES,
+                 help="the theme's corner picture: detailed (shaded, and some "
+                      "run across the whole bottom) or og (the original, "
+                      "simpler ones)",
+                 tags=fun_tags + ("art", "picture", "ascii", "og", "classic",
+                                  "detailed", "decoration")),
         b.choice("effect speed", "effect_speed", EFFECT_SPEEDS,
                  lambda: f"{s.effect_speed:g}x",
                  help="how fast gradients flow and the fun modifiers move",
