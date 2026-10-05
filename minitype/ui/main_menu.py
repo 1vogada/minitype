@@ -60,7 +60,7 @@ def _mode(key, label, value, seq, attr, start, s, help):
     def step(d):
         return lambda: setattr(s, attr, cycle(seq, getattr(s, attr), step=d))
     return Item(key, label, step(1), value, back=step(-1), enter=start,
-                help=help, section="test")
+                help=help, section="gamemode")
 
 
 def build_items(app):
@@ -86,7 +86,7 @@ def build_items(app):
               s, "type a real quote; choose built-in or online quotes in settings"),
         Item("4", "zen", lambda: TestSpec("zen", "zen", 0, "zen"),
              help="no target text, type whatever you like; enter finishes",
-             section="test"),
+             section="gamemode"),
         _mode("5", "code", lambda: s.code_lang, CODE_LANGS, "code_lang",
               lambda: TestSpec(f"code {s.code_lang}", "words", 0, "code"),
               s, "type a code snippet: symbols, brackets and keywords"),
@@ -94,15 +94,15 @@ def build_items(app):
              lambda: _book_count(),
              help="type through a .txt book from the books folder, a page "
                   "at a time; skip pages whenever you like",
-             section="test"),
+             section="gamemode"),
         _mode("6", "numbers", lambda: f"{s.word_amount}", WORD_COUNTS, "word_amount",
               lambda: TestSpec(f"{s.word_amount} numbers", "words",
                                s.word_amount, "numbers"),
               s, "numbers only"),
         Item("7", "custom length", ask_length,
-             help="any number of words, or any time like 45s", section="test"),
+             help="any number of words, or any time like 45s", section="gamemode"),
         Item("8", "custom text", ask_text,
-             help="paste text or give a file path", section="test"),
+             help="paste text or give a file path", section="gamemode"),
 
         Item("9", "learn", lambda: learn_menu(app),
              help="keybr-style lessons that unlock letters as you get faster",

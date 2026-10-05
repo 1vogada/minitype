@@ -295,6 +295,8 @@ def search_keys(menu, key):
         if q:
             menu.set_query("")
             return True, None
+        if menu.back_out():                 # two columns: rows -> sections
+            return True, None
         return True, BACK
     return False, None
 

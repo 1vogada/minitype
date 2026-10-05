@@ -24,9 +24,9 @@ minitype
   value, tab / shift-tab (or `[` `]`, PgUp / PgDn) jump between sections,
   esc goes back. Rows with a hotkey show it beside the label. Shift+enter
   steps a value backwards.
-- **sidebar with section buttons on the left**: left / right move between
-  the buttons and the rows. On the buttons, up / down pick a section and
-  right or enter steps into it; on a row, right changes the value.
+- **sidebar with section buttons on the left**: you start on the buttons.
+  Up / down pick a section, enter steps into its rows, esc steps back out
+  (and esc on the buttons leaves). Left / right only ever change values.
 - **settings**: just start typing to filter; only settings whose name
   contains what you typed stay. Start a word with `#` to search tags and
   sections instead (`#colour`, `#mistakes`, `#look`). The search bar shows

@@ -10,9 +10,10 @@ into actions:
     right / left     step an item's value forward / back; on a row with no
                      value, switch section when one section shows at a time
     shift-enter      step the value back, in every style
-    two columns      (sidebar with section buttons on the left) left / right
-                     move between the buttons and the rows; right on a row
-                     changes its value, as there's nowhere further right
+    two columns      (sidebar with section buttons on the left) you start on
+                     the buttons: up / down pick a section, enter steps into
+                     its rows, esc steps back out. Left / right only ever
+                     change values
     tab / shift-tab  next / previous section, in every style
     [ ] pgup pgdn    the same
     hotkey           jump to that item and activate it
@@ -126,9 +127,11 @@ class Menu:
     def nav_hint(self):
         """The movement keys, for the hint line; they depend on the layout."""
         if self.columns:
-            return ("arrows move   left/right column   right change   "
-                    "shift-enter back")
-        return "arrows move   left/right change   shift-enter back"
+            if self.on_sections:
+                return "up/down section   enter open"
+            return ("arrows move   left/right change   shift-enter step back   "
+                    "esc sections")
+        return "arrows move   left/right change   shift-enter step back"
 
     @property
     def selected(self):
@@ -204,27 +207,36 @@ class Menu:
         """Keys that mean something different in the two-column layout.
         Returns None for keys that work the same as anywhere else.
 
-        On the section buttons: up/down pick a section, right or enter
-        steps into its rows. On the rows: left steps back to the
-        sections, and right, with nowhere further right to go, changes
-        the value."""
+        Left and right never move between the columns; they only change
+        values. On the section buttons, up/down pick a section and enter
+        steps into its rows (esc steps back out, see back_out). On the
+        rows, left/right change the value and do nothing on rows that
+        have none."""
         if self.on_sections:
             if key in (keys.UP, keys.DOWN):
                 if sections:
                     self._switch_tab(-1 if key == keys.UP else 1)
                 return True, None
-            if key in (keys.RIGHT, keys.ENTER, keys.SHIFT_ENTER):
+            if key in (keys.ENTER, keys.SHIFT_ENTER):
                 self.on_sections = False
                 return True, None
-            if key == keys.LEFT:
+            if key in (keys.LEFT, keys.RIGHT):
                 return True, None
             return None
-        if key == keys.LEFT:
-            self.on_sections = True
-            return True, None
         if key == keys.RIGHT:
             return True, (item.action() if item.value is not None else None)
+        if key == keys.LEFT:
+            return True, (item.back() if item.back is not None else None)
         return None
+
+    def back_out(self):
+        """Esc in the rows of the two-column layout steps back to the
+        section buttons. Returns True if it did, False if esc should do
+        what it does anywhere else (leave the menu)."""
+        if self.columns and not self.on_sections:
+            self.on_sections = True
+            return True
+        return False
 
     # ---------------------------------------------------------------- drawing
 
