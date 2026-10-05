@@ -46,7 +46,7 @@ class App:
         console.set_background(st.background)
         stealth = s.lowkey == "disguised"
         versions = theme_art(s.theme, s.art_style) if art is None else art
-        palette = st.art_palette()
+        palette = st.art_palette(shaded=s.art_colours == "shaded")
         console.set_decor(
             border=None if stealth or s.border == "off" else s.border,
             border_style=st.title,

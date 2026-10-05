@@ -283,16 +283,18 @@ class Line:
     """A path drawn one character wide, the glyph following its direction
     (or always `char`)."""
 
-    def __init__(self, points, part="a", char=None, focus=True):
+    def __init__(self, points, part="a", char=None, focus=True, tone=0.7):
         self.points, self.part, self.char, self.focus = points, part, char, focus
+        self.tone = tone
 
 
 class Stamp:
     """Exact text at a point: stars, sparkles, letters. part is one colour
     letter, or one per character; blanks in text leave what's under them."""
 
-    def __init__(self, x, y, text, part="a", focus=True):
+    def __init__(self, x, y, text, part="a", focus=True, tone=0.75):
         self.x, self.y, self.text, self.part, self.focus = x, y, text, part, focus
+        self.tone = tone
 
     def part_at(self, k):
         """The colour of character k; a short colour string carries its
@@ -349,12 +351,14 @@ def scatter(x0, y0, x1, y1, n, chars, part, seed=1, focus=False):
 
 
 class Scene:
-    """aspect is the box's width (its height is 1); parts its layers,
-    lines and stamps, bottom first, or a function giving them for a height
-    in rows (for text that can't scale); sizes the heights it's made at."""
+    """aspect is the box's width (its height is 1), or a function giving
+    it for a height in rows; parts its layers, lines and stamps, bottom
+    first, or a function giving them for a height (for text that can't
+    scale); sizes the heights it's made at."""
 
-    def __init__(self, aspect, parts, span=False, sizes=(20, 14, 10)):
-        self.aspect, self.span, self.sizes = aspect, span, sizes
+    def __init__(self, aspect, parts, span=False, sizes=(26, 20, 14, 10)):
+        self.span, self.sizes = span, sizes
+        self.aspect_of = aspect if callable(aspect) else (lambda rows: aspect)
         self.parts_of = parts if callable(parts) else (lambda rows: parts)
 
 
@@ -374,13 +378,15 @@ def _glyph_of(dx, dy):
 
 
 def render(scene, rows):
-    """The scene `rows` tall: (lines, parts, keep), where keep[r] is the
-    first column in row r that belongs to the focus (len(line) if none)."""
+    """The scene `rows` tall: (lines, parts, tones, keep). tones has a digit
+    0-9 for how light each character is; keep[r] is the first column in
+    row r that belongs to the focus (len(line) if none)."""
     unit = 1.0 / rows                       # a cell is unit tall, unit/2 wide
     cw = unit / 2
-    box_cols = max(1, round(scene.aspect / cw))
+    aspect = scene.aspect_of(rows)
+    box_cols = max(1, round(aspect / cw))
     cols = max(box_cols, SPAN_COLS) if scene.span else box_cols
-    x_left = scene.aspect - cols * cw
+    x_left = aspect - cols * cw
 
     def col_range(x0, x1):
         return (max(0, int((x0 - x_left) / cw) - 1), min(cols, int((x1 - x_left) / cw) + 2))
@@ -413,6 +419,10 @@ def render(scene, rows):
     chars = [[" "] * cols for _ in range(rows)]
     parts = [[" "] * cols for _ in range(rows)]
     focus = [[False] * cols for _ in range(rows)]
+    tones = [[" "] * cols for _ in range(rows)]
+
+    def digit(t):
+        return str(min(9, max(0, int(t * 10))))
     zof = [[-1] * cols for _ in range(rows)]
     for r in range(rows):
         for c in range(cols):
@@ -446,6 +456,7 @@ def render(scene, rows):
                 continue
             chars[r][c] = ch
             parts[r][c] = part
+            tones[r][c] = digit(tone)
             focus[r][c] = layer.focus
             zof[r][c] = order[id(layer)]
 
@@ -460,7 +471,7 @@ def render(scene, rows):
                     t = s / steps
                     c, r = int(ax + (bx - ax) * t), int(ay + (by - ay) * t)
                     if 0 <= r < rows and 0 <= c < cols and z > zof[r][c]:
-                        chars[r][c], parts[r][c] = g, p.part
+                        chars[r][c], parts[r][c], tones[r][c] = g, p.part, digit(p.tone)
                         focus[r][c], zof[r][c] = p.focus, z
         elif isinstance(p, Stamp):
             c0, r = int((p.x - x_left) / cw), int(p.y / unit)
@@ -468,20 +479,23 @@ def render(scene, rows):
                 c = c0 + k
                 if 0 <= r < rows and 0 <= c < cols and ch != " " and z > zof[r][c]:
                     chars[r][c], parts[r][c] = ch, p.part_at(k).strip() or "a"
+                    tones[r][c] = digit(p.tone)
                     focus[r][c], zof[r][c] = p.focus, z
 
     lines = ["".join(row) for row in chars]
     pparts = ["".join(row) for row in parts]
+    ptones = ["".join(row) for row in tones]
     # trim: empty rows on top, empty columns on the right (and the left,
     # unless the scene spans)
     while lines and not lines[0].strip():
-        lines.pop(0), pparts.pop(0), focus.pop(0)
+        lines.pop(0), pparts.pop(0), ptones.pop(0), focus.pop(0)
     used = [c for c in range(cols) if any(l[c] != " " for l in lines)]
     right = max(used) + 1 if used else 0
     left = 0 if scene.span else (min(used) if used else 0)
     lines = [l[left:right] for l in lines]
     pparts = [p[left:right] for p in pparts]
+    ptones = [t[left:right] for t in ptones]
     focus = [f[left:right] for f in focus]
     width = right - left
     keep = tuple(next((c for c in range(width) if f[c]), width) for f in focus)
-    return tuple(lines), tuple(pparts), keep
+    return tuple(lines), tuple(pparts), tuple(ptones), keep

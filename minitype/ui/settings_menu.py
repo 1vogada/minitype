@@ -15,7 +15,7 @@ from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICU
                       SIDEBAR_TABS, STOP_MODES, UI_STYLES, WORD_GAPS,
                       FUN_BOUNCE, FUN_SWITCH, FUN_CARET, EFFECT_SPEEDS,
                       FLOW_DIRECTIONS, CORRECTED, TYPOS, BORDER_STYLES,
-                      ART_SCOPES, ART_STYLES)
+                      ART_SCOPES, ART_STYLES, ART_COLOURS)
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import storage
 from ..terminal import console, keys
@@ -352,6 +352,13 @@ def build_items(app):
                       "simpler ones)",
                  tags=fun_tags + ("art", "picture", "ascii", "og", "classic",
                                   "detailed", "decoration")),
+        b.choice("art colours", "art_colours", ART_COLOURS,
+                 help="shaded: the picture in softer shades and hues of the "
+                      "theme's colours, darker and cooler in shadow, lighter "
+                      "and warmer in the light. flat: the theme's colours as "
+                      "they are",
+                 tags=fun_tags + ("art", "picture", "colours", "colors", "shades",
+                                  "hues", "soft", "flat")),
         b.choice("effect speed", "effect_speed", EFFECT_SPEEDS,
                  lambda: f"{s.effect_speed:g}x",
                  help="how fast gradients flow and the fun modifiers move",

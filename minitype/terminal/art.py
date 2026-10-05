@@ -402,22 +402,36 @@ LETTER_OF = {part: letter for letter, part in PART_LETTERS.items()}
 ART_STYLES = ("detailed", "og")
 
 
+# art_detailed.py stores a character's colour letter and tone (0-9, how
+# light it is) as one code: CODES[letter's index * 10 + tone]
+CODES = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&()*+"
+OG_TONE = "6"                 # the plain colour when shading
+
+
 class Piece(NamedTuple):
     """One size of a picture: its lines, a colour letter for every
-    character (" " for blanks), and for every row the column its focus
-    starts at. Text may cut into a row left of that, never past it. A
-    spanning piece can lose columns on its left to fit the screen."""
+    character (" " for blanks), a tone digit for every character (how
+    light it is, for shaded colours), and for every row the column its
+    focus starts at. Text may cut into a row left of that, never past it.
+    A spanning piece can lose columns on its left to fit the screen."""
     lines: tuple
     parts: tuple
+    tones: tuple
     keep: tuple
     span: bool = False
 
 
 def _unpack(span, size):
     width, rows, keep = size
-    lines = tuple((" " * lead + text).ljust(width) for lead, text, _ in rows)
-    parts = tuple((" " * lead + colours).ljust(width) for lead, _, colours in rows)
-    return Piece(lines, parts, keep, span)
+    lines, parts, tones = [], [], []
+    for lead, text, codes in rows:
+        lines.append((" " * lead + text).ljust(width))
+        idx = [None if c == " " else CODES.index(c) for c in codes]
+        parts.append((" " * lead + "".join(" " if i is None else "dtexagw"[i // 10]
+                                           for i in idx)).ljust(width))
+        tones.append((" " * lead + "".join(" " if i is None else str(i % 10)
+                                           for i in idx)).ljust(width))
+    return Piece(tuple(lines), tuple(parts), tuple(tones), keep, span)
 
 
 @lru_cache(maxsize=None)
@@ -434,7 +448,8 @@ def _og(lines, colours):
     parts = tuple("".join(" " if ch == " " else LETTER_OF[part]
                           for ch, part in zip(line, row))
                   for line, row in zip(lines, _parts_of(lines, colours)))
-    return Piece(tuple(lines), parts, (0,) * len(lines))
+    tones = tuple("".join(" " if c == " " else OG_TONE for c in p) for p in parts)
+    return Piece(tuple(lines), parts, tones, (0,) * len(lines))
 
 
 def resolve(value, style="detailed"):
@@ -483,8 +498,13 @@ class Picture:
         self.lines, self.keep, self.span = piece.lines, piece.keep, piece.span
         self.width = max(map(len, piece.lines), default=0)
         self.height = len(piece.lines)
-        self._codes = [[palette.get(PART_LETTERS.get(p), "") for p in row]
-                       for row in piece.parts]
+        self._codes = []
+        for parts, tones in zip(piece.parts, piece.tones):
+            row = []
+            for p, t in zip(parts, tones):
+                part = PART_LETTERS.get(p)
+                row.append(palette.get((part, t)) or palette.get(part, ""))
+            self._codes.append(row)
         self._reset = reset
 
     def row(self, r, start=0):
@@ -508,5 +528,6 @@ def _paint(piece, palette, reset):
 
 def paint(piece, palette, reset="\x1b[0m"):
     """The piece as a Picture: palette maps each part (PARTS) to an escape
-    code. The same piece and palette give the same Picture back."""
-    return _paint(piece, tuple(sorted(palette.items())), reset)
+    code, and for shaded colours (part, tone digit) to one per tone. The
+    same piece and palette give the same Picture back."""
+    return _paint(piece, tuple(palette.items()), reset)

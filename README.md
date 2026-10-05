@@ -173,11 +173,12 @@ Skipping pages:
 - **theme art**: a detailed, shaded ASCII picture that fits the theme in
   the bottom-right corner (a palm island at sunset for ocean, a bat over
   a castle under the moon for dracula, a campfire for ember, a neon grid
-  for synthwave, ...), painted in several of the theme's colours: off,
-  menus (default, not on the typing screen) or everywhere. Many of them
-  run across the whole bottom of the screen (the sea, a forest, a
-  mountain range, the grid) while the picture itself stays in the corner.
-  Each comes in several sizes and the biggest that fits is drawn. It
+  for synthwave, ...), painted in shades of the theme's colours: off,
+  menus (default, not on the typing screen) or everywhere. Every one runs
+  across the whole bottom of the screen (the sea, a forest, a mountain
+  range, the grid, a city, a desk) while the picture itself stays in the
+  corner. Each comes in four sizes, 10 to 26 rows tall, and the biggest
+  that fits is drawn. It
   never covers text: the background steps around it, and if the picture
   itself doesn't fit, a smaller one is used. Lowkey disguised hides it
   along with the border
@@ -193,6 +194,9 @@ Skipping pages:
   - **glitch**: letters further ahead flicker into symbols now and then
   - **effect speed** (0.25x-4x) and **flow direction** for gradients
   - **art style**: *detailed* or *og*, the original, simpler pictures
+  - **art colours**: *shaded* (softer shades and hues of the theme's
+    colours: darker and cooler in shadow, lighter and warmer in the
+    light) or *flat* (the theme's colours as they are)
   Each follows the theme by default ("theme") or can be forced on or off.
   The party, glitch and bubbly themes come with modifiers switched on
 - **theme creator** (settings → look): build a theme from scratch or from
@@ -272,7 +276,8 @@ you switch back.
 The detailed pictures in `minitype/terminal/art_detailed.py` are made by
 `python tools/make_art.py` from the scenes in `tools/art_scenes.py`:
 shapes, lines and text drawn by a small rasteriser (`tools/artgen.py`)
-that picks each character by how its cell is covered and shaded. Edit a
+that picks each character by how its cell is covered and shaded, and
+records how light each one is for the shaded colours. Edit a
 scene and run `python tools/make_art.py <name>` to rebuild just that one,
 or `--show <name>` to print it.
 

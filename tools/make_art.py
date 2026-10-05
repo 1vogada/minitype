@@ -23,23 +23,30 @@ in tools/art_scenes.py - edit those and rebuild rather than this file.
 DETAILED maps a picture's name to (span, sizes): span says whether its
 background runs across the whole bottom of the screen, and each size,
 biggest first, is (width, rows, keep). Each row is (indent, characters,
-colours): colours has a letter for every character (d t e x a g w, see
-art.PART_LETTERS). keep is where each row's focus starts: text may cut
-into a row left of it, never right of it.
+codes): a code for every character, its colour and how light it is (see
+art.CODES). keep is where each row's focus starts: text may cut into a
+row left of it, never right of it.
 """
 
 DETAILED = {
 '''
 
 
-def pack(lines, parts, keep):
-    """(width, rows, keep), each row (indent, characters, colours)."""
+# a cell's colour letter and tone digit as one character: 7 x 10 codes
+CODES = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%&()*+"
+LETTERS = "dtexagw"
+
+
+def pack(lines, parts, tones, keep):
+    """(width, rows, keep), each row (indent, characters, codes)."""
     width = max(map(len, lines), default=0)
     rows = []
-    for l, p in zip(lines, parts):
+    for l, p, t in zip(lines, parts, tones):
         text = l.rstrip()
         lead = len(text) - len(text.lstrip())
-        rows.append((lead, text[lead:], p[lead:len(text)]))
+        codes = "".join(" " if ch == " " else CODES[LETTERS.index(pc) * 10 + int(tc)]
+                        for ch, pc, tc in zip(text[lead:], p[lead:], t[lead:]))
+        rows.append((lead, text[lead:], codes))
     return width, tuple(rows), keep
 
 
@@ -78,7 +85,7 @@ def main(args):
     if args and args[0] == "--show":
         for name in args[1:]:
             for rows in SCENES[name].sizes:
-                lines, _, _ = artgen.render(SCENES[name], rows)
+                lines = artgen.render(SCENES[name], rows)[0]
                 print(f"===== {name} {rows}")
                 print("\n".join(l[-120:] for l in lines))
         return

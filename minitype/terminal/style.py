@@ -28,8 +28,10 @@ changes. Colours are 256-colour numbers (0-255) or "#rrggbb".
 rounded to the nearest of the 256 colours elsewhere (macOS Terminal).
 """
 
+import colorsys
 import json
 import os
+import re
 from dataclasses import dataclass, replace
 
 from .. import storage
@@ -106,6 +108,61 @@ def rgb_of_256(n):
     n -= 16
     levels = (0, 95, 135, 175, 215, 255)
     return (levels[n // 36], levels[n // 6 % 6], levels[n % 6])
+
+
+def rgb_of_code(code, layer=38):
+    """The RGB an escape code sets for text (layer 38) or background (48),
+    None if it sets none."""
+    for m in re.finditer(r"\x1b\[([0-9;]*)m", code or ""):
+        nums = [int(n) for n in m.group(1).split(";") if n]
+        i = 0
+        while i < len(nums):
+            n = nums[i]
+            if n == layer and nums[i + 1:i + 2] == [2]:
+                return tuple(nums[i + 2:i + 5])
+            if n == layer and nums[i + 1:i + 2] == [5]:
+                return rgb_of_256(nums[i + 2])
+            if layer == 38 and (30 <= n <= 37 or 90 <= n <= 97):
+                return rgb_of_256(n - 30 if n < 90 else n - 82)
+            if layer == 48 and (40 <= n <= 47 or 100 <= n <= 107):
+                return rgb_of_256(n - 40 if n < 100 else n - 92)
+            i += 1
+    return None
+
+
+def luminance(c):
+    return (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) / 255
+
+
+ART_BASE_TONE = 0.65       # the tone at which a shade is the theme colour itself
+
+
+def shade(base, tone, ground):
+    """A softer shade of a theme colour for corner art, by tone (0 dark to
+    1 light): darker tones sink towards the background and lean cooler,
+    lighter ones lift towards white and lean warmer, and everything is a
+    little less saturated than the theme colour itself."""
+    r, g, b = (v / 255 for v in base)
+    h, l, s = colorsys.rgb_to_hls(r, g, b)
+    s *= 0.85
+    d = tone - ART_BASE_TONE
+    if d < 0:
+        k = -d / ART_BASE_TONE                  # 0..1 into the shadow
+        h = _towards(h, 0.62, 0.07 * k)        # blue-ish
+        r, g, b = colorsys.hls_to_rgb(h, l, s * (1 - 0.25 * k))
+        mix, target = 0.62 * k, ground
+    else:
+        k = d / (1 - ART_BASE_TONE)             # 0..1 into the light
+        h = _towards(h, 0.13, 0.05 * k)        # gold-ish
+        r, g, b = colorsys.hls_to_rgb(h, l, s)
+        mix, target = 0.35 * k, (255, 252, 240)
+    return tuple(round(v * 255 * (1 - mix) + t * mix) for v, t in zip((r, g, b), target))
+
+
+def _towards(h, target, amount):
+    """Hue h turned up to `amount` of a full turn towards target hue."""
+    d = (target - h + 0.5) % 1.0 - 0.5
+    return (h + max(-amount, min(amount, d))) % 1.0
 
 
 def parse_colour(v):
@@ -611,14 +668,31 @@ class Styles:
         return bool((e.gradient and e.flow) or e.bounce != "off" or e.glitch
                     or e.caret_fx != "off" or e.shake)
 
-    def art_palette(self):
+    def art_palette(self, shaded=False):
         """The theme's colours by name, for painting corner art. A theme
-        without a colour for a part (mono) falls back to the accent."""
-        return {"dim": self.dim, "text": self.ok or self.title,
+        without a colour for a part (mono) falls back to the accent. With
+        shaded, each part also gets ten tones, (part, "0") to (part, "9"):
+        softer shades and hues of it, see shade()."""
+        flat = {"dim": self.dim, "text": self.ok or self.title,
                 "error": self.bad if not self.quiet else self.title,
                 "extra": self.extra if not self.quiet else self.dim,
                 "accent": self.title, "good": self.good or self.title,
                 "warn": self.warn or self.title}
+        if not shaded:
+            return flat
+        ground = rgb_of_code(self.background, 48)
+        if ground is None:
+            # no theme background: guess the terminal's from the text colour
+            text = rgb_of_code(flat["text"]) or (200, 200, 200)
+            ground = (250, 250, 248) if luminance(text) < 0.35 else (18, 18, 22)
+        out = dict(flat)
+        for part, code in flat.items():
+            base = rgb_of_code(code)
+            if base is None:
+                continue
+            for t in range(10):
+                out[(part, str(t))] = _code(shade(base, t / 9, ground), 38)
+        return out
 
     def caret_colour(self, now):
         """The rainbow caret's colour at this moment."""
