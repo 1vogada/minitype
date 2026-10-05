@@ -11,9 +11,9 @@ into actions:
                      value, switch section when one section shows at a time
     shift-enter      step the value back, in every style
     two columns      (sidebar with section buttons on the left) you start on
-                     the buttons: up / down pick a section, enter steps into
-                     its rows, esc steps back out. Left / right only ever
-                     change values
+                     the buttons: up / down pick a section, enter or right
+                     steps into its rows, esc steps back out. In the rows
+                     left / right only change values
     tab / shift-tab  next / previous section, in every style
     [ ] pgup pgdn    the same
     hotkey           jump to that item and activate it
@@ -128,7 +128,7 @@ class Menu:
         """The movement keys, for the hint line; they depend on the layout."""
         if self.columns:
             if self.on_sections:
-                return "up/down section   enter open"
+                return "up/down section   enter/right open"
             return ("arrows move   left/right change   shift-enter step back   "
                     "esc sections")
         return "arrows move   left/right change   shift-enter step back"
@@ -207,20 +207,19 @@ class Menu:
         """Keys that mean something different in the two-column layout.
         Returns None for keys that work the same as anywhere else.
 
-        Left and right never move between the columns; they only change
-        values. On the section buttons, up/down pick a section and enter
+        On the section buttons, up/down pick a section and enter or right
         steps into its rows (esc steps back out, see back_out). On the
-        rows, left/right change the value and do nothing on rows that
-        have none."""
+        rows, left/right only change the value, and do nothing on rows
+        that have none."""
         if self.on_sections:
             if key in (keys.UP, keys.DOWN):
                 if sections:
                     self._switch_tab(-1 if key == keys.UP else 1)
                 return True, None
-            if key in (keys.ENTER, keys.SHIFT_ENTER):
+            if key in (keys.ENTER, keys.SHIFT_ENTER, keys.RIGHT):
                 self.on_sections = False
                 return True, None
-            if key in (keys.LEFT, keys.RIGHT):
+            if key == keys.LEFT:
                 return True, None
             return None
         if key == keys.RIGHT:
