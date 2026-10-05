@@ -386,53 +386,83 @@ def _glyph_of(dx, dy):
     return "\\"
 
 
+class _Grid:
+    """A scene sampled at some height: which layer covers each of the 4x4
+    samples in every cell, and where cells are in scene coordinates."""
+
+    def __init__(self, scene, rows):
+        self.rows = rows
+        self.unit = unit = 1.0 / rows             # a cell is unit tall, unit/2 wide
+        self.cw = cw = unit / 2
+        aspect = scene.aspect_of(rows)
+        box_cols = max(1, round(aspect / cw))
+        self.cols = cols = max(box_cols, SPAN_COLS) if scene.span else box_cols
+        self.x_left = x_left = aspect - cols * cw
+        self.items = scene.parts_of(rows)
+        self.layers = [p for p in self.items if isinstance(p, Layer)]
+        self.order = {id(p): z for z, p in enumerate(self.items)}
+        self.owner = owner = [None] * (rows * cols)   # per cell: SUB*SUB layer ids
+        for li, layer in enumerate(self.layers):
+            x0, y0, x1, y1 = layer.shape.box
+            c0 = max(0, int((x0 - x_left) / cw) - 1)
+            c1 = min(cols, int((x1 - x_left) / cw) + 2)
+            r0, r1 = max(0, int(y0 / unit) - 1), min(rows, int(y1 / unit) + 2)
+            test = layer.shape.test
+            for r in range(r0, r1):
+                for c in range(c0, c1):
+                    cell = owner[r * cols + c]
+                    for j in range(SUB):
+                        y = (r + (j + 0.5) / SUB) * unit
+                        for i in range(SUB):
+                            x = x_left + (c + (i + 0.5) / SUB) * cw
+                            if test(x, y):
+                                if cell is None:
+                                    cell = owner[r * cols + c] = [None] * (SUB * SUB)
+                                cell[j * SUB + i] = li
+
+    def at(self, c, r, fx=0.5, fy=0.5):
+        """Scene coordinates of a point in cell (c, r)."""
+        return self.x_left + (c + fx) * self.cw, (r + fy) * self.unit
+
+
+def _digit(t):
+    return str(min(9, max(0, int(t * 10))))
+
+
+def _trim(scene, grids, focus):
+    """Drop empty rows on top and empty columns on the right (and the
+    left, unless the scene spans) from equal-sized grids of strings; the
+    first grid holds the characters. Returns the trimmed grids and keep."""
+    lines = grids[0]
+    top = 0
+    while top < len(lines) and not "".join(lines[top]).strip():
+        top += 1
+    grids = [[row for row in g[top:]] for g in grids]
+    focus = focus[top:]
+    lines = grids[0]
+    cols = len(lines[0]) if lines else 0
+    used = [c for c in range(cols) if any(l[c] != " " for l in lines)]
+    right = max(used) + 1 if used else 0
+    left = 0 if scene.span else (min(used) if used else 0)
+    out = [tuple("".join(row[left:right]) for row in g) for g in grids]
+    focus = [f[left:right] for f in focus]
+    width = right - left
+    keep = tuple(next((c for c in range(width) if f[c]), width) for f in focus)
+    return out, keep
+
+
 def render(scene, rows):
-    """The scene `rows` tall: (lines, parts, tones, keep). tones has a digit
-    0-9 for how light each character is; keep[r] is the first column in
-    row r that belongs to the focus (len(line) if none)."""
-    unit = 1.0 / rows                       # a cell is unit tall, unit/2 wide
-    cw = unit / 2
-    aspect = scene.aspect_of(rows)
-    box_cols = max(1, round(aspect / cw))
-    cols = max(box_cols, SPAN_COLS) if scene.span else box_cols
-    x_left = aspect - cols * cw
-
-    def col_range(x0, x1):
-        return (max(0, int((x0 - x_left) / cw) - 1), min(cols, int((x1 - x_left) / cw) + 2))
-
-    def row_range(y0, y1):
-        return max(0, int(y0 / unit) - 1), min(rows, int(y1 / unit) + 2)
-
-    n = rows * cols
-    owner = [None] * n                  # per cell: list of SUB*SUB layer ids
-    items = scene.parts_of(rows)
-    layers = [p for p in items if isinstance(p, Layer)]
-    order = {id(p): z for z, p in enumerate(items)}
-    for li, layer in enumerate(layers):
-        x0, y0, x1, y1 = layer.shape.box
-        c0, c1 = col_range(x0, x1)
-        r0, r1 = row_range(y0, y1)
-        test = layer.shape.test
-        for r in range(r0, r1):
-            for c in range(c0, c1):
-                cell = owner[r * cols + c]
-                for j in range(SUB):
-                    y = (r + (j + 0.5) / SUB) * unit
-                    for i in range(SUB):
-                        x = x_left + (c + (i + 0.5) / SUB) * cw
-                        if test(x, y):
-                            if cell is None:
-                                cell = owner[r * cols + c] = [None] * (SUB * SUB)
-                            cell[j * SUB + i] = li
-
+    """The scene `rows` tall in ASCII: (lines, parts, tones, keep). tones
+    has a digit 0-9 for how light each character is; keep[r] is the first
+    column in row r that belongs to the focus (len(line) if none)."""
+    g = _Grid(scene, rows)
+    cols, layers, order, owner = g.cols, g.layers, g.order, g.owner
     chars = [[" "] * cols for _ in range(rows)]
     parts = [[" "] * cols for _ in range(rows)]
-    focus = [[False] * cols for _ in range(rows)]
     tones = [[" "] * cols for _ in range(rows)]
-
-    def digit(t):
-        return str(min(9, max(0, int(t * 10))))
+    focus = [[False] * cols for _ in range(rows)]
     zof = [[-1] * cols for _ in range(rows)]
+    n = SUB * SUB
     for r in range(rows):
         for c in range(cols):
             cell = owner[r * cols + c]
@@ -443,13 +473,10 @@ def render(scene, rows):
                 continue
             dom = max(set(hits), key=hits.count)
             layer = layers[dom]
-            x = x_left + (c + 0.5) * cw
-            y = (r + 0.5) * unit
-            tone = layer.tone(x, y)
+            tone = layer.tone(*g.at(c, r))
             mat = layer.mat
             own = hits.count(dom)
             part = mat.part(tone)
-            n = SUB * SUB
             if mat.outline and n - 2 > own >= 3 and (mat.bold or own < n * 0.6):
                 # its own edge, whatever is behind it
                 ch = best_glyph([1.0 if s == dom else 0.0 for s in cell], mat.bold)
@@ -463,48 +490,210 @@ def render(scene, rows):
                 ch = best_glyph([0.0 if s is None else 1.0 for s in cell], mat.bold)
             if ch == " ":
                 continue
-            chars[r][c] = ch
-            parts[r][c] = part
-            tones[r][c] = digit(tone)
-            focus[r][c] = layer.focus
-            zof[r][c] = order[id(layer)]
+            chars[r][c], parts[r][c], tones[r][c] = ch, part, _digit(tone)
+            focus[r][c], zof[r][c] = layer.focus, order[id(layer)]
 
-    for p in items:
+    for p in g.items:
         z = order[id(p)]
         if isinstance(p, Line):
-            pts = [((x - x_left) / cw, y / unit) for x, y in p.points]
+            pts = [((x - g.x_left) / g.cw, y / g.unit) for x, y in p.points]
             for (ax, ay), (bx, by) in zip(pts, pts[1:]):
                 steps = max(1, int(max(abs(bx - ax), abs(by - ay)) * 3))
-                g = p.char or _glyph_of((bx - ax) / 2, by - ay)
-                for s in range(steps + 1):
-                    t = s / steps
+                ch = p.char or _glyph_of((bx - ax) / 2, by - ay)
+                for st in range(steps + 1):
+                    t = st / steps
                     c, r = int(ax + (bx - ax) * t), int(ay + (by - ay) * t)
                     if 0 <= r < rows and 0 <= c < cols and z > zof[r][c]:
-                        chars[r][c], parts[r][c], tones[r][c] = g, p.part, digit(p.tone)
+                        chars[r][c], parts[r][c], tones[r][c] = ch, p.part, _digit(p.tone)
                         focus[r][c], zof[r][c] = p.focus, z
         elif isinstance(p, Stamp):
-            c0, r = int((p.x - x_left) / cw), int(p.y / unit)
+            c0, r = int((p.x - g.x_left) / g.cw), int(p.y / g.unit)
             for k, ch in enumerate(p.text):
                 c = c0 + k
                 if 0 <= r < rows and 0 <= c < cols and ch != " " and z > zof[r][c]:
                     chars[r][c], parts[r][c] = ch, p.part_at(k).strip() or "a"
-                    tones[r][c] = digit(p.tone)
+                    tones[r][c] = _digit(p.tone)
                     focus[r][c], zof[r][c] = p.focus, z
 
-    lines = ["".join(row) for row in chars]
-    pparts = ["".join(row) for row in parts]
-    ptones = ["".join(row) for row in tones]
-    # trim: empty rows on top, empty columns on the right (and the left,
-    # unless the scene spans)
-    while lines and not lines[0].strip():
-        lines.pop(0), pparts.pop(0), ptones.pop(0), focus.pop(0)
-    used = [c for c in range(cols) if any(l[c] != " " for l in lines)]
-    right = max(used) + 1 if used else 0
-    left = 0 if scene.span else (min(used) if used else 0)
-    lines = [l[left:right] for l in lines]
-    pparts = [p[left:right] for p in pparts]
-    ptones = [t[left:right] for t in ptones]
-    focus = [f[left:right] for f in focus]
-    width = right - left
-    keep = tuple(next((c for c in range(width) if f[c]), width) for f in focus)
-    return tuple(lines), tuple(pparts), tuple(ptones), keep
+    (lines, pparts, ptones), keep = _trim(scene, [chars, parts, tones], focus)
+    return lines, pparts, ptones, keep
+
+
+# a cell's four quadrants (top-left, top-right, bottom-left, bottom-right)
+# drawn in the foreground colour, as a block character
+QUADRANTS = {
+    (0, 0, 0, 0): " ", (1, 0, 0, 0): "▘", (0, 1, 0, 0): "▝", (0, 0, 1, 0): "▖",
+    (0, 0, 0, 1): "▗", (1, 1, 0, 0): "▀", (0, 0, 1, 1): "▄", (1, 0, 1, 0): "▌",
+    (0, 1, 0, 1): "▐", (1, 0, 0, 1): "▚", (0, 1, 1, 0): "▞", (1, 1, 1, 0): "▛",
+    (1, 1, 0, 1): "▜", (1, 0, 1, 1): "▙", (0, 1, 1, 1): "▟", (1, 1, 1, 1): "█",
+}
+
+
+# braille: each cell is 2 dots across and 4 down; the bit for each dot
+BRAILLE_BITS = ((0x01, 0x08), (0x02, 0x10), (0x04, 0x20), (0x40, 0x80))
+# text that's really a line, and which dot rows it fills
+STREAKS = {"=": (1, 2), "-": (2,), "~": (1, 2), "_": (3,)}
+
+
+def _closeness(a, b):
+    """How unlike two (part, tone) colours are: another part is far."""
+    return (a[0] != b[0]) * 10 + abs(int(a[1]) - int(b[1]))
+
+
+def render_blocks(scene, rows):
+    """The scene `rows` tall in block characters: each cell is four
+    quadrants, each its own colour, drawn as a quadrant or half block in
+    one colour on a background of another. Fine detail is braille, 2x4
+    dots a cell: lines, line-like text (= - ~ _) and dithered textures,
+    over whatever colour is behind. Other text (stamps, code glyphs)
+    stays text, on the colour behind it. Returns (lines, parts, tones,
+    back_parts, back_tones, keep); a blank back part means the terminal's
+    own background."""
+    g = _Grid(scene, rows)
+    cols, layers, order, owner = g.cols, g.layers, g.order, g.owner
+    qr, qc = rows * 2, cols * 2
+    quad = [[None] * qc for _ in range(qr)]       # (part, tone digit)
+    qz = [[-1] * qc for _ in range(qr)]
+    qfocus = [[False] * qc for _ in range(qr)]
+    text = {}                                     # (r, c): (char, part, tone, focus, z)
+    dots = {}                                     # (dot row, dot col): (colour, z, focus)
+
+    def dot(R, C, colour, z, foc):
+        if 0 <= R < rows * 4 and 0 <= C < cols * 2:
+            old = dots.get((R, C))
+            if old is None or z > old[1]:
+                dots[(R, C)] = (colour, z, foc)
+    h = SUB // 2
+    for r in range(rows):
+        for c in range(cols):
+            cell = owner[r * cols + c]
+            if not cell:
+                continue
+            for qy in (0, 1):
+                for qx in (0, 1):
+                    ids = [cell[(qy * h + j) * SUB + qx * h + i] for j in range(h) for i in range(h)]
+                    hits = [s for s in ids if s is not None]
+                    if len(hits) < 2:
+                        continue
+                    layer = layers[max(set(hits), key=hits.count)]
+                    mat = layer.mat
+                    tone = layer.tone(*g.at(c, r, (qx + 0.5) / 2, (qy + 0.5) / 2))
+                    z = order[id(layer)]
+                    if mat.code and tone < mat.code_below:
+                        # a wall of glyphs stays text
+                        ch = mat.char(tone, r, c)
+                        if ch != " " and (r, c) not in text:
+                            text[(r, c)] = (ch, mat.part(tone), _digit(tone), layer.focus, z)
+                        continue
+                    if mat.dither:
+                        # a sparse texture: braille dots, each by its own tone
+                        for dy in (0, 1):
+                            for dx in (0, 1):
+                                Rd, Cd = r * 4 + qy * 2 + dy, c * 2 + qx
+                                t = layer.tone(*g.at(c, r, (qx + 0.5) / 2, (qy * 2 + dy + 0.5) / 4))
+                                if t > BAYER[Rd % 4][(Cd + dx * 2) % 4] * 1.4:
+                                    dot(Rd, Cd, (mat.part(t), _digit(t)), z, layer.focus)
+                        continue
+                    elif tone <= 0.0:
+                        continue                 # a deliberate gap (stripes, ripples)
+                    R, C = r * 2 + qy, c * 2 + qx
+                    quad[R][C], qz[R][C], qfocus[R][C] = (mat.part(tone), _digit(tone)), z, layer.focus
+
+    for p in g.items:
+        z = order[id(p)]
+        if isinstance(p, Line):
+            # one braille dot wide
+            pts = [((x - g.x_left) / g.cw * 2, y / g.unit * 4) for x, y in p.points]
+            for (ax, ay), (bx, by) in zip(pts, pts[1:]):
+                steps = max(1, int(max(abs(bx - ax), abs(by - ay)) * 2))
+                for st in range(steps + 1):
+                    t = st / steps
+                    dot(int(ay + (by - ay) * t), int(ax + (bx - ax) * t),
+                        (p.part, _digit(p.tone)), z, p.focus)
+        elif isinstance(p, Stamp):
+            c0, r = int((p.x - g.x_left) / g.cw), int(p.y / g.unit)
+            for k, ch in enumerate(p.text):
+                c = c0 + k
+                if ch in STREAKS:
+                    colour = (p.part_at(k).strip() or "a", _digit(p.tone))
+                    for dy in STREAKS[ch]:
+                        for dx in (0, 1):
+                            dot(r * 4 + dy, c * 2 + dx, colour, z, p.focus)
+                    continue
+                if 0 <= r < rows and 0 <= c < cols and ch != " ":
+                    old = text.get((r, c))
+                    if old is None or z > old[4]:
+                        text[(r, c)] = (ch, p.part_at(k).strip() or "a", _digit(p.tone), p.focus, z)
+
+    grids = [[[" "] * cols for _ in range(rows)] for _ in range(5)]
+    chars, parts, tones, bparts, btones = grids
+    focus = [[False] * cols for _ in range(rows)]
+    for r in range(rows):
+        for c in range(cols):
+            cells = [(r * 2, c * 2), (r * 2, c * 2 + 1), (r * 2 + 1, c * 2), (r * 2 + 1, c * 2 + 1)]
+            cols4 = [quad[R][C] for R, C in cells]
+            zs = [qz[R][C] for R, C in cells]
+            focus[r][c] = any(qfocus[R][C] for R, C in cells)
+            t = text.get((r, c))
+            if t and t[4] >= max(zs):
+                # text on top of whatever is mostly behind it
+                ch, part, tone, foc, _ = t
+                filled = [x for x in cols4 if x]
+                back = max(set(filled), key=filled.count) if len(filled) >= 2 else None
+                chars[r][c], parts[r][c], tones[r][c] = ch, part, tone
+                if back:
+                    bparts[r][c], btones[r][c] = back
+                focus[r][c] = focus[r][c] or foc
+                continue
+            cell_dots = [(dy, dx, dots[(r * 4 + dy, c * 2 + dx)]) for dy in range(4) for dx in (0, 1)
+                         if (r * 4 + dy, c * 2 + dx) in dots]
+            cell_dots = [(dy, dx, d) for dy, dx, d in cell_dots if d[1] > max(zs)]
+            if cell_dots:
+                # braille dots over the colour behind them
+                bits, colours = 0, []
+                for dy, dx, (colour, z, foc) in cell_dots:
+                    bits |= BRAILLE_BITS[dy][dx]
+                    colours.append(colour)
+                    focus[r][c] = focus[r][c] or foc
+                fg = max(set(colours), key=colours.count)
+                filled = [x for x in cols4 if x]
+                back = max(set(filled), key=filled.count) if len(filled) >= 2 else None
+                chars[r][c] = chr(0x2800 + bits)
+                parts[r][c], tones[r][c] = fg
+                if back:
+                    bparts[r][c], btones[r][c] = back
+                continue
+            if not any(cols4):
+                continue
+            # the two colours that matter most; the rest join the nearer one
+            counts = {}
+            for x in cols4:
+                counts[x] = counts.get(x, 0) + 1
+            top2 = sorted(counts, key=lambda x: (-counts[x], x is None))[:2]
+            mapped = []
+            for x in cols4:
+                if x in top2:
+                    mapped.append(x)
+                elif x is None:
+                    mapped.append(None if None in top2 else min(top2, key=lambda y: int(y[1])))
+                else:
+                    near = [y for y in top2 if y is not None]
+                    mapped.append(min(near, key=lambda y: _closeness(x, y)))
+            kinds = list(dict.fromkeys(mapped))
+            if len(kinds) == 1:
+                fg, bg = kinds[0], None
+            elif None in kinds:
+                fg, bg = [k for k in kinds if k is not None][0], None
+            else:
+                # the nearer layer in front
+                za = max(z for z, x in zip(zs, cols4) if x == kinds[0]) if kinds[0] in cols4 else -1
+                zb = max(z for z, x in zip(zs, cols4) if x == kinds[1]) if kinds[1] in cols4 else -1
+                fg, bg = (kinds[0], kinds[1]) if za >= zb else (kinds[1], kinds[0])
+            mask = tuple(1 if x == fg else 0 for x in mapped)
+            chars[r][c] = QUADRANTS[mask]
+            parts[r][c], tones[r][c] = fg
+            if bg is not None and mask != (1, 1, 1, 1):
+                bparts[r][c], btones[r][c] = bg
+
+    (lines, pparts, ptones, pb, tb), keep = _trim(scene, [chars, parts, tones, bparts, btones], focus)
+    return lines, pparts, ptones, pb, tb, keep

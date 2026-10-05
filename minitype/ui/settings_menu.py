@@ -347,11 +347,12 @@ def build_items(app):
                       "now and then (never the next few)",
                  tags=fun_tags + ("glitch", "flicker")),
         b.choice("art style", "art_style", ART_STYLES,
-                 help="the theme's corner picture: detailed (shaded, and some "
-                      "run across the whole bottom) or og (the original, "
-                      "simpler ones)",
+                 help="the theme's corner picture: blocks (pixel art in block "
+                      "characters), detailed (shaded ASCII) or og (the original, "
+                      "simpler ones). If blocks show as boxes or question "
+                      "marks, your terminal's font lacks them: pick detailed",
                  tags=fun_tags + ("art", "picture", "ascii", "og", "classic",
-                                  "detailed", "decoration")),
+                                  "detailed", "blocks", "pixel", "decoration")),
         b.choice("art colours", "art_colours", ART_COLOURS,
                  help="shaded: the picture in softer shades and hues of the "
                       "theme's colours, darker and cooler in shadow, lighter "

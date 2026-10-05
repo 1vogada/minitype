@@ -23,7 +23,7 @@ CORRECTED = ["marked", "normal", "red"]     # how a fixed mistake looks
 BORDER_STYLES = ["off", "ascii", "line", "rounded", "double", "heavy", "block",
                  "thick"]
 ART_SCOPES = ["off", "menus", "everywhere"]  # where the theme's picture shows
-ART_STYLES = ["detailed", "og"]     # the new pictures, or the original ones
+ART_STYLES = ["blocks", "detailed", "og"]   # pixel art, shaded ASCII, or the originals
 ART_COLOURS = ["shaded", "flat"]    # softer shades of the theme, or its colours as they are
 TYPOS = ["off", "below", "replace", "both"]  # where the wrong key is shown
 # fun modifiers: "theme" follows the theme, the rest force a value

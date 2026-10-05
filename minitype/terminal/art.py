@@ -1,20 +1,25 @@
-"""ASCII art for the corner of the screen, one piece per theme.
+"""Art for the corner of the screen, one picture per theme.
 
-Every piece is plain ASCII so it draws the same in any terminal. Each comes
-in several sizes, biggest first: the detailed ones (art_detailed.py, made
-by tools/make_art.py), some of which run across the whole bottom of the
-screen, then the "OG" ones: a large one coloured from the theme's palette
-(art_large.py) and the small one-colour one below (ART). The biggest that
-fits on screen is drawn; the "art style" setting can leave the detailed
-ones out. THEME_ART says which piece a built-in theme uses.
+Each comes in several sizes, biggest first, and the biggest that fits on
+screen is drawn. The "art style" setting picks which: blocks (pixel art in
+block characters, each cell two colours) or detailed (shaded ASCII), both
+made by tools/make_art.py into art_detailed.py and running across the
+whole bottom of the screen; then always the "OG" ones as the fallback: a
+large one coloured from the theme's palette (art_large.py) and the small
+one-colour one below (ART). THEME_ART says which picture a built-in theme
+uses.
 A theme in themes.json picks one with "art": a piece's name, or a list of
 its own lines; without "art" it uses its base theme's.
 """
 
+import base64
+import json
 import re
+import zlib
 from functools import lru_cache
 from typing import NamedTuple
 
+from .art_detailed import BLOCKS as _BLOCKS
 from .art_detailed import DETAILED as _DETAILED
 from .art_large import LARGE as _LARGE
 
@@ -408,7 +413,7 @@ PARTS = ("dim", "text", "error", "extra", "accent", "good", "warn")
 PART_LETTERS = dict(zip("dtexagw", PARTS))
 LETTER_OF = {part: letter for letter, part in PART_LETTERS.items()}
 
-ART_STYLES = ("detailed", "og")
+ART_STYLES = ("blocks", "detailed", "og")
 
 
 # art_detailed.py stores a character's colour letter and tone (0-9, how
@@ -422,33 +427,62 @@ class Piece(NamedTuple):
     character (" " for blanks), a tone digit for every character (how
     light it is, for shaded colours), and for every row the column its
     focus starts at. Text may cut into a row left of that, never past it.
-    A spanning piece can lose columns on its left to fit the screen."""
+    A spanning piece can lose columns on its left to fit the screen.
+    Block pieces also have a background colour letter and tone for every
+    character (" " for the terminal's own)."""
     lines: tuple
     parts: tuple
     tones: tuple
     keep: tuple
     span: bool = False
+    back_parts: tuple = None
+    back_tones: tuple = None
+
+
+def _decode(lead, codes, width):
+    """Colour letters and tone digits from a row of codes."""
+    idx = [None if c == " " else CODES.index(c) for c in codes]
+    parts = "".join(" " if i is None else "dtexagw"[i // 10] for i in idx)
+    tones = "".join(" " if i is None else str(i % 10) for i in idx)
+    return (" " * lead + parts).ljust(width), (" " * lead + tones).ljust(width)
 
 
 def _unpack(span, size):
     width, rows, keep = size
-    lines, parts, tones = [], [], []
-    for lead, text, codes in rows:
+    lines, parts, tones, bparts, btones = [], [], [], [], []
+    for row in rows:
+        lead, text, codes = row[:3]
         lines.append((" " * lead + text).ljust(width))
-        idx = [None if c == " " else CODES.index(c) for c in codes]
-        parts.append((" " * lead + "".join(" " if i is None else "dtexagw"[i // 10]
-                                           for i in idx)).ljust(width))
-        tones.append((" " * lead + "".join(" " if i is None else str(i % 10)
-                                           for i in idx)).ljust(width))
-    return Piece(tuple(lines), tuple(parts), tuple(tones), keep, span)
+        p, t = _decode(lead, codes, width)
+        parts.append(p)
+        tones.append(t)
+        if len(row) > 3:
+            p, t = _decode(lead, row[3], width)
+            bparts.append(p)
+            btones.append(t)
+    back = (tuple(bparts), tuple(btones)) if bparts else (None, None)
+    return Piece(tuple(lines), tuple(parts), tuple(tones), tuple(keep), span, *back)
+
+
+def _load(packed):
+    return json.loads(zlib.decompress(base64.b85decode(packed)))
 
 
 @lru_cache(maxsize=None)
 def detailed(name):
-    """A picture's detailed sizes, biggest first ([] if it has none)."""
+    """A picture's shaded-ASCII sizes, biggest first ([] if it has none)."""
     if name not in _DETAILED:
         return []
-    span, sizes = _DETAILED[name]
+    span, sizes = _load(_DETAILED[name])
+    return [_unpack(span, size) for size in sizes]
+
+
+@lru_cache(maxsize=None)
+def blocks(name):
+    """A picture's block-character sizes, biggest first ([] if none)."""
+    if name not in _BLOCKS:
+        return []
+    span, sizes = _load(_BLOCKS[name])
     return [_unpack(span, size) for size in sizes]
 
 
@@ -461,13 +495,14 @@ def _og(lines, colours):
     return Piece(tuple(lines), parts, tones, (0,) * len(lines))
 
 
-def resolve(value, style="detailed"):
+def resolve(value, style="blocks"):
     """A theme's "art" value as a list of pieces, biggest first. A name
-    gives the detailed picture's sizes (unless style is "og") and then the
-    OG ones, large and coloured, then small; a list of lines is a single
-    piece in the accent colour. None for anything else (including "none")."""
+    gives the picture's sizes in the style (blocks or detailed; none for
+    og) and then the OG ones, large and coloured, then small; a list of
+    lines is a single piece in the accent colour. None for anything else
+    (including "none")."""
     if isinstance(value, str) and value in ART:
-        pieces = list(detailed(value)) if style != "og" else []
+        pieces = list({"blocks": blocks, "detailed": detailed}.get(style, lambda n: [])(value))
         if value in LARGE:
             pieces.append(_og(*LARGE[value]))
         return pieces + [_og(ART[value], {})]
@@ -508,11 +543,17 @@ class Picture:
         self.width = max(map(len, piece.lines), default=0)
         self.height = len(piece.lines)
         self._codes = []
-        for parts, tones in zip(piece.parts, piece.tones):
+        backs = (zip(piece.back_parts, piece.back_tones) if piece.back_parts
+                 else ((None, None) for _ in piece.parts))
+        for parts, tones, (bparts, btones) in zip(piece.parts, piece.tones, backs):
             row = []
-            for p, t in zip(parts, tones):
+            for k, (p, t) in enumerate(zip(parts, tones)):
                 part = PART_LETTERS.get(p)
-                row.append(palette.get((part, t)) or palette.get(part, ""))
+                code = palette.get((part, t)) or palette.get(part, "")
+                if bparts and bparts[k] != " ":
+                    back = PART_LETTERS[bparts[k]]
+                    code += palette.get(("bg", back, btones[k])) or palette.get(("bg", back), "")
+                row.append(code)
             self._codes.append(row)
         self._reset = reset
 
@@ -537,6 +578,7 @@ def _paint(piece, palette, reset):
 
 def paint(piece, palette, reset="\x1b[0m"):
     """The piece as a Picture: palette maps each part (PARTS) to an escape
-    code, and for shaded colours (part, tone digit) to one per tone. The
-    same piece and palette give the same Picture back."""
+    code, for shaded colours (part, tone digit) to one per tone, and for
+    block pieces ("bg", part) and ("bg", part, tone) to background codes.
+    The same piece and palette give the same Picture back."""
     return _paint(piece, tuple(palette.items()), reset)

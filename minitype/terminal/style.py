@@ -575,10 +575,10 @@ def theme_names():
     return names + ["mono"] + list(custom_themes())
 
 
-def art_of_spec(spec, art_style="detailed", seen=()):
+def art_of_spec(spec, art_style="blocks", seen=()):
     """The corner art a theme spec asks for: its own "art", or its base
     theme's when it doesn't say. A list of art pieces, biggest first; []
-    for none. art_style "og" leaves the detailed pictures out."""
+    for none, in the art style: blocks, detailed or og."""
     art = spec.get("art")
     if art == "none":
         return []
@@ -587,7 +587,7 @@ def art_of_spec(spec, art_style="detailed", seen=()):
     return theme_art(spec.get("base", "default"), art_style, seen)
 
 
-def theme_art(name, art_style="detailed", seen=()):
+def theme_art(name, art_style="blocks", seen=()):
     """A theme's corner art as pieces, biggest first; [] for none."""
     if name in seen:
         return []                      # a base loop in themes.json
@@ -678,26 +678,35 @@ class Styles:
         """The theme's colours by name, for painting corner art. A theme
         without a colour for a part (mono) falls back to the accent. With
         shaded, each part also gets ten tones, (part, "0") to (part, "9"):
-        softer shades and hues of it, see shade()."""
+        softer shades and hues of it, see shade(). Block pictures colour
+        backgrounds too, so every colour also comes as a background code,
+        keyed ("bg", part) and ("bg", part, tone)."""
         flat = {"dim": self.dim, "text": self.ok or self.title,
                 "error": self.bad if not self.quiet else self.title,
                 "extra": self.extra if not self.quiet else self.dim,
                 "accent": self.title, "good": self.good or self.title,
                 "warn": self.warn or self.title}
+        backs = {}
+        for part, code in flat.items():
+            colour = rgb_of_code(code)
+            if colour is not None:
+                backs[("bg", part)] = _code(colour, 48)
         if not shaded:
-            return flat
+            return {**flat, **backs}
         ground = rgb_of_code(self.background, 48)
         if ground is None:
             # no theme background: guess the terminal's from the text colour
             text = rgb_of_code(flat["text"]) or (200, 200, 200)
             ground = (250, 250, 248) if luminance(text) < 0.35 else (18, 18, 22)
-        out = dict(flat)
+        out = {**flat, **backs}
         for part, code in flat.items():
             base = rgb_of_code(code)
             if base is None:
                 continue
             for t in range(10):
-                out[(part, str(t))] = _code(shade(base, t / 9, ground), 38)
+                colour = shade(base, t / 9, ground)
+                out[(part, str(t))] = _code(colour, 38)
+                out[("bg", part, str(t))] = _code(colour, 48)
         return out
 
     def caret_colour(self, now):

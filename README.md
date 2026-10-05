@@ -194,7 +194,10 @@ Skipping pages:
   - **caret effect**: *pulse* (blinks) or *rainbow* (cycles colour)
   - **glitch**: letters further ahead flicker into symbols now and then
   - **effect speed** (0.25x-4x) and **flow direction** for gradients
-  - **art style**: *detailed* or *og*, the original, simpler pictures
+  - **art style**: *blocks* (default: pixel art in half and quadrant blocks,
+    with braille dots for fine lines and textures), *detailed* (shaded
+    ASCII) or *og*, the original, simpler pictures. If blocks show as boxes
+    or question marks, your terminal's font lacks them: pick detailed
   - **art colours**: *shaded* (softer shades and hues of the theme's
     colours: darker and cooler in shadow, lighter and warmer in the
     light) or *flat* (the theme's colours as they are)

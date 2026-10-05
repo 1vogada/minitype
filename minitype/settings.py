@@ -96,7 +96,7 @@ class Settings:
     accent_text: bool = False    # typed letters in the theme's accent colour
     border: str = "rounded"      # frame around the screen: off, ascii, line, rounded, double, heavy
     art: str = "menus"           # the theme's corner picture: off, menus, everywhere
-    art_style: str = "detailed"  # detailed / og (the original pictures)
+    art_style: str = "blocks"    # blocks / detailed / og (the original pictures)
     art_colours: str = "shaded"  # shaded (softer shades and hues) / flat
     # a theme's effects, each of which can be switched off
     theme_background: bool = True
