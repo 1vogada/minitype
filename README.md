@@ -186,6 +186,10 @@ Skipping pages:
 - every effect can be switched off on its own, for any theme: theme
   background, gradients, gradient flow, heat, and bold / italic (all on
   by default; the sample line shows the change as you toggle)
+- **theme background**: *theme* (themes with a background of their own
+  paint it), *always* (every theme gets one: a very dark tint of its
+  accent, or a pale one for light themes; use this in a light-mode
+  terminal so dark themes still look right) or *off* (your terminal's own)
 - **fun** (settings → fun), purely visual, never changes what you type:
   - **bounce**: letters bob up and down, *gentle* near the caret or *wild*
   - **shake**: the text jolts sideways after a wrong key

@@ -7,7 +7,8 @@ from .config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS,
                      QUOTE_SOURCES, SIDEBAR_TABS, STOP_MODES, UI_STYLES,
                      WORD_GAPS, FUN_BOUNCE, FUN_SWITCH, FUN_CARET,
                      EFFECT_SPEEDS, FLOW_DIRECTIONS, CORRECTED, TYPOS,
-                     BORDER_STYLES, ART_SCOPES, ART_STYLES, ART_COLOURS)
+                     BORDER_STYLES, ART_SCOPES, ART_STYLES, ART_COLOURS,
+                     THEME_BACKGROUNDS)
 from .terminal.style import theme_names
 from .words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 
@@ -32,6 +33,7 @@ CHOICES = {
     "art": ART_SCOPES,
     "art_style": ART_STYLES,
     "art_colours": ART_COLOURS,
+    "theme_background": THEME_BACKGROUNDS,
     "typos": TYPOS,
     "fun_bounce": FUN_BOUNCE,
     "fun_shake": FUN_SWITCH,
@@ -99,7 +101,7 @@ class Settings:
     art_style: str = "blocks"    # blocks / detailed / og (the original pictures)
     art_colours: str = "shaded"  # shaded (softer shades and hues) / flat
     # a theme's effects, each of which can be switched off
-    theme_background: bool = True
+    theme_background: str = "theme"   # theme / always / off
     theme_gradient: bool = True
     theme_flow: bool = True      # gradients move
     theme_heat: bool = True      # text colour follows the combo
@@ -191,6 +193,9 @@ class Settings:
             self.word_gap = "dots"       # from before word gap had choices
         if d.get("keep_errors") is True and "corrected" not in d:
             self.corrected = "marked"    # keep errors became corrected letters
+        if isinstance(d.get("theme_background"), bool):
+            # it was on/off before "always" came along
+            d = dict(d, theme_background="theme" if d["theme_background"] else "off")
         for f in fields(self):
             v = d.get(f.name)
             if type(v) is not type(getattr(self, f.name)):

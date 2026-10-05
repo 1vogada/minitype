@@ -624,7 +624,9 @@ class Styles:
                  custom=None):
         """The keyword switches turn a theme's effects off one by one:
         its background, gradient, the gradient's movement, heat, and
-        bold / italic letters.
+        bold / italic letters. background can also be "always": a theme
+        without a background of its own gets one made from its colours,
+        for terminals whose own background doesn't suit it (light mode).
 
         modifiers   {Effects field: setting} for the fun modifiers, where
                     "theme" keeps what the theme says, "off"/"on" force a
@@ -647,7 +649,7 @@ class Styles:
         else:
             effects = replace(
                 effects,
-                background=effects.background if background else "",
+                background=effects.background if background not in (False, "off") else "",
                 gradient=effects.gradient if gradient else (),
                 flow=effects.flow if flow else 0.0,
                 heat=effects.heat if heat else (),
@@ -657,6 +659,8 @@ class Styles:
              self.title, self.good, self.warn) = palette
             if accent_text:
                 self.ok = self.title     # typed letters in the accent colour
+        if background == "always" and not effects.background and not self.quiet:
+            effects = replace(effects, background=bg(self.made_background()))
         effects = _with_modifiers(effects, modifiers or {})
         if lowkey == "disguised":
             effects = NO_EFFECTS         # stealth: nothing moves either
@@ -666,6 +670,18 @@ class Styles:
         self.effects = effects
         e = self.effects
         self.typed_attr = (BOLD if e.bold else "") + (ITALIC if e.italic else "")
+
+    def made_background(self):
+        """A background for a theme that has none: a very dark tint of its
+        accent, or for a theme meant for light terminals (dark text) a
+        very pale one. As "#rrggbb"."""
+        accent = rgb_of_code(self.title) or (128, 128, 128)
+        text = rgb_of_code(self.ok) or (220, 220, 220)
+        if luminance(text) < 0.35:
+            base, mix = (250, 250, 247), 0.06
+        else:
+            base, mix = (16, 17, 20), 0.08
+        return "#%02x%02x%02x" % tuple(round(b * (1 - mix) + a * mix) for b, a in zip(base, accent))
 
     @property
     def animated(self):

@@ -15,7 +15,7 @@ from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICU
                       SIDEBAR_TABS, STOP_MODES, UI_STYLES, WORD_GAPS,
                       FUN_BOUNCE, FUN_SWITCH, FUN_CARET, EFFECT_SPEEDS,
                       FLOW_DIRECTIONS, CORRECTED, TYPOS, BORDER_STYLES,
-                      ART_SCOPES, ART_STYLES, ART_COLOURS)
+                      ART_SCOPES, ART_STYLES, ART_COLOURS, THEME_BACKGROUNDS)
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import storage
 from ..terminal import console, keys
@@ -251,10 +251,13 @@ def build_items(app):
 
     effect_tags = ("theme", "effects", "appearance", "colour", "color")
     items += [_preview(row, sample) for row in (
-        b.flag("theme background", "theme_background",
-               "paint the theme's background across the screen (aurora, "
-               "synthwave, midnight...); off keeps your terminal's own",
-               tags=effect_tags + ("background",)),
+        b.choice("theme background", "theme_background", THEME_BACKGROUNDS,
+                 help="theme: themes with a background of their own (aurora, "
+                      "synthwave, midnight...) paint it across the screen. "
+                      "always: every theme does, one made from its colours "
+                      "if it has none - for a light-mode terminal. off: your "
+                      "terminal's own",
+                 tags=effect_tags + ("background", "light", "dark", "mode")),
         b.flag("gradients", "theme_gradient",
                "typed letters shade through the theme's gradient (rainbow, "
                "aurora, vaporwave...); off uses its plain text colour",
