@@ -19,6 +19,7 @@ BOOK_FOOTER = ("esc menu   tab restart   pgdn next page   pgup previous page   "
                "ctrl-q hide")
 REDRAW_EVERY = 0.1
 REDRAW_ANIMATED = 0.05    # smoother when the theme has things moving
+SPACE_TYPO = "_"          # how a wrong space shows with indicate typos
 SLOW_WORDS = 20       # how many of your slowest words a drill draws from
 MIN_SLOW_WORDS = 5    # tracked words needed before the drill is offered
 
@@ -50,6 +51,7 @@ class TypingTest:
         self.done = False       # ended from inside a key press
         self.wrong = False      # last key was rejected by stop on error
         self.err_marks = set()  # (word, letter) positions that had a wrong key
+        self.typo_keys = {}     # (word, letter) -> the last wrong key pressed there
         self.last_error = -1.0  # when the last wrong key came (for shake)
         self.prev_t = None
         self.word_start = None  # when the first char of the current word landed
@@ -222,8 +224,9 @@ class TypingTest:
         return self.diff == "normal" and s.backspace != "off"
 
     def error_marks(self):
-        """Letters to keep red after they were fixed (keep errors)."""
-        return self.err_marks if self.app.settings.keep_errors else ()
+        """Letters that had a wrong key at some point; the renderer decides
+        how a fixed one looks (the corrected letters setting)."""
+        return self.err_marks
 
     def _back_ok(self, i):
         """Whether backspacing out of the current word may enter word i."""
@@ -283,6 +286,7 @@ class TypingTest:
             self._miss(word[j] if self.stop == "letter" and j < len(word) else " ")
             if j < len(word):
                 self.err_marks.add((self.wi, j))
+                self.typo_keys[(self.wi, j)] = SPACE_TYPO
             self.wrong = True
             return
         self._press(el, typed == word)
@@ -326,6 +330,7 @@ class TypingTest:
             self._miss(want)
             if j < len(word):
                 self.err_marks.add((self.wi, j))
+                self.typo_keys[(self.wi, j)] = ch
             if self.diff == "master":
                 self._fail("wrong key")
                 return
@@ -471,7 +476,8 @@ def run_test(app, spec):
             draw(st, app.settings, head, test.words, test.typed,
                  test.wi, max(10, size[0] - 4), test.footer(), marks, test.wrong,
                  keyboard_lines(app, test), test.hidden(now),
-                 test.error_marks(), test.combo, now, test.last_error)
+                 test.error_marks(), test.combo, now, test.last_error,
+                 test.typo_keys)
             last_draw = now
             dirty = False
 

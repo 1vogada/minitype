@@ -19,6 +19,8 @@ QUOTE_SOURCES = ["built-in", "online"]
 CODE_LANGS = ["python", "javascript"]
 CARETS = ["underline", "block"]
 WORD_GAPS = ["blank", "dots", "underline"]   # what's drawn between words
+CORRECTED = ["marked", "normal", "red"]     # how a fixed mistake looks
+TYPOS = ["off", "below", "replace", "both"]  # where the wrong key is shown
 # fun modifiers: "theme" follows the theme, the rest force a value
 FUN_BOUNCE = ["theme", "off", "gentle", "wild"]
 FUN_SWITCH = ["theme", "off", "on"]

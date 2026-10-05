@@ -5,6 +5,11 @@ wraps those cells into lines; tape mode lays them on one line that scrolls
 with the caret. Offsets are global character positions, which is what the
 ghost and pace carets are measured in.
 
+Letters that had a wrong key and were fixed look as the corrected letters
+setting says (marked in the warn colour, normal, or red), and indicate
+typos shows the wrong key pressed: in place of the letter (replace), on a
+row underneath (below), or both.
+
 The theme's fun modifiers are applied here too, and only here, so they
 never change what you have to type:
     pop      the last few typed letters are bright and bold
@@ -19,7 +24,7 @@ import math
 
 from ..config import VIEW_LINES
 from ..terminal import console
-from ..terminal.style import BOLD, INV, RESET, UND
+from ..terminal.style import BOLD, INV, ITALIC, RESET, UND
 
 SPACE_DOT = "·"
 HIDDEN = "_"
@@ -58,12 +63,18 @@ class Painter:
     """Turns words and what's been typed into styled cells."""
 
     def __init__(self, st, settings, words, typed, wi, marks, wrong, hidden,
-                 errors=(), combo=0, now=0.0):
+                 errors=(), combo=0, now=0.0, typo_keys=None):
         self.st, self.words, self.typed, self.wi = st, words, typed, wi
         self.marks, self.hidden = marks, hidden
-        self.errors = errors
+        self.errors = errors                   # letters that ever had a wrong key
+        self.typo_keys = typo_keys or {}       # ...and the wrong key pressed there
         self.combo, self.now = combo, now      # for theme heat and flow
         self.blind = settings.blind
+        self.corrected = settings.corrected
+        self.typos = "off" if self.blind else settings.typos
+        self.typo_row = self.typos in ("below", "both")
+        self.below = {}                        # offset -> (style, char) for that row
+        self.rejected = wrong                  # a wrong key was just turned away
         self.mirror = settings.funbox == "mirror"
         self.fx = st.effects
         self.speed = abs(getattr(st, "speed", 1.0)) or 1.0
@@ -90,6 +101,24 @@ class Painter:
             self.offs.append(g)
             g += len(s) + 1
         self.caret_off = (self.offs[wi] + len(typed[wi])) if wi < len(words) else -1
+
+    def _corrected(self, typed_style):
+        """Style for a letter that had a wrong key and was then fixed:
+        marked in the theme's warn colour (italic without colour), red, or
+        like any other typed letter. Returns (style, still counts as a
+        clean typed letter for pop and fade)."""
+        if self.blind or self.corrected == "normal":
+            return typed_style, True
+        if self.corrected == "red":
+            return self.st.bad, False
+        return (self.st.warn or ITALIC), False
+
+    def _typo(self, off, wanted, pressed):
+        """Fill in the row under the text for a wrong letter."""
+        if self.typos == "below":
+            self.below[off] = (self.st.bad, pressed)
+        elif self.typos == "both":
+            self.below[off] = (self.st.dim, wanted)    # the right one under it
 
     def _glitched(self, off):
         """Whether an untyped letter flickers this moment (the same answer
@@ -134,6 +163,9 @@ class Painter:
             off = self.offs[i] + j
             if i == wi and j == len(t):
                 cells.append((self.caret, HIDDEN if self.hidden else c, off))
+                if self.rejected and self.typo_row and (i, j) in self.typo_keys:
+                    # stop on error: the turned-away key, under the caret
+                    self.below[off] = (st.bad, self.typo_keys[(i, j)])
                 continue
             typed_ok = False
             if tc is None:
@@ -145,10 +177,15 @@ class Painter:
             elif wc is None:
                 s = st.extra
             elif tc == wc:
-                typed_ok = (i, j) not in self.errors
-                s = st.typed(off, i, self.combo, self.now) if typed_ok else st.bad
+                typed_ok = True
+                s = st.typed(off, i, self.combo, self.now)
+                if (i, j) in self.errors:
+                    s, typed_ok = self._corrected(s)
             else:
                 s = st.bad
+                self._typo(off, wc, tc)
+                if self.typos in ("replace", "both"):
+                    c = tc                     # show what was actually pressed
             s, c = self._flourish(s, c, off, typed_ok,
                                   tc is None and i >= wi and not self.hidden)
             if off in self.marks:
@@ -190,15 +227,24 @@ def join(cells):
     return "".join(s + c + RESET if s else c for s, c, _ in cells)
 
 
+def rows_per_line(p):
+    return 1 + (p.fx.bounce != "off") + p.typo_row
+
+
 def rows(p, cells):
     """A line of cells as screen rows: one row, or with bounce two, where
-    each letter sits on the upper or lower row as it bobs."""
+    each letter sits on the upper or lower row as it bobs. With indicate
+    typos below (or both), one more row under it holds the wrong keys."""
     if p.fx.bounce == "off":
-        return [join(cells)]
-    up = [p.is_up(off) for _, _, off in cells]
-    top = join((s, c, o) if u else ("", " ", o) for (s, c, o), u in zip(cells, up))
-    low = join(("", " ", o) if u else (s, c, o) for (s, c, o), u in zip(cells, up))
-    return [top, low]
+        out = [join(cells)]
+    else:
+        up = [p.is_up(off) for _, _, off in cells]
+        out = [join((s, c, o) if u else ("", " ", o) for (s, c, o), u in zip(cells, up)),
+               join(("", " ", o) if u else (s, c, o) for (s, c, o), u in zip(cells, up))]
+    if p.typo_row:
+        out.append(join((*p.below[o], o) if o in p.below else ("", " ", o)
+                        for _, _, o in cells))
+    return out
 
 
 def block_lines(p, width):
@@ -206,7 +252,7 @@ def block_lines(p, width):
     li = next((n for n, (a, b) in enumerate(lines) if a <= p.wi < b),
               len(lines) - 1)
     top = max(0, min(li - 1, len(lines) - VIEW_LINES))
-    per_line = 1 if p.fx.bounce == "off" else 2
+    per_line = rows_per_line(p)
     view = [r for a, b in lines[top:top + VIEW_LINES] for r in rows(p, p.span(a, b))]
     return view + [""] * (VIEW_LINES * per_line - len(view))
 
@@ -227,19 +273,21 @@ def tape_line(p, width):
 
 def draw(st, settings, header, words, typed, wi, width, footer, marks=(),
          wrong=False, below=(), hidden=False, errors=(), combo=0, now=0.0,
-         last_error=-1.0):
+         last_error=-1.0, typo_keys=None):
     """Redraw the test screen in place.
 
     marks:  global char offsets to underline (ghost and pace carets)
     wrong:  turns the caret red after a rejected key
     below:  extra lines under the words (the on-screen keyboard)
     hidden: memory mode, untyped characters are blanked out
-    errors: (word, letter) positions to keep red even once typed right
+    errors: (word, letter) positions that had a wrong key; once fixed they
+            look as the corrected letters setting says
     combo, now:  for theme heat, flow and the animated modifiers
     last_error:  when the last wrong key was, for shake
+    typo_keys:   the wrong key pressed at each of those, for indicate typos
     """
     p = Painter(st, settings, words, typed, wi, marks, wrong, hidden, errors,
-                combo, now)
+                combo, now, typo_keys)
     out = []
     if header:
         out += ["  " + st.dim + header + RESET, ""]

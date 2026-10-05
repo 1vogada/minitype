@@ -126,8 +126,14 @@ Skipping pages:
 - stop on error: *letter* (a wrong key doesn't move the cursor) or *word*
   (you can't leave a wrong word)
 - backspace: *off* (confidence mode) or *freedom* (back into correct words)
-- keep errors: letters you mistyped stay red even after you fix them.
-  Backspace is up to the backspace setting (off for no corrections at all)
+- corrected letters: how a letter looks once you fix a mistake on it.
+  *marked* (default) uses the theme's warning colour (italic in mono), so a
+  live mistake (red) and a fixed one never look the same; *normal* looks
+  like any typed letter; *red* stays red
+- indicate typos (like Monkeytype's): show the key you actually pressed,
+  *below* the letter, in its place (*replace*), or *both* (in its place,
+  with the right letter underneath). With stop on error: letter, the
+  turned-away key shows under the caret until you press the right one
 - with stop on error: word, backspace always works inside a wrong word, so
   you can't get stuck on it (even with backspace off or on expert)
 - minimum speed and minimum accuracy: fall below and the test fails

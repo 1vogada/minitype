@@ -14,7 +14,7 @@ from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICU
                       MIN_ACCS, MIN_WPMS, PACES, PCTS, QUOTE_SOURCES,
                       SIDEBAR_TABS, STOP_MODES, UI_STYLES, WORD_GAPS,
                       FUN_BOUNCE, FUN_SWITCH, FUN_CARET, EFFECT_SPEEDS,
-                      FLOW_DIRECTIONS)
+                      FLOW_DIRECTIONS, CORRECTED, TYPOS)
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import storage
 from ..terminal import console, keys
@@ -112,11 +112,21 @@ def build_items(app):
                       "wrong word so you can't get stuck",
                  tags=("confidence", "freedom", "corrections", "delete", "mistakes",
                        "backspace")),
-        b.flag("keep errors", "keep_errors",
-               "letters you mistyped stay red even after you fix them, so every "
-               "mistake stays visible. Doesn't change backspace; for no "
-               "corrections at all, set backspace to off",
-               tags=("mistakes", "errors", "red", "strict")),
+        _preview(b.choice("corrected letters", "corrected", CORRECTED,
+                          help="how a letter looks once you fix a mistake on "
+                               "it. marked: the theme's warning colour (italic "
+                               "in mono), so live mistakes (red) stand out. "
+                               "normal: like any typed letter. red: stays red",
+                          tags=("mistakes", "errors", "corrected", "fixed", "red",
+                                "keep errors", "colour")),
+                 lambda: theme_sample(app)),
+        _preview(b.choice("indicate typos", "typos", TYPOS,
+                          help="show the key you actually pressed. below: under "
+                               "the letter. replace: in its place. both: in its "
+                               "place, with the right letter under it",
+                          tags=("mistakes", "errors", "typos", "wrong key",
+                                "below", "replace")),
+                 lambda: theme_sample(app)),
         b.flag("punctuation", "punctuation",
                "capitals, commas, full stops and quotes",
                tags=("text", "symbols", "capitals")),

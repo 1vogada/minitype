@@ -6,7 +6,7 @@ from .config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS,
                      MEMORY_SECS, MIN_ACCS, MIN_WPMS, PACES, QUOTE_LENGTHS,
                      QUOTE_SOURCES, SIDEBAR_TABS, STOP_MODES, UI_STYLES,
                      WORD_GAPS, FUN_BOUNCE, FUN_SWITCH, FUN_CARET,
-                     EFFECT_SPEEDS, FLOW_DIRECTIONS)
+                     EFFECT_SPEEDS, FLOW_DIRECTIONS, CORRECTED, TYPOS)
 from .terminal.style import theme_names
 from .words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 
@@ -26,6 +26,8 @@ CHOICES = {
     "pace": PACES,
     "caret": CARETS,
     "word_gap": WORD_GAPS,
+    "corrected": CORRECTED,
+    "typos": TYPOS,
     "fun_bounce": FUN_BOUNCE,
     "fun_shake": FUN_SWITCH,
     "fun_pop": FUN_SWITCH,
@@ -53,7 +55,8 @@ class Settings:
     difficulty: str = "normal"   # expert: a wrong word ends it. master: a wrong key ends it.
     stop_on_error: str = "off"   # letter: wrong keys don't move the cursor. word: can't leave a wrong word
     backspace: str = "normal"    # off: no corrections at all. freedom: back into correct words too
-    keep_errors: bool = False    # mistyped letters stay red once fixed
+    corrected: str = "marked"    # fixed letters: marked (warn colour), normal, or red
+    typos: str = "off"           # show the wrong key: off, below, replace, both
     punctuation: bool = False
     numbers: bool = False        # sprinkle numbers into normal word tests
     blind: bool = False          # no feedback until the results screen
@@ -145,8 +148,6 @@ class Settings:
             flags.append(f"stop-{self.stop_on_error}")
         if self.backspace != "normal":
             flags.append("no-bksp" if self.backspace == "off" else "freedom")
-        if self.keep_errors:
-            flags.append("keep-errors")
         for on, name in ((self.punctuation, "punct"), (self.numbers, "num"),
                          (self.blind, "blind"), (self.ghost, "ghost"),
                          (self.tape, "tape")):
@@ -179,6 +180,8 @@ class Settings:
             self.theme = "mono"          # from before themes existed
         if d.get("show_spaces") is True and "word_gap" not in d:
             self.word_gap = "dots"       # from before word gap had choices
+        if d.get("keep_errors") is True and "corrected" not in d:
+            self.corrected = "marked"    # keep errors became corrected letters
         for f in fields(self):
             v = d.get(f.name)
             if type(v) is not type(getattr(self, f.name)):
