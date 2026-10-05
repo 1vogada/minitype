@@ -126,8 +126,10 @@ Skipping pages:
 - stop on error: *letter* (a wrong key doesn't move the cursor) or *word*
   (you can't leave a wrong word)
 - backspace: *off* (confidence mode) or *freedom* (back into correct words)
-- keep errors: letters you mistyped stay red even after you get them right,
-  and backspace does nothing. Pairs well with stop on error: letter
+- keep errors: letters you mistyped stay red even after you fix them.
+  Backspace is up to the backspace setting (off for no corrections at all)
+- with stop on error: word, backspace always works inside a wrong word, so
+  you can't get stuck on it (even with backspace off or on expert)
 - minimum speed and minimum accuracy: fall below and the test fails
 - funbox: reversed words, CAPS, rAnDoM case, mirrored text
 - memory: the words disappear a few seconds in

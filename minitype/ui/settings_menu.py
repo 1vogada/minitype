@@ -105,13 +105,18 @@ def build_items(app):
                       "word: you can't leave a wrong word",
                  tags=("mistakes", "errors", "cursor", "letter", "word")),
         b.choice("backspace", "backspace", BACKSPACE_MODES,
-                 help="off: no corrections at all (confidence mode). "
-                      "freedom: you can go back into correct words too",
-                 tags=("confidence", "freedom", "corrections", "delete", "mistakes")),
+                 help="normal: fix the word you're on, or step back into a wrong "
+                      "one. off: no corrections at all (confidence mode). "
+                      "freedom: you can go back into correct words too. "
+                      "With stop on error: word, backspace always works in a "
+                      "wrong word so you can't get stuck",
+                 tags=("confidence", "freedom", "corrections", "delete", "mistakes",
+                       "backspace")),
         b.flag("keep errors", "keep_errors",
-               "letters you mistyped stay red even after you type them right, "
-               "and backspace does nothing. Best with stop on error: letter",
-               tags=("mistakes", "errors", "red", "backspace", "strict", "delete")),
+               "letters you mistyped stay red even after you fix them, so every "
+               "mistake stays visible. Doesn't change backspace; for no "
+               "corrections at all, set backspace to off",
+               tags=("mistakes", "errors", "red", "strict")),
         b.flag("punctuation", "punctuation",
                "capitals, commas, full stops and quotes",
                tags=("text", "symbols", "capitals")),

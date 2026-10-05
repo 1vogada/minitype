@@ -211,8 +211,15 @@ class TypingTest:
         return None
 
     def _can_backspace(self):
+        """Whether backspace works: the backspace setting decides, and
+        expert / master switch it off. Except that with stop on error
+        "word" you can't leave a wrong word, so backspace always works
+        inside one - without it you'd be stuck there."""
         s = self.app.settings
-        return self.diff == "normal" and s.backspace != "off" and not s.keep_errors
+        if self.stop == "word" and self.typed[self.wi] \
+                and self.typed[self.wi] != self.words[self.wi][:len(self.typed[self.wi])]:
+            return True
+        return self.diff == "normal" and s.backspace != "off"
 
     def error_marks(self):
         """Letters to keep red after they were fixed (keep errors)."""

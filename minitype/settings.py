@@ -53,7 +53,7 @@ class Settings:
     difficulty: str = "normal"   # expert: a wrong word ends it. master: a wrong key ends it.
     stop_on_error: str = "off"   # letter: wrong keys don't move the cursor. word: can't leave a wrong word
     backspace: str = "normal"    # off: no corrections at all. freedom: back into correct words too
-    keep_errors: bool = False    # mistyped letters stay red once fixed; backspace does nothing
+    keep_errors: bool = False    # mistyped letters stay red once fixed
     punctuation: bool = False
     numbers: bool = False        # sprinkle numbers into normal word tests
     blind: bool = False          # no feedback until the results screen
