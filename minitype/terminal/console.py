@@ -14,17 +14,21 @@ MIN_W, MIN_H = 20, 5
 _last_size = None
 _background = ""
 
-# corner, corner, corner, corner, across, down
+# corner, corner, corner, corner, across, down. The sides are as wide as
+# "down": "thick" has two-column sides, which look as thick as its one-row
+# top and bottom since a terminal cell is about twice as tall as it's wide
+BLOCK = "█"
 BORDERS = {
     "ascii": ("+", "+", "+", "+", "-", "|"),
     "line": ("┌", "┐", "└", "┘", "─", "│"),
     "rounded": ("╭", "╮", "╰", "╯", "─", "│"),
     "double": ("╔", "╗", "╚", "╝", "═", "║"),
     "heavy": ("┏", "┓", "┗", "┛", "━", "┃"),
+    "block": (BLOCK,) * 6,
+    "thick": (BLOCK * 2, BLOCK * 2, BLOCK * 2, BLOCK * 2, BLOCK, BLOCK * 2),
 }
 # the theme's frame and corner art, set by set_decor()
-_decor = {"border": None, "border_style": "", "art": None, "art_style": "",
-          "art_scope": "menus"}
+_decor = {"border": None, "border_style": "", "art": None, "art_scope": "menus"}
 
 
 def enable_vt():
@@ -82,7 +86,8 @@ def size():
     the inside of the border when there is one."""
     w, h = term_size()
     if _decor["border"]:
-        return max(MIN_W, w - 2), max(MIN_H, h - 2)
+        side = len(_decor["border"][5])
+        return max(MIN_W, w - 2 * side), max(MIN_H, h - 2)
     return w, h
 
 
@@ -149,7 +154,7 @@ def present(lines, focus=None, pinned=(), scene="menu"):
     view += pinned
     rows = [clip(line, w - 1) for line in view]
     if art:
-        rows = overlay_art(rows, art, d["art_style"], w - 1, len(pinned))
+        rows = overlay_art(rows, art, w - 1, len(pinned))
     if d["border"]:
         rows = frame(rows, d["border"], d["border_style"], w - 1)
     bg = _background
@@ -162,31 +167,34 @@ def present(lines, focus=None, pinned=(), scene="menu"):
     flush()
 
 
-def overlay_art(rows, art, style, width, pinned_n):
+def overlay_art(rows, versions, width, pinned_n):
     """Put the art in the bottom-right corner, above any pinned lines with
-    a row to spare. If it would touch text on any of its rows, or the space
-    is too small, the frame is left without it rather than half-covered."""
-    art_w, art_h = max(len(l) for l in art), len(art)
+    a row to spare. `versions` are the picture's sizes, biggest first, as
+    styled lines; the first that fits without touching any text is drawn,
+    and if none does the frame is left without art rather than covered."""
     bottom = len(rows) - pinned_n - (2 if pinned_n else 1)
-    top = bottom - art_h + 1
-    col = width - art_w - 1
-    if top < 1 or col < width // 3:
+    for art in versions:
+        art_w, art_h = max(visible_len(l) for l in art), len(art)
+        top = bottom - art_h + 1
+        col = width - art_w - 1
+        if top < 1 or col < width // 3:
+            continue
+        if any(visible_len(rows[top + k]) > col - 2 for k in range(art_h)):
+            continue
+        rows = list(rows)
+        for k, line in enumerate(art):
+            r = rows[top + k]
+            rows[top + k] = r + RESET + " " * (col - visible_len(r)) + line + RESET
         return rows
-    if any(visible_len(rows[top + k]) > col - 2 for k in range(art_h)):
-        return rows
-    rows = list(rows)
-    for k, line in enumerate(art):
-        r = rows[top + k]
-        gap = " " * (col - visible_len(r))
-        rows[top + k] = r + RESET + gap + style + line + RESET
     return rows
 
 
 def frame(rows, chars, style, inner):
-    """A border around the rows, `inner` columns wide inside. It stops a
-    column short of the terminal's edge: writing the very last column
-    leaves some terminals waiting to wrap, and the line clear after it
-    would then wipe the corner."""
+    """A border around the rows, `inner` columns wide inside; the sides are
+    as wide as the side character. It stops a column short of the
+    terminal's edge: writing the very last column leaves some terminals
+    waiting to wrap, and the line clear after it would then wipe the
+    corner."""
     tl, tr, bl, br, across, down = chars
     side = style + down + RESET
     return ([style + tl + across * inner + tr + RESET]
@@ -194,13 +202,12 @@ def frame(rows, chars, style, inner):
             + [style + bl + across * inner + br + RESET])
 
 
-def set_decor(border=None, border_style="", art=None, art_style="",
-              art_scope="menus"):
-    """The theme's frame and corner art for present(): border is a
-    BORDERS key or None, art a list of lines or None, art_scope "menus" or
-    "everywhere"."""
+def set_decor(border=None, border_style="", art=None, art_scope="menus"):
+    """The theme's frame and corner art for present(): border is a BORDERS
+    key or None; art the picture's sizes, biggest first, each a list of
+    styled lines, or None; art_scope "menus" or "everywhere"."""
     _decor.update(border=BORDERS.get(border), border_style=border_style,
-                  art=art or None, art_style=art_style, art_scope=art_scope)
+                  art=art or None, art_scope=art_scope)
 
 
 def set_background(code):

@@ -4,6 +4,7 @@ from .learn.progress import LearnProgress
 from .settings import Settings
 from .stats import SessionStats
 from .terminal import console
+from .terminal.art import paint as paint_art
 from .terminal.style import Styles, theme_art
 from .words.bank import WordBank
 from .words.generator import WordGenerator
@@ -44,12 +45,14 @@ class App:
                     custom=custom)
         console.set_background(st.background)
         stealth = s.lowkey == "disguised"
-        picture = theme_art(s.theme) if art is None else art
+        versions = theme_art(s.theme) if art is None else art
+        palette = st.art_palette()
         console.set_decor(
             border=None if stealth or s.border == "off" else s.border,
             border_style=st.title,
-            art=None if stealth or s.art == "off" else picture,
-            art_style=st.title, art_scope=s.art)
+            art=None if stealth or s.art == "off" else
+            [paint_art(lines, colours, palette) for lines, colours in versions],
+            art_scope=s.art)
         return st
 
     def load_words(self, name):

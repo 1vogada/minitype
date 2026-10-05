@@ -223,7 +223,9 @@ def build_items(app):
                  lambda: theme_sample(app)),
         b.choice("border", "border", BORDER_STYLES,
                  help="a frame around the screen in the theme's accent colour. "
-                      "ascii uses + - | only; the others are line drawing",
+                      "ascii uses + - | only; line, rounded, double and heavy "
+                      "are line drawing; block and thick are solid, thick "
+                      "with two-column sides",
                  tags=("border", "frame", "box", "appearance", "theme")),
         b.choice("theme art", "art", ART_SCOPES,
                  help="an ASCII picture that fits the theme, in the screen's "

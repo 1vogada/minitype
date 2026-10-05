@@ -20,7 +20,8 @@ CODE_LANGS = ["python", "javascript"]
 CARETS = ["underline", "block"]
 WORD_GAPS = ["blank", "dots", "underline"]   # what's drawn between words
 CORRECTED = ["marked", "normal", "red"]     # how a fixed mistake looks
-BORDER_STYLES = ["off", "ascii", "line", "rounded", "double", "heavy"]
+BORDER_STYLES = ["off", "ascii", "line", "rounded", "double", "heavy", "block",
+                 "thick"]
 ART_SCOPES = ["off", "menus", "everywhere"]  # where the theme's picture shows
 TYPOS = ["off", "below", "replace", "both"]  # where the wrong key is shown
 # fun modifiers: "theme" follows the theme, the rest force a value

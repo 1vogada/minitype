@@ -514,7 +514,8 @@ def theme_names():
 
 def art_of_spec(spec, seen=()):
     """The corner art a theme spec asks for: its own "art", or its base
-    theme's when it doesn't say. [] for none."""
+    theme's when it doesn't say. A list of (lines, colours) versions,
+    biggest first; [] for none."""
     art = spec.get("art")
     if art == "none":
         return []
@@ -524,7 +525,8 @@ def art_of_spec(spec, seen=()):
 
 
 def theme_art(name, seen=()):
-    """A theme's corner art as lines, [] for none."""
+    """A theme's corner art as (lines, colours) versions, biggest first;
+    [] for none."""
     if name in seen:
         return []                      # a base loop in themes.json
     if name in custom_specs():
@@ -609,6 +611,15 @@ class Styles:
         e = self.effects
         return bool((e.gradient and e.flow) or e.bounce != "off" or e.glitch
                     or e.caret_fx != "off" or e.shake)
+
+    def art_palette(self):
+        """The theme's colours by name, for painting corner art. A theme
+        without a colour for a part (mono) falls back to the accent."""
+        return {"dim": self.dim, "text": self.ok or self.title,
+                "error": self.bad if not self.quiet else self.title,
+                "extra": self.extra if not self.quiet else self.dim,
+                "accent": self.title, "good": self.good or self.title,
+                "warn": self.warn or self.title}
 
     def caret_colour(self, now):
         """The rainbow caret's colour at this moment."""
