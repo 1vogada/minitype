@@ -235,6 +235,33 @@ def build_items(app):
                "of its text colour (no effect with mono or disguised)",
                tags=("colour", "color", "appearance", "theme", "accent",
                      "text", "letters")),
+    ]
+    def sample():
+        return theme_sample(app)
+
+    effect_tags = ("theme", "effects", "appearance", "colour", "color")
+    items += [_preview(row, sample) for row in (
+        b.flag("theme background", "theme_background",
+               "paint the theme's background across the screen (aurora, "
+               "synthwave, midnight...); off keeps your terminal's own",
+               tags=effect_tags + ("background",)),
+        b.flag("gradients", "theme_gradient",
+               "typed letters shade through the theme's gradient (rainbow, "
+               "aurora, vaporwave...); off uses its plain text colour",
+               tags=effect_tags + ("gradient", "rainbow")),
+        b.flag("gradient flow", "theme_flow",
+               "gradients move along as you type; off keeps them still",
+               tags=effect_tags + ("gradient", "flow", "animation", "motion")),
+        b.flag("heat", "theme_heat",
+               "typed text changes colour with your combo (ember); off "
+               "keeps it one colour",
+               tags=effect_tags + ("heat", "combo")),
+        b.flag("bold / italic", "theme_text_style",
+               "draw typed letters bold or italic where the theme does "
+               "(synthwave, ember, vaporwave...)",
+               tags=effect_tags + ("bold", "italic", "font")),
+    )]
+    items += [
         b.choice("ui style", "ui_style", UI_STYLES,
                  help="list: one column. sidebar: details beside the menu. "
                       "tabs: one section at a time",

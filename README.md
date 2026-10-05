@@ -155,6 +155,9 @@ Skipping pages:
     mistake), **phosphor** (green CRT), **vaporwave** (italic pastel neon),
     **candy** (flowing pastels), **midnight** (a dark background theme)
 - "accent letters" makes the letters you type take the theme's accent colour
+- every effect can be switched off on its own, for any theme: theme
+  background, gradients, gradient flow, heat, and bold / italic (all on
+  by default; the sample line shows the change as you toggle)
 
 ### Your own themes
 

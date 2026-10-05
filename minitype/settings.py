@@ -77,6 +77,12 @@ class Settings:
     # ---- look and feel
     theme: str = "default"
     accent_text: bool = False    # typed letters in the theme's accent colour
+    # a theme's effects, each of which can be switched off
+    theme_background: bool = True
+    theme_gradient: bool = True
+    theme_flow: bool = True      # gradients move
+    theme_heat: bool = True      # text colour follows the combo
+    theme_text_style: bool = True   # bold / italic letters
     lowkey: str = "off"          # minimal: just the words. disguised: looks like a plain prompt
     ui_style: str = "list"       # how menus are laid out
     sidebar_tabs: str = "off"    # sidebar style: tab bar on top, or section buttons on the left

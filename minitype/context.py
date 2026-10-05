@@ -29,7 +29,10 @@ class App:
         """The current theme's colours. Every screen draws through this, so
         it's also where the theme's background is handed to the console."""
         s = self.settings
-        st = Styles(s.theme, s.lowkey, s.accent_text)
+        st = Styles(s.theme, s.lowkey, s.accent_text,
+                    background=s.theme_background, gradient=s.theme_gradient,
+                    flow=s.theme_flow, heat=s.theme_heat,
+                    text_style=s.theme_text_style)
         console.set_background(st.background)
         return st
 

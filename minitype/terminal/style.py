@@ -22,7 +22,7 @@ rounded to the nearest of the 256 colours elsewhere (macOS Terminal).
 
 import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from .. import storage
 
@@ -373,7 +373,12 @@ class Styles:
     """Colour codes for the current theme. The mono theme, and the disguised
     lowkey mode, use only dim/underline so nothing on screen is coloured."""
 
-    def __init__(self, theme="default", lowkey="off", accent_text=False):
+    def __init__(self, theme="default", lowkey="off", accent_text=False,
+                 background=True, gradient=True, flow=True, heat=True,
+                 text_style=True):
+        """The keyword switches turn a theme's effects off one by one:
+        its background, gradient, the gradient's movement, heat, and
+        bold / italic letters."""
         self.lowkey = lowkey
         self.quiet = theme == "mono" or lowkey == "disguised"
         self.effects = NO_EFFECTS
@@ -382,7 +387,15 @@ class Styles:
             self.title = "" if lowkey == "disguised" else WHITE
             self.good = self.warn = ""
         else:
-            palette, self.effects = _theme(theme)
+            palette, effects = _theme(theme)
+            self.effects = replace(
+                effects,
+                background=effects.background if background else "",
+                gradient=effects.gradient if gradient else (),
+                flow=effects.flow if flow else 0.0,
+                heat=effects.heat if heat else (),
+                bold=effects.bold and text_style,
+                italic=effects.italic and text_style)
             (self.dim, self.ok, self.bad, self.extra,
              self.title, self.good, self.warn) = palette
             if accent_text:
