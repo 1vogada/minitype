@@ -509,24 +509,72 @@ def _():
 
 @scene("blossom")
 def _():
-    branch = [taper(bezier((1.38, 1.0), (1.48, 0.62), (1.42, 0.36)), 0.14, 0.09),
-              taper(bezier((1.5, 0.35), (1.1, 0.42), (0.6, 0.3)), 0.08, 0.025),
-              taper(bezier((1.0, 0.38), (0.95, 0.55), (0.75, 0.62)), 0.03, 0.01),
-              taper(bezier((0.8, 0.33), (0.7, 0.18), (0.5, 0.12)), 0.025, 0.008),
-              taper(bezier((1.2, 0.38), (1.25, 0.2), (1.15, 0.08)), 0.025, 0.008)]
-    clusters = [(0.6, 0.29), (0.52, 0.12), (0.76, 0.6), (0.9, 0.48), (1.15, 0.09), (1.05, 0.33),
-                (0.7, 0.2), (1.25, 0.28), (0.85, 0.36)]
-    parts = [Layer(union(*branch), Mat(" :|#", [(0, "d"), (0.5, "w")], outline="w"),
-                   grad(0, 0.3, 0, 0.45, 0.9, 0.3))]
-    for i, (x, y) in enumerate(clusters):
-        puff = union(*[circle(x + 0.05 * math.cos(i + k * 2.1), y + 0.04 * math.sin(i + k * 2.1),
-                              0.045 + 0.01 * (k % 2)) for k in range(4)])
-        parts.append(Layer(puff, Mat(" .:o*@", [(0, "d"), (0.3, "e"), (0.75, "t")], outline="e"),
-                           textured(sphere(x, y, 0.09, -0.5, -0.7, 0.2, 1.0), 0.2, 45, i)))
-    parts += scatter(0.0, 0.2, 1.4, 0.95, 26, ["*", ".", "'", "o", ","], "e", seed=13)
-    parts.append(Layer(below(lambda x: 0.95), Mat(" .,*", [(0, "d"), (0.6, "e")], edges=False),
-                       textured(0.5, 0.5, 30), focus=False))
-    return Scene(1.5, parts, span=True)
+    # a bonsai-like sakura: an S-curved trunk on a round root base, under
+    # one wide cloud of blossom that droops on the left and reaches far to
+    # the right, flecked with red; two small clumps hang lower down
+    clumps = [
+        # (x, y, r): the main cloud, left to right
+        (0.2, 0.45, 0.09), (0.3, 0.36, 0.11), (0.28, 0.5, 0.07), (0.42, 0.28, 0.12),
+        (0.42, 0.44, 0.1), (0.55, 0.18, 0.12), (0.58, 0.35, 0.12), (0.7, 0.12, 0.11),
+        (0.72, 0.28, 0.13), (0.85, 0.16, 0.12), (0.86, 0.32, 0.12), (0.98, 0.22, 0.12),
+        (1.0, 0.38, 0.11), (1.1, 0.3, 0.12), (1.2, 0.38, 0.11), (1.28, 0.46, 0.1),
+        (1.36, 0.53, 0.08), (1.14, 0.47, 0.08), (0.12, 0.52, 0.06), (1.43, 0.6, 0.05),
+    ]
+    low = [(1.06, 0.66, 0.07), (1.15, 0.64, 0.06), (1.1, 0.74, 0.05),       # lower right
+           (0.66, 0.68, 0.055), (0.6, 0.72, 0.04)]                          # lower left
+    rng = [(x + 0.06 * (rand(k, 3) - 0.5), y + 0.05 * (rand(k, 4) - 0.5), 0.025 + 0.02 * rand(k, 5))
+           for k, (x, y, r) in enumerate(clumps * 2)]                       # ragged edge tufts
+
+    def cloud(cs):
+        return union(*[circle(x, y, r) for x, y, r in cs])
+    canopy = cloud(clumps + rng)
+    lower = cloud(low)
+
+    def bloom(x, y):
+        # lit from the top left, darker underneath, grainy like the petals
+        t = 1.0 - (y - 0.1) * 0.75 - (x - 0.6) * 0.1
+        return max(0.3, min(1.0, t + 0.3 * (noise(x * 28, y * 28, 1) - 0.5)))
+    flecks = lambda x, y: noise(x * 26, y * 30, 7) > 0.72
+    blossom = Mat(" .:;+*%", [(0, "a"), (0.62, "t")], outline="t")
+    trunk = (bezier((0.83, 0.92), (0.74, 0.76), (0.88, 0.64), 18)
+             + bezier((0.88, 0.64), (0.98, 0.52), (0.84, 0.44), 18)[1:])
+    bark = Mat("|)(#%", [(0, "d"), (0.6, "w")], outline="d")
+    bark_tone = lambda x, y: 0.25 + 0.3 * (math.sin(x * 120 + y * 30) > 0.3) + 0.2 * (x < 0.84)
+
+    def build(rows):
+        out = [
+            # the stone it stands on, speckled, all the way across
+            Layer(below(lambda x: 0.88), Mat(" .:", "d", dither=True),
+                  lambda x, y: 0.25 + 0.3 * noise(x * 18, y * 40, 2), focus=False),
+            Line([(-4.0, 0.885), (3.0, 0.885)], "d", "_", False, tone=0.35),
+            *[Stamp(1.4 - k * 0.09 - 0.04 * rand(k, 21), 0.9 + 0.08 * rand(k, 22), ".,'*"[k % 4],
+                    "aex"[k % 3], False, tone=0.4 + 0.5 * rand(k, 23)) for k in range(60)],
+            # root base and trunk
+            Layer(ellipse(0.83, 0.92, 0.13, 0.04), Mat(" .:%#", "d", outline="d"),
+                  lambda x, y: 0.3 + 0.3 * noise(x * 40, y * 40, 3)),
+            *[Line([(0.83 + dx * 0.3, 0.9), (0.83 + dx, 0.94)], "d", tone=0.2) for dx in (-0.1, -0.05, 0.06, 0.11)],
+            Layer(taper(trunk, 0.1, 0.045), bark, bark_tone),
+            # branches reaching out under the cloud
+            *[Layer(taper(bezier(a_, m, b_), w, w * 0.4), bark, bark_tone) for a_, m, b_, w in [
+                ((0.86, 0.47), (0.74, 0.44), (0.58, 0.5), 0.03),
+                ((0.88, 0.5), (1.0, 0.44), (1.14, 0.5), 0.03),
+                ((0.9, 0.58), (1.0, 0.6), (1.06, 0.66), 0.025),
+                ((0.8, 0.6), (0.72, 0.62), (0.66, 0.68), 0.022)]],
+            # the blossom, with its red flecks and frosty tips
+            Layer(canopy, blossom, bloom),
+            Layer(where(canopy, flecks), Mat("*%#@", [(0, "x"), (0.5, "e")], edges=False),
+                  lambda x, y: 0.4 + 0.6 * noise(x * 50, y * 50, 8)),
+            Layer(lower, blossom, lambda x, y: bloom(x, y - 0.25)),
+            Layer(where(lower, flecks), Mat("*%#", [(0, "x"), (0.5, "e")], edges=False), 0.7),
+            *[Stamp(x + r * math.cos(k) * 1.05, y + r * math.sin(k) * 1.05, "'`,.*"[k % 5], "t",
+                    tone=0.9) for x, y, r in clumps for k in (1, 3, 4)],
+            # petals drifting down
+            *scatter(-3.0, 0.15, 0.1, 0.85, 40, ["'", ",", ".", "*"], "a", seed=97),
+            *[Stamp(x, y, ch, part, tone=0.6) for x, y, ch, part in
+              [(0.2, 0.7, ",", "a"), (0.45, 0.8, "'", "e"), (1.42, 0.8, ".", "a"), (0.05, 0.25, "*", "a")]],
+        ]
+        return out
+    return Scene(1.55, build, span=True)
 
 
 @scene("lavender")
