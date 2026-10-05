@@ -149,7 +149,9 @@ Skipping pages:
   has a mistake, the theme row's help says what's wrong
 - lowkey: *minimal* shows only the words during a test; *disguised* drops all
   colour and looks like a plain command prompt
-- tape mode (one scrolling line), block or underline caret, visible spaces
+- tape mode (one scrolling line); underline caret (the letter to type is
+  underlined and keeps its colour) or block caret (drawn inverted); word
+  gap: blank, dots or an underline between words
 - on-screen keyboard highlighting the next key, in qwerty, colemak, dvorak,
   qwertz or azerty; in learn mode keys are coloured by speed
 - ghost caret (your last run), pace caret (fixed wpm), error beep

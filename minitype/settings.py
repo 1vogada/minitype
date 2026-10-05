@@ -4,7 +4,8 @@ from .config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS,
                      CODE_LANGS, DIFFICULTIES,
                      FUNBOXES, GOALS, KEYBOARD_MODES, LAYOUTS, LOWKEY_MODES,
                      MEMORY_SECS, MIN_ACCS, MIN_WPMS, PACES, QUOTE_LENGTHS,
-                     QUOTE_SOURCES, SIDEBAR_TABS, STOP_MODES, UI_STYLES)
+                     QUOTE_SOURCES, SIDEBAR_TABS, STOP_MODES, UI_STYLES,
+                     WORD_GAPS)
 from .terminal.style import theme_names
 from .words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 
@@ -23,6 +24,7 @@ CHOICES = {
     "code_lang": CODE_LANGS,
     "pace": PACES,
     "caret": CARETS,
+    "word_gap": WORD_GAPS,
     "keyboard": KEYBOARD_MODES,
     "layout": list(LAYOUTS),
     "theme": theme_names,
@@ -78,8 +80,8 @@ class Settings:
     ui_style: str = "list"       # how menus are laid out
     sidebar_tabs: str = "off"    # sidebar style: tab bar on top, or section buttons on the left
     tape: bool = False           # one scrolling line instead of a block of lines
-    caret: str = "block"
-    show_spaces: bool = False    # draw spaces between words as dots
+    caret: str = "underline"     # underline: the letter to type is underlined. block: inverted
+    word_gap: str = "blank"      # between words: blank, dots or underline
     keyboard: str = "learn"      # on-screen keyboard: off, in learn mode, or always
     layout: str = "qwerty"       # for the on-screen keyboard
     ghost: bool = False          # dim caret replaying your last run
@@ -150,6 +152,8 @@ class Settings:
             return
         if d.get("quiet") is True and "theme" not in d:
             self.theme = "mono"          # from before themes existed
+        if d.get("show_spaces") is True and "word_gap" not in d:
+            self.word_gap = "dots"       # from before word gap had choices
         for f in fields(self):
             v = d.get(f.name)
             if type(v) is not type(getattr(self, f.name)):

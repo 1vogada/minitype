@@ -42,10 +42,17 @@ class Painter:
         self.errors = errors
         self.blind = settings.blind
         self.mirror = settings.funbox == "mirror"
-        self.caret = INV if settings.caret == "block" else UND + (st.ok or "")
-        if wrong and not self.blind:
-            self.caret = st.bad + INV
-        self.gap_char = SPACE_DOT if settings.show_spaces else " "
+        wrong = wrong and not self.blind
+        if settings.caret == "block":
+            # the letter to type drawn inverted; red after a wrong key
+            self.caret = self.caret_gap = (st.bad if wrong else "") + INV
+        else:
+            # underline only: the letter keeps the untyped colour, the
+            # underline turns red after a wrong key. On a space the
+            # underline is bright, so it stands out from an underlined gap
+            self.caret = (st.bad if wrong else st.dim) + UND
+            self.caret_gap = (st.bad if wrong else st.title) + UND
+        self.gap_style = settings.word_gap
         self.display = [w + typed[i][len(w):] for i, w in enumerate(words)]
         self.offs = []
         g = 0
@@ -87,11 +94,14 @@ class Painter:
         """The space after word i."""
         off = self.offs[i] + len(self.display[i])
         if i == self.wi and len(self.typed[i]) >= len(self.display[i]):
-            return (self.caret, " ", off)
+            return (self.caret_gap, " ", off)
         if off in self.marks:
             return (self.st.dim + UND, " ", off)
-        dot = self.gap_char != " "
-        return (self.st.dim if dot else "", self.gap_char, off)
+        if self.gap_style == "dots":
+            return (self.st.dim, SPACE_DOT, off)
+        if self.gap_style == "underline":
+            return (self.st.dim + UND, " ", off)
+        return ("", " ", off)
 
     def span(self, a, b):
         """Cells for words a..b-1 with the spaces between them; a trailing
@@ -126,7 +136,10 @@ def tape_line(p, width):
     a = max(0, p.wi - 40)
     b = min(len(p.words), p.wi + 40)
     cells = p.span(a, b)
-    caret_at = next((k for k, cell in enumerate(cells) if cell[0] == p.caret),
+    # found by position, not colour: an underline caret can share its
+    # colour with the ghost caret or an underlined gap
+    caret_off = p.offs[p.wi] + len(p.typed[p.wi]) if p.wi < len(p.words) else -1
+    caret_at = next((k for k, cell in enumerate(cells) if cell[2] == caret_off),
                     len(cells))
     start = max(0, caret_at - width // 3)
     return join(cells[start:start + width])

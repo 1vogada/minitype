@@ -12,7 +12,7 @@ from ..words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICULTIES, FUNBOXES, GOALS,
                       KEYBOARD_MODES, LAYOUTS, LOWKEY_MODES, MEMORY_SECS,
                       MIN_ACCS, MIN_WPMS, PACES, PCTS, QUOTE_SOURCES,
-                      SIDEBAR_TABS, STOP_MODES, UI_STYLES)
+                      SIDEBAR_TABS, STOP_MODES, UI_STYLES, WORD_GAPS)
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import storage
 from ..terminal import console, keys
@@ -209,10 +209,15 @@ def build_items(app):
                  tags=("hide", "stealth", "boss", "work", "minimal", "disguise")),
         b.flag("tape", "tape", "the words scroll along a single line",
                tags=("layout", "line", "scroll", "appearance")),
-        b.choice("caret", "caret", CARETS, help="how the cursor is drawn",
-                 tags=("cursor", "appearance")),
-        b.flag("show spaces", "show_spaces", "draw the spaces between words as dots",
-               tags=("whitespace", "dots", "appearance")),
+        b.choice("caret", "caret", CARETS,
+                 help="underline: the letter to type is underlined and keeps "
+                      "its colour. block: the letter is drawn inverted",
+                 tags=("cursor", "appearance", "underline", "block")),
+        b.choice("word gap", "word_gap", WORD_GAPS,
+                 help="what's drawn in the spaces between words: nothing, "
+                      "dots, or an underline",
+                 tags=("whitespace", "spaces", "dots", "underline", "separator",
+                       "appearance")),
         b.choice("keyboard", "keyboard", KEYBOARD_MODES,
                  help="on-screen keyboard highlighting the next key",
                  tags=("keys", "keyboard", "learn", "appearance")),
