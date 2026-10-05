@@ -3,7 +3,8 @@
 A minimal CLI typing test inspired by [keybr](https://www.keybr.com/) and
 [Monkeytype](https://monkeytype.com/). Pure Python, no dependencies.
 
-Runs on Windows, Linux and macOS (Python 3.8+).
+Runs on Windows, Linux and macOS (Python 3.8+), and on Android in
+[Termux](https://termux.dev/).
 
 ## Run
 
@@ -13,7 +14,10 @@ python -m minitype
 
 (`python3` on Linux and macOS.)
 
-### Linux and macOS
+### Linux, macOS and Termux
+
+In Termux, install Python first (`pkg install python git`), clone the repo
+and run `python -m minitype` in it.
 
 minitype switches the terminal into raw mode while it runs and puts it
 back on exit. If it ever doesn't (a crash in the middle of something), type
