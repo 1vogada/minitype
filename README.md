@@ -161,7 +161,8 @@ Skipping pages:
     background), **synthwave** (bold neon gradient), **ember** (your text
     heats up from grey to white hot as your combo grows, and cools on a
     mistake), **phosphor** (green CRT), **vaporwave** (italic pastel neon),
-    **candy** (flowing pastels), **midnight** (a dark background theme)
+    **candy** (flowing pastels), **midnight** (a dark background theme),
+    **summit** (black and white: a snowy peak made of light and code)
   - fun: **party** (fast rainbow, bouncing letters, pop, rainbow caret),
     **glitch** (cyberpunk gradient, glitching letters, shake, pulsing
     caret), **bubbly** (pastels that bounce wildly)

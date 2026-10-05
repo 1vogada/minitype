@@ -340,6 +340,14 @@ ART = {
                \  '.___.;
             .   '._  _.'  *
 """),
+    "summit": _art(r"""
+        1 0      /\      0 1
+          1    /\/##\     1
+        0   /\/ \/###\  0
+          /\/  /\  \###\
+         /  \ /  \  \###\
+        ^ ^ ^^ ^ ^^ ^ ^^ ^
+"""),
 }
 
 THEME_ART = {
@@ -387,6 +395,7 @@ THEME_ART = {
     "vaporwave": "palm",
     "candy": "lollipop",
     "midnight": "moon",
+    "summit": "summit",
 }
 
 ART_NAMES = list(ART)

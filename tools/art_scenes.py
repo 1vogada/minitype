@@ -1452,4 +1452,80 @@ def hills(base, part="g", seed=0, far="d"):
                   lambda x, y: 0.5 + 0.3 * math.sin((y - near(x)) * 80 + x * 4), focus=False)]
 
 
+
+CODE = "0123456789ABCDEFHJKLPRSTUXZ=+-<>/?#$%"
+
+
+def ridge(points, jag=0.012, seed=0):
+    """The top of a mountain through (x, y) points, rough along the way;
+    nothing outside them."""
+    def top(x):
+        if x < points[0][0] or x > points[-1][0]:
+            return INF
+        for (x0, y0), (x1, y1) in zip(points, points[1:]):
+            if x0 <= x <= x1:
+                y = y0 + (y1 - y0) * (x - x0) / (x1 - x0)
+                return y + jag * (math.sin(x * 97 + seed) + 0.6 * math.sin(x * 211 + seed * 2))
+        return INF
+    return top
+
+
+@scene("summit")
+def _():
+    # a sharp peak made of light and code: lit snow gullies on its left
+    # face, the shadowed side dissolving into glyphs, a far range behind,
+    # a dark ridge in front, pines along the bottom, and a sky of digits
+    peak = ridge([(0.22, 0.8), (0.42, 0.5), (0.52, 0.36), (0.6, 0.41), (0.72, 0.26), (0.84, 0.14),
+                  (0.95, 0.04), (1.02, 0.1), (1.1, 0.17), (1.2, 0.29), (1.32, 0.33), (1.42, 0.42),
+                  (1.58, 0.56)], 0.01, 1)
+
+    def spine(y):
+        return 0.95 - (y - 0.04) * 0.42                     # the sunlit edge runs down-left
+
+    def peak_tone(x, y):
+        lit = x < spine(y)
+        snow = max(0.0, 1 - (y - 0.04) * 1.35)              # more snow higher up
+        if lit:
+            gully = math.sin((x * 9 + y * 15) * 7 + 2 * math.sin(y * 20))
+            t = 0.55 + 0.45 * snow + 0.22 * gully
+        else:
+            gully = math.sin((-x * 10 + y * 13) * 7 + 2 * math.sin(x * 15))
+            t = 0.24 + 0.7 * snow * max(0.0, gully) ** 2
+        return max(0.0, min(1.0, t + 0.12 * (noise(x * 40, y * 40, 4) - 0.5)))
+
+    far = ridge([(-4.0, 0.5)] + [(-3.9 + k * 0.18, 0.42 + 0.12 * rand(k, 41)) for k in range(31)]
+                + [(1.8, 0.5)], 0.008, 2)
+
+    def far_tone(x, y):
+        return max(0.0, 0.5 - (y - far(x)) * 2.2 + 0.25 * math.sin((x * 12 + y * 18) * 5))
+
+    front = ridge([(-4.0, 0.66), (-2.6, 0.6), (-1.5, 0.66), (-0.6, 0.58), (0.05, 0.6), (0.3, 0.55),
+                   (0.5, 0.64), (0.75, 0.72), (1.0, 0.76), (1.3, 0.72), (1.8, 0.68)], 0.012, 3)
+
+    def front_tone(x, y):
+        # snow caught in gullies running down to the left, fading lower down
+        streak = math.sin((x * 3 + y * 7) * 9 + 1.5 * math.sin(x * 4))
+        depth = y - front(x)
+        snow = max(0.0, 1 - depth / 0.16)
+        mist = min(0.4, max(0.0, depth - 0.08) * 2.5)        # the valley fills with mist
+        return 0.24 + mist + (0.45 * snow if streak > 0.55 else 0.0)
+
+    sky = rect(-4.5, -0.5, 2.0, 1.5)
+    rock = Mat(" .:-=+*#%@", [(0, "d"), (0.4, "g"), (0.75, "t")], outline="t")
+    return Scene(1.55, [
+        Layer(sky, Mat("0", "d", edges=False, code=CODE, code_below=2.0, seed=1),
+              lambda x, y: 0.08 + 0.35 * noise(x * 9, y * 14, 6) ** 2, focus=False),
+        Layer(below(far), Mat(" .:-=+*#", [(0, "d"), (0.45, "g")], outline="g"),
+              lambda x, y: max(0.24, far_tone(x, y)), focus=False),
+        Layer(below(peak), rock, peak_tone),
+        Layer(below(front), Mat(" .:-=+#%@", [(0, "d"), (0.5, "t")], outline="g"),
+              front_tone, focus=False),
+        Layer(where(below(treeline(0.95, 0.24, 0.032, 11)), lambda x, y: y < 0.9),
+              Mat("#", "d", outline="g"), lambda x, y: 0.1 + 0.15 * noise(x * 30, y * 30, 12),
+              focus=False),
+        Layer(below(lambda x: 0.9), Mat("0", "d", edges=False, code=CODE, code_below=2.0, seed=4),
+              lambda x, y: 0.15 + 0.4 * noise(x * 11, y * 20, 9), focus=False),
+    ], span=True, sizes=(32, 26, 20, 14, 10))
+
+
 SCENES.update((name, make()) for name, make in _MAKERS.items())

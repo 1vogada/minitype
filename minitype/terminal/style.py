@@ -330,6 +330,12 @@ COMPLEX = {
         "base": "catppuccin", "background": "#0d1117", "text": "#e6edf3",
         "dim": "#484f58", "accent": "#58a6ff", "error": "#f85149",
     },
+    # black and white, snow and code
+    "summit": {
+        "base": "nord", "background": "#0a0b0c", "text": "#eceff1", "dim": "#55595e",
+        "accent": "#ffffff", "good": "#a9afb5", "warn": "#cfd4d8", "extra": "#8c4a4a",
+        "error": "#ff6b6b",
+    },
 }
 
 

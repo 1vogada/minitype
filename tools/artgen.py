@@ -253,8 +253,11 @@ class Mat:
     outline uses shaped glyphs, dither whether tone is shown as a halftone."""
 
     def __init__(self, ramp=" .:-=+*#%@", parts="a", edges=True, dither=False,
-                 outline=None, bold=False):
+                 outline=None, bold=False, code=None, code_below=0.0, code_gap=2, seed=0):
         self.ramp, self.edges, self.dither, self.bold = ramp, edges, dither, bold
+        # code: glyphs that fill wherever the tone is under code_below, one
+        # every code_gap columns, picked at random (a wall of digits)
+        self.code, self.code_below, self.code_gap, self.seed = code, code_below, code_gap, seed
         self.outline = outline          # a colour letter: outline even over other layers
         self.parts = [(0.0, parts)] if isinstance(parts, str) else parts
 
@@ -266,6 +269,12 @@ class Mat:
         return p
 
     def char(self, tone, r, c):
+        if self.code and tone < self.code_below:
+            if c % self.code_gap:
+                return " "
+            n = (r * 7919 + c * 104729 + self.seed * 15485863) & 0xFFFFFFFF
+            n = ((n ^ (n >> 13)) * 1274126177) & 0xFFFFFFFF
+            return self.code[(n >> 8) % len(self.code)]
         ramp = self.ramp
         if self.dither:
             level = tone * (len(ramp) - 1) + (BAYER[r % 4][c % 4] - 0.5)
