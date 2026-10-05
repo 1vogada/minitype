@@ -19,6 +19,12 @@ QUOTE_SOURCES = ["built-in", "online"]
 CODE_LANGS = ["python", "javascript"]
 CARETS = ["underline", "block"]
 WORD_GAPS = ["blank", "dots", "underline"]   # what's drawn between words
+# fun modifiers: "theme" follows the theme, the rest force a value
+FUN_BOUNCE = ["theme", "off", "gentle", "wild"]
+FUN_SWITCH = ["theme", "off", "on"]
+FUN_CARET = ["theme", "off", "pulse", "rainbow"]
+EFFECT_SPEEDS = [0.25, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0]
+FLOW_DIRECTIONS = ["forward", "backward"]
 KEYBOARD_MODES = ["off", "learn", "always"]
 LOWKEY_MODES = ["off", "minimal", "disguised"]
 UI_STYLES = ["list", "sidebar", "tabs"]

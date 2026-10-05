@@ -4,14 +4,36 @@ Every word becomes a list of cells (style, char, offset). The block layout
 wraps those cells into lines; tape mode lays them on one line that scrolls
 with the caret. Offsets are global character positions, which is what the
 ghost and pace carets are measured in.
+
+The theme's fun modifiers are applied here too, and only here, so they
+never change what you have to type:
+    pop      the last few typed letters are bright and bold
+    fade     typed letters far behind the caret go dim
+    glitch   untyped letters well ahead flicker to symbols now and then
+    caret    pulse blinks it, rainbow cycles its colour
+    shake    the text jolts sideways for a moment after a wrong key
+    bounce   each line becomes two rows and letters hop between them
 """
+
+import math
 
 from ..config import VIEW_LINES
 from ..terminal import console
-from ..terminal.style import INV, RESET, UND
+from ..terminal.style import BOLD, INV, RESET, UND
 
 SPACE_DOT = "·"
 HIDDEN = "_"
+
+POP_LEN = 3            # typed letters behind the caret that pop
+FADE_FROM = 12         # typed letters further back than this fade
+GLITCH_SAFE = 3        # letters right after the caret never glitch
+GLITCH_ODDS = 45       # about one letter in this many flickers at a time
+GLITCH_GLYPHS = "#%&@$*?!<>/\\=+"
+SHAKE_TIME = 0.3       # seconds the text shakes after a wrong key
+SHAKE_STEPS = (1, -1, 1, -1, 0)
+BOB_RATE = 5.0         # how fast letters bob
+BOB_RANGE = 8          # gentle bounce: letters this close to the caret bob
+PULSE_RATE = 2.0       # caret blinks a second
 
 
 def wrap(display, width):
@@ -43,16 +65,23 @@ class Painter:
         self.combo, self.now = combo, now      # for theme heat and flow
         self.blind = settings.blind
         self.mirror = settings.funbox == "mirror"
+        self.fx = st.effects
+        self.speed = abs(getattr(st, "speed", 1.0)) or 1.0
         wrong = wrong and not self.blind
+        rainbow = self.fx.caret_fx == "rainbow" and not wrong
         if settings.caret == "block":
             # the letter to type drawn inverted; red after a wrong key
-            self.caret = self.caret_gap = (st.bad if wrong else "") + INV
+            colour = st.caret_colour(now) if rainbow else st.bad if wrong else ""
+            self.caret = self.caret_gap = colour + INV
         else:
             # underline only: the letter keeps the untyped colour, the
             # underline turns red after a wrong key. On a space the
             # underline is bright, so it stands out from an underlined gap
-            self.caret = (st.bad if wrong else st.dim) + UND
-            self.caret_gap = (st.bad if wrong else st.title) + UND
+            colour = st.caret_colour(now) if rainbow else None
+            self.caret = (colour or (st.bad if wrong else st.dim)) + UND
+            self.caret_gap = (colour or (st.bad if wrong else st.title)) + UND
+        if self.fx.caret_fx == "pulse" and int(now * PULSE_RATE * self.speed) % 2:
+            self.caret, self.caret_gap = st.dim, ""        # the blink's off half
         self.gap_style = settings.word_gap
         self.display = [w + typed[i][len(w):] for i, w in enumerate(words)]
         self.offs = []
@@ -60,6 +89,40 @@ class Painter:
         for s in self.display:
             self.offs.append(g)
             g += len(s) + 1
+        self.caret_off = (self.offs[wi] + len(typed[wi])) if wi < len(words) else -1
+
+    def _glitched(self, off):
+        """Whether an untyped letter flickers this moment (the same answer
+        all through one flicker, so it doesn't change every frame)."""
+        moment = int(self.now * 8 * self.speed)
+        return (off * 7919 + moment * 104729) % GLITCH_ODDS == 0
+
+    def _flourish(self, s, c, off, typed_ok, untyped):
+        """Apply pop, fade and glitch to one letter."""
+        fx, d = self.fx, self.caret_off - off
+        if typed_ok and fx.pop and 0 < d <= POP_LEN:
+            s = BOLD + self.st.title
+        elif typed_ok and fx.fade and d > FADE_FROM:
+            s = self.st.dim
+        elif untyped and fx.glitch and -d > GLITCH_SAFE and self._glitched(off):
+            c = GLITCH_GLYPHS[(off + int(self.now * 8)) % len(GLITCH_GLYPHS)]
+        return s, c
+
+    def is_up(self, off):
+        """Bounce: whether this letter is on the upper row right now."""
+        fx = self.fx
+        if fx.bounce == "off":
+            return False
+        if fx.bounce == "gentle" and abs(off - self.caret_off) > BOB_RANGE:
+            return False
+        return math.sin(self.now * BOB_RATE * self.speed + off * 0.7) > 0.35
+
+    def shake(self, last_error):
+        """Columns to nudge the text sideways after a wrong key."""
+        t = self.now - last_error
+        if not self.fx.shake or not 0 <= t < SHAKE_TIME:
+            return 0
+        return SHAKE_STEPS[int(t / SHAKE_TIME * len(SHAKE_STEPS))]
 
     def word(self, i):
         st, w, t, wi = self.st, self.words[i], self.typed[i], self.wi
@@ -72,6 +135,7 @@ class Painter:
             if i == wi and j == len(t):
                 cells.append((self.caret, HIDDEN if self.hidden else c, off))
                 continue
+            typed_ok = False
             if tc is None:
                 s = st.bad if (i < wi and not self.blind) else st.dim
                 if self.hidden and i >= wi:
@@ -81,10 +145,12 @@ class Painter:
             elif wc is None:
                 s = st.extra
             elif tc == wc:
-                s = st.bad if (i, j) in self.errors \
-                    else st.typed(off, i, self.combo, self.now)
+                typed_ok = (i, j) not in self.errors
+                s = st.typed(off, i, self.combo, self.now) if typed_ok else st.bad
             else:
                 s = st.bad
+            s, c = self._flourish(s, c, off, typed_ok,
+                                  tc is None and i >= wi and not self.hidden)
             if off in self.marks:
                 s = st.dim + UND
             cells.append((s, c, off))
@@ -124,13 +190,25 @@ def join(cells):
     return "".join(s + c + RESET if s else c for s, c, _ in cells)
 
 
+def rows(p, cells):
+    """A line of cells as screen rows: one row, or with bounce two, where
+    each letter sits on the upper or lower row as it bobs."""
+    if p.fx.bounce == "off":
+        return [join(cells)]
+    up = [p.is_up(off) for _, _, off in cells]
+    top = join((s, c, o) if u else ("", " ", o) for (s, c, o), u in zip(cells, up))
+    low = join(("", " ", o) if u else (s, c, o) for (s, c, o), u in zip(cells, up))
+    return [top, low]
+
+
 def block_lines(p, width):
     lines = wrap(p.display, width)
     li = next((n for n, (a, b) in enumerate(lines) if a <= p.wi < b),
               len(lines) - 1)
     top = max(0, min(li - 1, len(lines) - VIEW_LINES))
-    view = [join(p.span(a, b)) for a, b in lines[top:top + VIEW_LINES]]
-    return view + [""] * (VIEW_LINES - len(view))
+    per_line = 1 if p.fx.bounce == "off" else 2
+    view = [r for a, b in lines[top:top + VIEW_LINES] for r in rows(p, p.span(a, b))]
+    return view + [""] * (VIEW_LINES * per_line - len(view))
 
 
 def tape_line(p, width):
@@ -144,11 +222,12 @@ def tape_line(p, width):
     caret_at = next((k for k, cell in enumerate(cells) if cell[2] == caret_off),
                     len(cells))
     start = max(0, caret_at - width // 3)
-    return join(cells[start:start + width])
+    return rows(p, cells[start:start + width])
 
 
 def draw(st, settings, header, words, typed, wi, width, footer, marks=(),
-         wrong=False, below=(), hidden=False, errors=(), combo=0, now=0.0):
+         wrong=False, below=(), hidden=False, errors=(), combo=0, now=0.0,
+         last_error=-1.0):
     """Redraw the test screen in place.
 
     marks:  global char offsets to underline (ghost and pace carets)
@@ -156,18 +235,19 @@ def draw(st, settings, header, words, typed, wi, width, footer, marks=(),
     below:  extra lines under the words (the on-screen keyboard)
     hidden: memory mode, untyped characters are blanked out
     errors: (word, letter) positions to keep red even once typed right
+    combo, now:  for theme heat, flow and the animated modifiers
+    last_error:  when the last wrong key was, for shake
     """
     p = Painter(st, settings, words, typed, wi, marks, wrong, hidden, errors,
                 combo, now)
     out = []
     if header:
-        out += [st.dim + header + RESET, ""]
+        out += ["  " + st.dim + header + RESET, ""]
     focus = len(out)
-    if settings.tape:
-        out += [tape_line(p, width), ""]
-    else:
-        out += block_lines(p, width)
+    text = tape_line(p, width) + [""] if settings.tape else block_lines(p, width)
+    shifted = " " * (2 + p.shake(last_error))       # shake nudges just the words
+    out += [shifted + line if line else "" for line in text]
     if below:
-        out += [""] + list(below)
+        out += [""] + ["  " + line for line in below]
     pinned = ["", st.dim + footer + RESET] if footer else ()
-    console.present(["  " + line if line else "" for line in out], focus, pinned)
+    console.present(out, focus, pinned)

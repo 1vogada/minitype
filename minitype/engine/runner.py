@@ -18,6 +18,7 @@ ZEN_FOOTER = "enter finish   esc menu   ctrl-q hide"
 BOOK_FOOTER = ("esc menu   tab restart   pgdn next page   pgup previous page   "
                "ctrl-q hide")
 REDRAW_EVERY = 0.1
+REDRAW_ANIMATED = 0.05    # smoother when the theme has things moving
 SLOW_WORDS = 20       # how many of your slowest words a drill draws from
 MIN_SLOW_WORDS = 5    # tracked words needed before the drill is offered
 
@@ -49,6 +50,7 @@ class TypingTest:
         self.done = False       # ended from inside a key press
         self.wrong = False      # last key was rejected by stop on error
         self.err_marks = set()  # (word, letter) positions that had a wrong key
+        self.last_error = -1.0  # when the last wrong key came (for shake)
         self.prev_t = None
         self.word_start = None  # when the first char of the current word landed
         self.popped_hints = False
@@ -247,6 +249,7 @@ class TypingTest:
     def _miss(self, want):
         self.bad_keys += 1
         self.combo = 0
+        self.last_error = time.time()
         self.misses[want] = self.misses.get(want, 0) + 1
         self.app.stats.miss_key(want)
         if self.app.settings.sound:
@@ -454,12 +457,14 @@ def run_test(app, spec):
             break
         test.top_up()
         size = console.size()
-        if dirty or now - last_draw > REDRAW_EVERY:
+        st = app.styles()
+        every = REDRAW_ANIMATED if st.animated else REDRAW_EVERY
+        if dirty or now - last_draw > every:
             head, marks = test.status(now)
-            draw(app.styles(), app.settings, head, test.words, test.typed,
+            draw(st, app.settings, head, test.words, test.typed,
                  test.wi, max(10, size[0] - 4), test.footer(), marks, test.wrong,
                  keyboard_lines(app, test), test.hidden(now),
-                 test.error_marks(), test.combo, now)
+                 test.error_marks(), test.combo, now, test.last_error)
             last_draw = now
             dirty = False
 

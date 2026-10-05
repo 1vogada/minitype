@@ -140,7 +140,7 @@ Skipping pages:
   **tabs** (one section at a time). The sidebar can also show a tab bar on
   top, or the sections as buttons down the left (settings → look → sidebar
   tabs)
-- 42 themes (settings → look → theme; a sample line under the row shows
+- 45 themes (settings → look → theme; a sample line under the row shows
   each one as you flip through):
   - plain: default, ocean, forest, sunset, dracula, nord, gruvbox,
     solarized, monokai, catppuccin, rose pine, matrix, amber, paper (for
@@ -154,10 +154,27 @@ Skipping pages:
     heats up from grey to white hot as your combo grows, and cools on a
     mistake), **phosphor** (green CRT), **vaporwave** (italic pastel neon),
     **candy** (flowing pastels), **midnight** (a dark background theme)
+  - fun: **party** (fast rainbow, bouncing letters, pop, rainbow caret),
+    **glitch** (cyberpunk gradient, glitching letters, shake, pulsing
+    caret), **bubbly** (pastels that bounce wildly)
 - "accent letters" makes the letters you type take the theme's accent colour
 - every effect can be switched off on its own, for any theme: theme
   background, gradients, gradient flow, heat, and bold / italic (all on
   by default; the sample line shows the change as you toggle)
+- **fun** (settings → fun), purely visual, never changes what you type:
+  - **bounce**: letters bob up and down, *gentle* near the caret or *wild*
+  - **shake**: the text jolts sideways after a wrong key
+  - **pop**: the last few letters you typed flash bright
+  - **fade**: typed letters dim as they fall behind
+  - **caret effect**: *pulse* (blinks) or *rainbow* (cycles colour)
+  - **glitch**: letters further ahead flicker into symbols now and then
+  - **effect speed** (0.25x-4x) and **flow direction** for gradients
+  Each follows the theme by default ("theme") or can be forced on or off.
+  The party, glitch and bubbly themes come with modifiers switched on
+- **theme creator** (settings → look): build a theme from scratch or from
+  any theme, with every colour, the background, gradient, flow, heat,
+  bold / italic and the fun modifiers, and a live preview. Save it to
+  `themes.json` or save and switch to it straight away
 
 ### Your own themes
 
@@ -174,6 +191,9 @@ Colours are 256-colour numbers (0-255) or `"#rrggbb"`. Effects:
 | `flow` | how many steps a second the gradient moves (0 = still) |
 | `heat` | list of colours, coolest first: typed text changes colour every 5 keys of combo |
 | `bold`, `italic` | `true` to draw typed letters that way |
+| `bounce` | `"gentle"` or `"wild"`: letters bob |
+| `shake`, `pop`, `fade`, `glitch` | `true` to switch that modifier on |
+| `caret` | `"pulse"` or `"rainbow"` |
 
 `#rrggbb` is sent as true colour where the terminal supports it (Windows,
 Termux, iTerm2, kitty, ...) and rounded to the nearest of 256 colours

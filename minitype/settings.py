@@ -5,7 +5,8 @@ from .config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS,
                      FUNBOXES, GOALS, KEYBOARD_MODES, LAYOUTS, LOWKEY_MODES,
                      MEMORY_SECS, MIN_ACCS, MIN_WPMS, PACES, QUOTE_LENGTHS,
                      QUOTE_SOURCES, SIDEBAR_TABS, STOP_MODES, UI_STYLES,
-                     WORD_GAPS)
+                     WORD_GAPS, FUN_BOUNCE, FUN_SWITCH, FUN_CARET,
+                     EFFECT_SPEEDS, FLOW_DIRECTIONS)
 from .terminal.style import theme_names
 from .words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 
@@ -25,6 +26,14 @@ CHOICES = {
     "pace": PACES,
     "caret": CARETS,
     "word_gap": WORD_GAPS,
+    "fun_bounce": FUN_BOUNCE,
+    "fun_shake": FUN_SWITCH,
+    "fun_pop": FUN_SWITCH,
+    "fun_fade": FUN_SWITCH,
+    "fun_caret": FUN_CARET,
+    "fun_glitch": FUN_SWITCH,
+    "effect_speed": EFFECT_SPEEDS,
+    "flow_direction": FLOW_DIRECTIONS,
     "keyboard": KEYBOARD_MODES,
     "layout": list(LAYOUTS),
     "theme": theme_names,
@@ -83,6 +92,15 @@ class Settings:
     theme_flow: bool = True      # gradients move
     theme_heat: bool = True      # text colour follows the combo
     theme_text_style: bool = True   # bold / italic letters
+    # fun modifiers: "theme" follows the theme, or force them
+    fun_bounce: str = "theme"    # theme / off / gentle / wild
+    fun_shake: str = "theme"     # theme / off / on, and the same below
+    fun_pop: str = "theme"
+    fun_fade: str = "theme"
+    fun_caret: str = "theme"     # theme / off / pulse / rainbow
+    fun_glitch: str = "theme"
+    effect_speed: float = 1.0    # how fast gradients and modifiers move
+    flow_direction: str = "forward"
     lowkey: str = "off"          # minimal: just the words. disguised: looks like a plain prompt
     ui_style: str = "list"       # how menus are laid out
     sidebar_tabs: str = "off"    # sidebar style: tab bar on top, or section buttons on the left

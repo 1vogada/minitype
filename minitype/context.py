@@ -24,15 +24,23 @@ class App:
         self.learn = LearnProgress()
         self.cursors = {}   # menu name -> selected row, kept between visits
         self.notice = ""    # one-off message for the next menu draw
+        self.theme_draft = None   # the theme creator's work in progress
 
-    def styles(self):
-        """The current theme's colours. Every screen draws through this, so
-        it's also where the theme's background is handed to the console."""
+    def styles(self, custom=None):
+        """The current theme's colours, with every effect and fun-modifier
+        setting applied. Every screen draws through this, so it's also where
+        the theme's background is handed to the console. `custom` is a
+        (palette, effects) pair to show instead (the theme creator's draft)."""
         s = self.settings
         st = Styles(s.theme, s.lowkey, s.accent_text,
                     background=s.theme_background, gradient=s.theme_gradient,
                     flow=s.theme_flow, heat=s.theme_heat,
-                    text_style=s.theme_text_style)
+                    text_style=s.theme_text_style,
+                    modifiers={"bounce": s.fun_bounce, "shake": s.fun_shake,
+                               "pop": s.fun_pop, "fade": s.fun_fade,
+                               "caret_fx": s.fun_caret, "glitch": s.fun_glitch},
+                    speed=s.effect_speed, reverse=s.flow_direction == "backward",
+                    custom=custom)
         console.set_background(st.background)
         return st
 

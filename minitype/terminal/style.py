@@ -9,6 +9,12 @@ A theme is seven colours (PARTS) and, optionally, effects:
     heat         typed letters change colour with your combo, coolest
                  first: every HEAT_STEP correct keys in a row moves one on
     bold, italic how typed letters are drawn
+    bounce       letters bob up and down: "gentle" near the caret, "wild"
+    shake        the text jolts sideways after a wrong key
+    pop          the last few typed letters flash bright
+    fade         typed letters dim the further behind they fall
+    caret        "pulse" (blinks) or "rainbow" (cycles colour)
+    glitch       letters further ahead flicker to symbols
 
 Plain themes are listed in THEMES, ones with effects in COMPLEX. You can add
 your own in themes.json in the app folder (see themes.example.json), with
@@ -44,7 +50,8 @@ CUSTOM_FILE = "themes.json"
 PARTS = ("dim", "text", "error", "extra", "accent", "good", "warn")
 GRADIENT_STEPS = 24      # colours a gradient is blended into
 HEAT_STEP = 5            # correct keys in a row per step of heat
-EFFECT_KEYS = ("background", "gradient", "by", "flow", "heat", "bold", "italic")
+EFFECT_KEYS = ("background", "gradient", "by", "flow", "heat", "bold", "italic",
+               "bounce", "shake", "pop", "fade", "caret", "glitch")
 
 
 # ---------------------------------------------------------------- colours
@@ -198,7 +205,28 @@ COMPLEX = {
         "base": "default", "accent": 213,
         "gradient": ["#ff5f5f", "#ffaf5f", "#ffff5f", "#5fff5f", "#5fffff",
                      "#5f87ff", "#d75fff"],
-        "by": "letter", "flow": 8,
+        "by": "letter", "flow": 8, "caret": "rainbow",
+    },
+    # fun ones: movement and flourishes
+    "party": {
+        "base": "default", "background": "#12001f", "accent": "#ff5fd7",
+        "gradient": ["#ff005f", "#ffaf00", "#d7ff00", "#00ffaf", "#00afff",
+                     "#af5fff"],
+        "by": "letter", "flow": 12, "bold": True,
+        "bounce": "gentle", "pop": True, "caret": "rainbow",
+    },
+    "glitch": {
+        "base": "matrix", "background": "#000000", "text": "#e0e0e0",
+        "accent": "#ff0055", "error": "#ff0055",
+        "gradient": ["#00ff9f", "#00b8ff", "#001eff", "#bd00ff", "#d600ff"],
+        "by": "word", "flow": 2,
+        "glitch": True, "shake": True, "caret": "pulse",
+    },
+    "bubbly": {
+        "base": "candy", "background": "#2b1b2e",
+        "gradient": ["#ffb3ba", "#ffdfba", "#ffffba", "#baffc9", "#bae1ff",
+                     "#e0bbff"],
+        "by": "word", "flow": 1, "bounce": "wild", "pop": True,
     },
     "aurora": {
         "base": "nord", "background": "#0b1021", "accent": "#3ddc97",
@@ -252,9 +280,25 @@ class Effects:
     heat: tuple = ()        # text escape codes, coolest first
     bold: bool = False
     italic: bool = False
+    # fun modifiers: movement and flourishes, see engine/render.py
+    bounce: str = "off"     # letters bob: off, gentle (near the caret), wild
+    shake: bool = False     # the text jolts sideways after a wrong key
+    pop: bool = False       # the last few typed letters flash bright
+    fade: bool = False      # typed letters dim the further behind they fall
+    caret_fx: str = "off"   # off, pulse (blinks) or rainbow (cycles colour)
+    glitch: bool = False    # letters further ahead flicker to symbols
 
 
 NO_EFFECTS = Effects()
+
+# fun modifiers, as named in themes.json and settings, and their values
+BOUNCES = ("off", "gentle", "wild")
+CARET_FX = ("off", "pulse", "rainbow")
+MODIFIERS = {          # themes.json key -> Effects field
+    "bounce": "bounce", "shake": "shake", "pop": "pop", "fade": "fade",
+    "caret": "caret_fx", "glitch": "glitch",
+}
+RAINBOW = tuple(c256(n) for n in (196, 208, 226, 46, 51, 21, 201))
 
 
 def build(spec, known):
@@ -287,6 +331,12 @@ def build(spec, known):
         raise ValueError("gradient and heat should be lists of colours")
     if len(gradient) == 1:
         raise ValueError("a gradient needs at least two colours")
+    bounce = spec.get("bounce", "off")
+    if bounce not in BOUNCES:
+        raise ValueError(f"bounce should be one of {', '.join(BOUNCES)}")
+    caret = spec.get("caret", "off")
+    if caret not in CARET_FX:
+        raise ValueError(f"caret should be one of {', '.join(CARET_FX)}")
     effects = Effects(
         background=bg(spec["background"]) if "background" in spec else "",
         gradient=tuple(_code(c, 38) for c in blend([parse_colour(c) for c in gradient]))
@@ -294,20 +344,30 @@ def build(spec, known):
         by=by, flow=float(flow),
         heat=tuple(fg(c) for c in heat),
         bold=spec.get("bold") is True, italic=spec.get("italic") is True,
+        bounce=bounce, caret_fx=caret,
+        shake=spec.get("shake") is True, pop=spec.get("pop") is True,
+        fade=spec.get("fade") is True, glitch=spec.get("glitch") is True,
     )
     return tuple(palette), effects
 
 
 def _builtin():
-    plain = {name: (p, NO_EFFECTS) for name, p in THEMES.items()}
-    out = dict(plain)
-    for name, spec in COMPLEX.items():
-        out[name] = build(spec, plain)
+    """Plain themes first, then the complex ones; a complex theme can use
+    any theme built before it (plain or complex) as its base."""
+    out = {name: (p, NO_EFFECTS) for name, p in THEMES.items()}
+    pending = dict(COMPLEX)
+    while pending:
+        ready = {n: s for n, s in pending.items() if s.get("base", "default") in out}
+        if not ready:
+            raise ValueError(f"unknown base in {', '.join(pending)}")
+        for name, spec in ready.items():
+            out[name] = build(spec, out)
+            del pending[name]
     return out
 
 
 _cache = {"truecolor": None, "builtin": None}
-_custom = {"key": None, "themes": {}, "error": ""}
+_custom = {"key": None, "themes": {}, "specs": {}, "error": ""}
 
 
 def builtin_themes():
@@ -326,13 +386,13 @@ def custom_themes():
     try:
         mtime = os.path.getmtime(path)
     except OSError:
-        _custom.update(key=None, themes={}, error="")
+        _custom.update(key=None, themes={}, specs={}, error="")
         return {}
     key = (path, mtime, truecolor())
     if key == _custom["key"]:
         return _custom["themes"]
     known = builtin_themes()
-    themes, errors = {}, []
+    themes, specs, errors = {}, {}, []
     try:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
@@ -343,14 +403,89 @@ def custom_themes():
                 if name in known:
                     raise ValueError("that name is built in")
                 themes[name] = build(spec, known)
+                specs[name] = spec
             except KeyError as e:
                 errors.append(f"{name}: missing {e.args[0]}")
             except (TypeError, ValueError) as e:
                 errors.append(f"{name}: {e}")
     except (OSError, ValueError) as e:
         errors.append(str(e))
-    _custom.update(key=key, themes=themes, error="; ".join(errors))
+    _custom.update(key=key, themes=themes, specs=specs, error="; ".join(errors))
     return themes
+
+
+def custom_specs():
+    """The themes from themes.json as written there, for editing."""
+    custom_themes()
+    return _custom.get("specs", {})
+
+
+def theme_spec(name):
+    """A theme as a spec the creator can start from: a themes.json or
+    complex theme as written, a plain built-in one as {"base": name}."""
+    if name in custom_specs():
+        return json.loads(json.dumps(custom_specs()[name]))
+    if name in COMPLEX:
+        return json.loads(json.dumps(COMPLEX[name]))
+    if THEMES.get(name) is not None:
+        return {"base": name}
+    return {"base": "default"}
+
+
+def _read_custom_file():
+    """themes.json as a dict, {} if there's none. ValueError if it isn't
+    valid, so a broken file is never overwritten."""
+    path = storage.path(CUSTOM_FILE)
+    if not os.path.isfile(path):
+        return {}
+    with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    if not isinstance(data, dict):
+        raise ValueError("themes.json isn't an object of themes")
+    return data
+
+
+def _write_custom_file(data):
+    path = storage.path(CUSTOM_FILE)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+    os.replace(tmp, path)
+    _custom["key"] = None                  # read it again next time
+
+
+def save_custom_theme(name, spec):
+    """Add or replace a theme in themes.json. Returns "" or what's wrong;
+    a theme that doesn't build, or a broken themes.json, isn't written."""
+    name = name.strip()
+    if not name:
+        return "the theme needs a name"
+    if name in builtin_themes():
+        return f"{name!r} is a built-in theme, pick another name"
+    try:
+        build(spec, builtin_themes())
+        data = _read_custom_file()
+    except KeyError as e:
+        return f"missing {e.args[0]}"
+    except (OSError, TypeError, ValueError) as e:
+        return str(e)
+    data[name] = spec
+    try:
+        _write_custom_file(data)
+    except OSError as e:
+        return str(e)
+    return ""
+
+
+def delete_custom_theme(name):
+    try:
+        data = _read_custom_file()
+        if name in data:
+            del data[name]
+            _write_custom_file(data)
+    except (OSError, ValueError) as e:
+        return str(e)
+    return ""
 
 
 def custom_error():
@@ -364,6 +499,19 @@ def theme_names():
     return names + ["mono"] + list(custom_themes())
 
 
+def _with_modifiers(effects, settings):
+    """Apply the fun-modifier settings on top of a theme's effects."""
+    changes = {}
+    for field, value in settings.items():
+        if value == "theme" or not hasattr(effects, field):
+            continue
+        if isinstance(getattr(effects, field), bool):
+            changes[field] = value == "on"
+        else:
+            changes[field] = value
+    return replace(effects, **changes)
+
+
 def _theme(name):
     return (builtin_themes().get(name) or custom_themes().get(name)
             or builtin_themes()["default"])
@@ -375,20 +523,32 @@ class Styles:
 
     def __init__(self, theme="default", lowkey="off", accent_text=False,
                  background=True, gradient=True, flow=True, heat=True,
-                 text_style=True):
+                 text_style=True, modifiers=None, speed=1.0, reverse=False,
+                 custom=None):
         """The keyword switches turn a theme's effects off one by one:
         its background, gradient, the gradient's movement, heat, and
-        bold / italic letters."""
+        bold / italic letters.
+
+        modifiers   {Effects field: setting} for the fun modifiers, where
+                    "theme" keeps what the theme says, "off"/"on" force a
+                    switch and anything else is the value (e.g. "wild")
+        speed       multiplies how fast everything animated moves
+        reverse     gradients flow the other way
+        custom      a (palette, effects) pair to use instead of `theme`
+                    (the theme creator's draft)"""
         self.lowkey = lowkey
         self.quiet = theme == "mono" or lowkey == "disguised"
-        self.effects = NO_EFFECTS
+        self.speed = speed * (-1 if reverse else 1)
+        palette, effects = custom or _theme(theme)
         if self.quiet:
             self.dim, self.ok, self.bad, self.extra = DIM, "", UND, UND + DIM
             self.title = "" if lowkey == "disguised" else WHITE
             self.good = self.warn = ""
+            # no colour, but movement still works (not when disguised)
+            effects = replace(NO_EFFECTS, bounce=effects.bounce,
+                              shake=effects.shake, glitch=effects.glitch)
         else:
-            palette, effects = _theme(theme)
-            self.effects = replace(
+            effects = replace(
                 effects,
                 background=effects.background if background else "",
                 gradient=effects.gradient if gradient else (),
@@ -400,8 +560,26 @@ class Styles:
              self.title, self.good, self.warn) = palette
             if accent_text:
                 self.ok = self.title     # typed letters in the accent colour
+        effects = _with_modifiers(effects, modifiers or {})
+        if lowkey == "disguised":
+            effects = NO_EFFECTS         # stealth: nothing moves either
+        elif self.quiet:
+            effects = replace(effects, pop=False, caret_fx="off"
+                              if effects.caret_fx == "rainbow" else effects.caret_fx)
+        self.effects = effects
         e = self.effects
         self.typed_attr = (BOLD if e.bold else "") + (ITALIC if e.italic else "")
+
+    @property
+    def animated(self):
+        """Whether anything on the typing screen moves on its own."""
+        e = self.effects
+        return bool((e.gradient and e.flow) or e.bounce != "off" or e.glitch
+                    or e.caret_fx != "off" or e.shake)
+
+    def caret_colour(self, now):
+        """The rainbow caret's colour at this moment."""
+        return RAINBOW[int(now * 6 * abs(self.speed)) % len(RAINBOW)]
 
     @property
     def background(self):
@@ -415,7 +593,8 @@ class Styles:
             colour = e.heat[min(combo // HEAT_STEP, len(e.heat) - 1)]
         elif e.gradient:
             k = offset if e.by == "letter" else word
-            colour = e.gradient[(k + int(now * e.flow)) % len(e.gradient)]
+            shift = int(now * e.flow * self.speed)
+            colour = e.gradient[(k + shift) % len(e.gradient)]
         else:
             colour = self.ok
         return self.typed_attr + colour

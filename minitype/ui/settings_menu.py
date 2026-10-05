@@ -8,22 +8,24 @@ backspace deletes a character at a time. [ and ] aren't typed into the
 search: they switch sections, like tab and shift-tab.
 """
 
-import time
-
 from ..words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICULTIES, FUNBOXES, GOALS,
                       KEYBOARD_MODES, LAYOUTS, LOWKEY_MODES, MEMORY_SECS,
                       MIN_ACCS, MIN_WPMS, PACES, PCTS, QUOTE_SOURCES,
-                      SIDEBAR_TABS, STOP_MODES, UI_STYLES, WORD_GAPS)
+                      SIDEBAR_TABS, STOP_MODES, UI_STYLES, WORD_GAPS,
+                      FUN_BOUNCE, FUN_SWITCH, FUN_CARET, EFFECT_SPEEDS,
+                      FLOW_DIRECTIONS)
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import storage
 from ..terminal import console, keys
-from ..terminal.style import INV, RESET, UND
+from ..terminal.style import INV, RESET
 from ..util import cycle
 from .book_menu import edit_book_filter, filter_label
 from .key_editor import key_editor
 from .menu import Item, Menu, title_lines
+from .preview import theme_sample
 from .screen import menu_loop
+from .theme_creator import theme_creator
 
 HINTS = "type to search   #tag   tab / [ ] section   esc back"
 BACK = object()     # returned from the key handler to leave the menu
@@ -60,33 +62,6 @@ class Builder:
 
 def _off_or(v, fmt):
     return lambda: fmt.format(v()) if v() else "off"
-
-
-SAMPLE = "the quick brown fox jumps"
-SAMPLE_TYPED = 16          # letters of SAMPLE shown as typed
-SAMPLE_WRONG = 10          # one of them was a mistake
-
-
-def theme_sample(app):
-    """A line of the current theme as the typing screen draws it: typed
-    letters (with the theme's gradient, heat or style; the combo climbs
-    along the line so heat shows), a mistake, the caret and what's left."""
-    st = app.styles()
-    now = time.time()
-    out, word = [], 0
-    for k, c in enumerate(SAMPLE):
-        if c == " ":
-            word += 1
-            out.append(" ")
-        elif k == SAMPLE_WRONG:
-            out.append(st.bad + c + RESET)
-        elif k < SAMPLE_TYPED:
-            out.append(st.typed(k, word, combo=k * 2, now=now) + c + RESET)
-        elif k == SAMPLE_TYPED:
-            out.append(st.dim + UND + c + RESET)
-        else:
-            out.append(st.dim + c + RESET)
-    return ["".join(out)]
 
 
 def _preview(item, preview):
@@ -230,6 +205,13 @@ def build_items(app):
                                 "mono", "theme", "custom", "gradient",
                                 "background")),
                  lambda: theme_sample(app)),
+        b.item("theme creator", lambda: theme_creator(app),
+               lambda: "make your own",
+               help="build a theme from scratch or from any theme: every "
+                    "colour, background, gradient, heat, style and fun "
+                    "modifier, with a live preview. Saved to themes.json",
+               tags=("theme", "creator", "custom", "colour", "color", "make",
+                     "build", "editor")),
         b.flag("accent letters", "accent_text",
                "letters you've typed take the theme's accent colour instead "
                "of its text colour (no effect with mono or disguised)",
@@ -308,6 +290,42 @@ def build_items(app):
                "key to see it while it's off",
                tags=("help", "keys", "footer")),
     ]
+    b.section = "fun"
+    fun_tags = ("fun", "effects", "animation", "modifier")
+    follows = "theme follows the theme, the others override it. "
+    items += [_preview(row, sample) for row in (
+        b.choice("bounce", "fun_bounce", FUN_BOUNCE,
+                 help=follows + "letters bob up and down: gentle near the "
+                      "caret, wild everywhere. Each line gets a second row "
+                      "to hop into",
+                 tags=fun_tags + ("bounce", "bob", "wave", "bobbly")),
+        b.choice("shake", "fun_shake", FUN_SWITCH,
+                 help=follows + "the text jolts sideways after a wrong key",
+                 tags=fun_tags + ("shake", "mistakes", "error")),
+        b.choice("pop", "fun_pop", FUN_SWITCH,
+                 help=follows + "the last few letters you typed flash bright "
+                      "and bold",
+                 tags=fun_tags + ("pop", "flash", "bold")),
+        b.choice("fade", "fun_fade", FUN_SWITCH,
+                 help=follows + "typed letters dim the further they fall "
+                      "behind you",
+                 tags=fun_tags + ("fade", "trail", "dim")),
+        b.choice("caret effect", "fun_caret", FUN_CARET,
+                 help=follows + "pulse: the caret blinks. rainbow: it cycles "
+                      "through colours",
+                 tags=fun_tags + ("caret", "cursor", "pulse", "blink", "rainbow")),
+        b.choice("glitch", "fun_glitch", FUN_SWITCH,
+                 help=follows + "letters further ahead flicker into symbols "
+                      "now and then (never the next few)",
+                 tags=fun_tags + ("glitch", "flicker")),
+        b.choice("effect speed", "effect_speed", EFFECT_SPEEDS,
+                 lambda: f"{s.effect_speed:g}x",
+                 help="how fast gradients flow and the fun modifiers move",
+                 tags=fun_tags + ("speed", "flow", "gradient", "fast", "slow")),
+        b.choice("flow direction", "flow_direction", FLOW_DIRECTIONS,
+                 help="which way flowing gradients move",
+                 tags=fun_tags + ("flow", "gradient", "direction", "reverse")),
+    )]
     b.section = "header"
     items += [
         b.flag("timer", "show_timer", "elapsed and remaining time",
