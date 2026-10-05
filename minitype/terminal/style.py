@@ -15,6 +15,8 @@ A theme is seven colours (PARTS) and, optionally, effects:
     fade         typed letters dim the further behind they fall
     caret        "pulse" (blinks) or "rainbow" (cycles colour)
     glitch       letters further ahead flicker to symbols
+    art          the picture in the screen's corner: a name from art.py,
+                 "none", or a list of lines of your own
 
 Plain themes are listed in THEMES, ones with effects in COMPLEX. You can add
 your own in themes.json in the app folder (see themes.example.json), with
@@ -31,6 +33,8 @@ import os
 from dataclasses import dataclass, replace
 
 from .. import storage
+from .art import THEME_ART
+from .art import resolve as resolve_art
 
 GRAY = "\x1b[90m"
 WHITE = "\x1b[97m"
@@ -51,7 +55,8 @@ PARTS = ("dim", "text", "error", "extra", "accent", "good", "warn")
 GRADIENT_STEPS = 24      # colours a gradient is blended into
 HEAT_STEP = 5            # correct keys in a row per step of heat
 EFFECT_KEYS = ("background", "gradient", "by", "flow", "heat", "bold", "italic",
-               "bounce", "shake", "pop", "fade", "caret", "glitch")
+               "bounce", "shake", "pop", "fade", "caret", "glitch", "art")
+ART_MAX_COLS, ART_MAX_ROWS = 40, 12     # a themes.json picture's limits
 
 
 # ---------------------------------------------------------------- colours
@@ -337,6 +342,14 @@ def build(spec, known):
     caret = spec.get("caret", "off")
     if caret not in CARET_FX:
         raise ValueError(f"caret should be one of {', '.join(CARET_FX)}")
+    art = spec.get("art")
+    if art is not None and art != "none" and resolve_art(art) is None:
+        raise ValueError("art should be a picture name, \"none\", or a list "
+                         "of lines")
+    if isinstance(art, list) and (len(art) > ART_MAX_ROWS
+                                  or max(map(len, art)) > ART_MAX_COLS):
+        raise ValueError(f"art can be at most {ART_MAX_COLS} wide and "
+                         f"{ART_MAX_ROWS} tall")
     effects = Effects(
         background=bg(spec["background"]) if "background" in spec else "",
         gradient=tuple(_code(c, 38) for c in blend([parse_colour(c) for c in gradient]))
@@ -497,6 +510,26 @@ def theme_names():
     names = list(THEMES) + list(COMPLEX)
     names.remove("mono")
     return names + ["mono"] + list(custom_themes())
+
+
+def art_of_spec(spec, seen=()):
+    """The corner art a theme spec asks for: its own "art", or its base
+    theme's when it doesn't say. [] for none."""
+    art = spec.get("art")
+    if art == "none":
+        return []
+    if art is not None:
+        return resolve_art(art) or []
+    return theme_art(spec.get("base", "default"), seen)
+
+
+def theme_art(name, seen=()):
+    """A theme's corner art as lines, [] for none."""
+    if name in seen:
+        return []                      # a base loop in themes.json
+    if name in custom_specs():
+        return art_of_spec(custom_specs()[name], seen + (name,))
+    return resolve_art(THEME_ART.get(name)) or []
 
 
 def _with_modifiers(effects, settings):

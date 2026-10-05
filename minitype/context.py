@@ -4,7 +4,7 @@ from .learn.progress import LearnProgress
 from .settings import Settings
 from .stats import SessionStats
 from .terminal import console
-from .terminal.style import Styles
+from .terminal.style import Styles, theme_art
 from .words.bank import WordBank
 from .words.generator import WordGenerator
 from .words.quotes import QuoteBank
@@ -26,11 +26,12 @@ class App:
         self.notice = ""    # one-off message for the next menu draw
         self.theme_draft = None   # the theme creator's work in progress
 
-    def styles(self, custom=None):
+    def styles(self, custom=None, art=None):
         """The current theme's colours, with every effect and fun-modifier
         setting applied. Every screen draws through this, so it's also where
-        the theme's background is handed to the console. `custom` is a
-        (palette, effects) pair to show instead (the theme creator's draft)."""
+        the theme's background, border and corner art are handed to the
+        console. `custom` is a (palette, effects) pair to show instead and
+        `art` its picture (the theme creator's draft)."""
         s = self.settings
         st = Styles(s.theme, s.lowkey, s.accent_text,
                     background=s.theme_background, gradient=s.theme_gradient,
@@ -42,6 +43,13 @@ class App:
                     speed=s.effect_speed, reverse=s.flow_direction == "backward",
                     custom=custom)
         console.set_background(st.background)
+        stealth = s.lowkey == "disguised"
+        picture = theme_art(s.theme) if art is None else art
+        console.set_decor(
+            border=None if stealth or s.border == "off" else s.border,
+            border_style=st.title,
+            art=None if stealth or s.art == "off" else picture,
+            art_style=st.title, art_scope=s.art)
         return st
 
     def load_words(self, name):

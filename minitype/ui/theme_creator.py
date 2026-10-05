@@ -12,10 +12,12 @@ exact one (0-255 or #rrggbb). Colours you don't set come from the base.
 
 import re
 
-from ..terminal.style import (BOUNCES, CARET_FX, PARTS, RESET, build,
-                              builtin_themes, custom_specs, delete_custom_theme,
-                              fg, parse_colour, rgb_to_256, save_custom_theme,
-                              theme_names, theme_spec)
+from ..terminal.art import ART_NAMES
+from ..terminal.style import (BOUNCES, CARET_FX, PARTS, RESET, art_of_spec,
+                              build, builtin_themes, custom_specs,
+                              delete_custom_theme, fg, parse_colour,
+                              rgb_to_256, save_custom_theme, theme_names,
+                              theme_spec)
 from ..util import cycle
 from .menu import Item, Menu, title_lines
 from .preview import theme_sample
@@ -24,6 +26,7 @@ from .screen import menu_loop
 
 HINTS = "enter edit   esc back"
 FLOWS = [0, 0.5, 1, 2, 4, 8, 12]
+FROM_BASE = "from base"
 SWATCH = "███"
 CODE_256 = re.compile(r"\x1b\[38;5;(\d+)m")
 CODE_RGB = re.compile(r"\x1b\[38;2;(\d+);(\d+);(\d+)m")
@@ -266,6 +269,31 @@ def build_items(app, d):
         flag("glitch", "glitch", "fun", "letters further ahead flicker to symbols"),
     ]
 
+    # ---- art
+    art_choices = [FROM_BASE, "none"] + ART_NAMES
+
+    def art_value():
+        art = s.get("art")
+        if art is None:
+            return FROM_BASE
+        return art if isinstance(art, str) else f"your own ({len(art)} lines)"
+
+    def art_step(dn):
+        def go():
+            cur = art_value() if art_value() in art_choices else FROM_BASE
+            nxt = cycle(art_choices, cur, step=dn)
+            if nxt == FROM_BASE:
+                s.pop("art", None)
+            else:
+                s["art"] = nxt
+        return go
+
+    items.append(Item("", "art", art_step(1), art_value, back=art_step(-1),
+                      section="art",
+                      help="the ASCII picture in the screen's corner, shown "
+                           "here as you pick. from base uses the base theme's; "
+                           "your own lines can go in themes.json as a list"))
+
     # ---- save
     def save(use):
         def go():
@@ -317,7 +345,8 @@ def draw(app, d, menu):
     built, err = d.built()
     # the preview draws in the draft, which also gives the screen its background
     preview = theme_sample(app, built) if built else [f"  can't preview: {err}"]
-    st = app.styles(built) if built else app.styles()
+    # last, so the screen's border colour and corner art are the draft's
+    st = app.styles(built, art=art_of_spec(d.spec)) if built else app.styles()
     lines = title_lines(app, st, f"theme creator - {d.name}")
     lines += ["  " + ln for ln in preview]
     strip = "  " + " ".join(f"{code}{SWATCH}{RESET}"

@@ -166,6 +166,13 @@ Skipping pages:
     **glitch** (cyberpunk gradient, glitching letters, shake, pulsing
     caret), **bubbly** (pastels that bounce wildly)
 - "accent letters" makes the letters you type take the theme's accent colour
+- **border**: a frame around the screen in the theme's accent colour:
+  off, ascii (`+ - |` only), line, rounded (default), double or heavy
+- **theme art**: an ASCII picture that fits the theme in the bottom-right
+  corner (palm island for ocean, a bat for dracula, a campfire for ember,
+  balloons for party, ...): off, menus (default, not on the typing screen)
+  or everywhere. It steps aside rather than cover any text, and lowkey
+  disguised hides it along with the border
 - every effect can be switched off on its own, for any theme: theme
   background, gradients, gradient flow, heat, and bold / italic (all on
   by default; the sample line shows the change as you toggle)
@@ -202,6 +209,7 @@ Colours are 256-colour numbers (0-255) or `"#rrggbb"`. Effects:
 | `bounce` | `"gentle"` or `"wild"`: letters bob |
 | `shake`, `pop`, `fade`, `glitch` | `true` to switch that modifier on |
 | `caret` | `"pulse"` or `"rainbow"` |
+| `art` | a built-in picture's name (see `minitype/terminal/art.py`), `"none"`, or a list of your own lines (up to 40 wide, 12 tall); without it, the base theme's picture |
 
 `#rrggbb` is sent as true colour where the terminal supports it (Windows,
 Termux, iTerm2, kitty, ...) and rounded to the nearest of 256 colours

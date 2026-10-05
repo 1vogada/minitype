@@ -14,7 +14,8 @@ from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICU
                       MIN_ACCS, MIN_WPMS, PACES, PCTS, QUOTE_SOURCES,
                       SIDEBAR_TABS, STOP_MODES, UI_STYLES, WORD_GAPS,
                       FUN_BOUNCE, FUN_SWITCH, FUN_CARET, EFFECT_SPEEDS,
-                      FLOW_DIRECTIONS, CORRECTED, TYPOS)
+                      FLOW_DIRECTIONS, CORRECTED, TYPOS, BORDER_STYLES,
+                      ART_SCOPES)
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import storage
 from ..terminal import console, keys
@@ -220,6 +221,16 @@ def build_items(app):
                                 "mono", "theme", "custom", "gradient",
                                 "background")),
                  lambda: theme_sample(app)),
+        b.choice("border", "border", BORDER_STYLES,
+                 help="a frame around the screen in the theme's accent colour. "
+                      "ascii uses + - | only; the others are line drawing",
+                 tags=("border", "frame", "box", "appearance", "theme")),
+        b.choice("theme art", "art", ART_SCOPES,
+                 help="an ASCII picture that fits the theme, in the screen's "
+                      "corner. menus: everywhere but the typing screen. It "
+                      "steps aside when the corner has text in it",
+                 tags=("art", "ascii", "picture", "graphic", "decoration",
+                       "appearance", "theme")),
         b.item("theme creator", lambda: theme_creator(app),
                lambda: "make your own",
                help="build a theme from scratch or from any theme: every "

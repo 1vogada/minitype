@@ -6,7 +6,8 @@ from .config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS,
                      MEMORY_SECS, MIN_ACCS, MIN_WPMS, PACES, QUOTE_LENGTHS,
                      QUOTE_SOURCES, SIDEBAR_TABS, STOP_MODES, UI_STYLES,
                      WORD_GAPS, FUN_BOUNCE, FUN_SWITCH, FUN_CARET,
-                     EFFECT_SPEEDS, FLOW_DIRECTIONS, CORRECTED, TYPOS)
+                     EFFECT_SPEEDS, FLOW_DIRECTIONS, CORRECTED, TYPOS,
+                     BORDER_STYLES, ART_SCOPES)
 from .terminal.style import theme_names
 from .words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 
@@ -27,6 +28,8 @@ CHOICES = {
     "caret": CARETS,
     "word_gap": WORD_GAPS,
     "corrected": CORRECTED,
+    "border": BORDER_STYLES,
+    "art": ART_SCOPES,
     "typos": TYPOS,
     "fun_bounce": FUN_BOUNCE,
     "fun_shake": FUN_SWITCH,
@@ -89,6 +92,8 @@ class Settings:
     # ---- look and feel
     theme: str = "default"
     accent_text: bool = False    # typed letters in the theme's accent colour
+    border: str = "rounded"      # frame around the screen: off, ascii, line, rounded, double, heavy
+    art: str = "menus"           # the theme's corner picture: off, menus, everywhere
     # a theme's effects, each of which can be switched off
     theme_background: bool = True
     theme_gradient: bool = True

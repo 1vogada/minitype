@@ -298,4 +298,4 @@ def draw(st, settings, header, words, typed, wi, width, footer, marks=(),
     if below:
         out += [""] + ["  " + line for line in below]
     pinned = ["", st.dim + footer + RESET] if footer else ()
-    console.present(out, focus, pinned)
+    console.present(out, focus, pinned, scene="test")

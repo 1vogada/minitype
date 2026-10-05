@@ -32,6 +32,17 @@
   "slanted": {
     "base": "rose pine",
     "accent": "#ebbcba",
-    "italic": true
+    "italic": true,
+    "art": "moon"
+  },
+  "my own picture": {
+    "base": "forest",
+    "art": [
+      "   _____   ",
+      "  /     \\  ",
+      " | () () | ",
+      "  \\  ^  /  ",
+      "   |||||   "
+    ]
   }
 }
