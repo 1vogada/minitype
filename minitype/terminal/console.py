@@ -6,6 +6,7 @@ import os
 import re
 import shutil
 import sys
+from functools import lru_cache
 
 ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]|\x1b\][^\x07]*\x07")
 RESET = "\x1b[0m"
@@ -32,7 +33,8 @@ BORDERS = {
     "thick": (BLOCK * 2, BLOCK * 2, BLOCK * 2, BLOCK * 2, BLOCK, BLOCK * 2),
 }
 # the theme's frame and corner art, set by set_decor()
-_decor = {"border": None, "border_style": "", "art": None, "art_scope": "menus"}
+_decor = {"border": None, "border_style": "", "art": None, "art_scope": "menus",
+          "behind": False}
 
 
 def enable_vt():
@@ -157,7 +159,7 @@ def present(lines, focus=None, pinned=(), scene="menu"):
     view += pinned
     rows = [clip(line, w - 1) for line in view]
     if art:
-        rows = overlay_art(rows, art, w - 1, len(pinned))
+        rows = overlay_art(rows, art, w - 1, len(pinned), d["behind"])
     if d["border"]:
         rows = frame(rows, d["border"], d["border_style"], w - 1)
     bg = _background
@@ -187,7 +189,53 @@ def _text_ends(row):
     return len(ANSI.sub("", row[:i]).rstrip()), full
 
 
-def overlay_art(rows, versions, width, pinned_n):
+def _cells(s):
+    """The visible characters of s, each with the codes in force for it."""
+    out, codes, i = [], "", 0
+    while i < len(s):
+        m = ANSI.match(s, i)
+        if m:
+            c = m.group()
+            if c == RESET:
+                codes = ""
+            elif c.endswith("m"):
+                codes += c
+            i = m.end()
+            continue
+        out.append((codes, s[i]))
+        i += 1
+    return out
+
+
+@lru_cache(maxsize=256)
+def _art_cells(pic, k, start, col):
+    """Row k of a picture as cells, from its column `start`, placed at
+    column col. The art doesn't change between frames, so it's kept."""
+    return tuple([("", " ")] * col + _cells(pic.row(k, start)))
+
+
+def _layer(row, pic, card):
+    """The row drawn over a row of the art (cells from _art_cells). The art
+    shows through wherever the row has a plain blank; letters, and blanks
+    with a highlight or background of their own, cover it. `card` is the
+    (from, to) columns of floating text (a help box), which covers the art
+    whole."""
+    text = _cells(row)
+    out, cur = [], None
+    for x in range(max(len(text), len(pic))):
+        t = text[x] if x < len(text) else ("", " ")
+        a = pic[x] if x < len(pic) else ("", " ")
+        solid = (t[1] != " " or "\x1b[7m" in t[0] or "48;" in t[0]
+                 or card[0] <= x < card[1])
+        codes, ch = t if solid or (a[1] == " " and not a[0]) else a
+        if codes != cur:
+            out.append(RESET + codes)
+            cur = codes
+        out.append(ch)
+    return "".join(out).rstrip() + RESET
+
+
+def overlay_art(rows, versions, width, pinned_n, behind=False):
     """Put the art in the bottom-right corner, above any pinned lines with
     a row to spare. `versions` are the picture's sizes, biggest first (art
     Pictures); the first whose focus fits without touching any text, in
@@ -195,9 +243,27 @@ def overlay_art(rows, versions, width, pinned_n):
     what doesn't fit on its left, and the background part of a row steps
     back from text rather than cover it. If none fits the frame is left
     without art. Floating text doesn't count when fitting it: it stays
-    on top, and the art shows again after it."""
+    on top, and the art shows again after it.
+
+    With `behind`, the biggest picture that fits the screen is drawn
+    whatever text there is, behind it: the text goes over the art letter
+    by letter, and only floating text gets a solid card."""
     bottom = len(rows) - pinned_n - (2 if pinned_n else 1)
     avail = width - 1
+    if behind:
+        for pic in versions:
+            w = min(pic.width, avail) if pic.span else pic.width
+            top, col = bottom - pic.height + 1, avail - w
+            if top < 1 or col < 0:
+                continue
+            rows = list(rows)
+            for k in range(pic.height):
+                r = rows[top + k]
+                i = r.find(FLOAT)
+                card = (visible_len(r[:i]), visible_len(r)) if i >= 0 else (0, 0)
+                rows[top + k] = _layer(r, _art_cells(pic, k, pic.width - w, col), card)
+            return rows
+        return rows
     for pic in versions:
         w = min(pic.width, avail) if pic.span else pic.width
         skip = pic.width - w                 # columns cut off the left
@@ -244,12 +310,14 @@ def frame(rows, chars, style, inner):
             + [style + bl + across * inner + br + RESET])
 
 
-def set_decor(border=None, border_style="", art=None, art_scope="menus"):
+def set_decor(border=None, border_style="", art=None, art_scope="menus",
+              behind=False):
     """The theme's frame and corner art for present(): border is a BORDERS
     key or None; art the picture's sizes, biggest first, each a list of
-    Pictures (see art.py), or None; art_scope "menus" or "everywhere"."""
+    Pictures (see art.py), or None; art_scope "menus" or "everywhere";
+    behind draws the art behind the text at full size (see overlay_art)."""
     _decor.update(border=BORDERS.get(border), border_style=border_style,
-                  art=art or None, art_scope=art_scope)
+                  art=art or None, art_scope=art_scope, behind=behind)
 
 
 def set_background(code):

@@ -52,7 +52,7 @@ class App:
             border_style=st.title,
             art=None if stealth or s.art == "off" else
             [paint_art(piece, palette) for piece in versions],
-            art_scope=s.art)
+            art_scope=s.art, behind=s.art_behind)
         return st
 
     def load_words(self, name):

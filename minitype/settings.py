@@ -100,6 +100,7 @@ class Settings:
     art: str = "menus"           # the theme's corner picture: off, menus, everywhere
     art_style: str = "blocks"    # blocks / detailed / og (the original pictures)
     art_colours: str = "shaded"  # shaded (softer shades and hues) / flat
+    art_behind: bool = False     # art always full size, text drawn over it
     # a theme's effects, each of which can be switched off
     theme_background: str = "theme"   # theme / always / off
     theme_gradient: bool = True

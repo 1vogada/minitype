@@ -187,6 +187,10 @@ Skipping pages:
   menu row is the exception: it goes in a box drawn over the art, so the
   art keeps its size as you move. Lowkey disguised hides it along with
   the border
+- **art behind text** (settings → look, off by default): the art always
+  shows at full size, behind everything. Text is drawn over it letter by
+  letter and the art shows between the letters; highlights stay solid,
+  and only the help box under the selected row gets a solid card
 - every effect can be switched off on its own, for any theme: theme
   background, gradients, gradient flow, heat, and bold / italic (all on
   by default; the sample line shows the change as you toggle)

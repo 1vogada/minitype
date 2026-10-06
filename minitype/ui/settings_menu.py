@@ -233,6 +233,13 @@ def build_items(app):
                       "steps aside when the corner has text in it",
                  tags=("art", "ascii", "picture", "graphic", "decoration",
                        "appearance", "theme")),
+        b.flag("art behind text", "art_behind",
+               "the art always shows at full size, behind everything: text "
+               "is drawn over it and the art shows between the letters. "
+               "Only the help box under the selected row covers it. off: "
+               "the art makes room for text",
+               tags=("art", "picture", "background", "layer", "behind",
+                     "appearance", "theme")),
         b.item("theme creator", lambda: theme_creator(app),
                lambda: "make your own",
                help="build a theme from scratch or from any theme: every "
