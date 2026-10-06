@@ -2,9 +2,12 @@
 
 Each comes in several sizes, biggest first, and the biggest that fits on
 screen is drawn. The "art style" setting picks which: blocks (pixel art in
-block characters, each cell two colours) or detailed (shaded ASCII), both
-made by tools/make_art.py into art_detailed.py and running across the
-whole bottom of the screen; then always the "OG" ones as the fallback: a
+block characters, each cell two colours), detailed (shaded ASCII) or
+combined (every technique at once, for the pictures that have it; the
+rest show in blocks), made by tools/make_art.py into art_detailed.py and
+running across the whole bottom of the screen; on a screen wider than
+they were drawn, their scenery grows on to the left (Picture.wider).
+Then always the "OG" ones as the fallback: a
 large one coloured from the theme's palette (art_large.py) and the small
 one-colour one below (ART). THEME_ART says which picture a built-in theme
 uses.
@@ -14,12 +17,14 @@ its own lines; without "art" it uses its base theme's.
 
 import base64
 import json
+import random
 import re
 import zlib
 from functools import lru_cache
 from typing import NamedTuple
 
 from .art_detailed import BLOCKS as _BLOCKS
+from .art_detailed import COMBINED as _COMBINED
 from .art_detailed import DETAILED as _DETAILED
 from .art_large import LARGE as _LARGE
 
@@ -413,7 +418,7 @@ PARTS = ("dim", "text", "error", "extra", "accent", "good", "warn")
 PART_LETTERS = dict(zip("dtexagw", PARTS))
 LETTER_OF = {part: letter for letter, part in PART_LETTERS.items()}
 
-ART_STYLES = ("blocks", "detailed", "og")
+ART_STYLES = ("blocks", "detailed", "og", "combined")
 
 
 # art_detailed.py stores a character's colour letter and tone (0-9, how
@@ -486,6 +491,17 @@ def blocks(name):
     return [_unpack(span, size) for size in sizes]
 
 
+@lru_cache(maxsize=None)
+def combined(name):
+    """A picture's combined sizes (every technique at once: blocks, eighths,
+    shades, braille and text), biggest first; [] for the pictures that
+    don't have one."""
+    if name not in _COMBINED:
+        return []
+    span, sizes = _load(_COMBINED[name])
+    return [_unpack(span, size) for size in sizes]
+
+
 def _og(lines, colours):
     """An OG picture as a piece: all of it is focus."""
     parts = tuple("".join(" " if ch == " " else LETTER_OF[part]
@@ -497,12 +513,15 @@ def _og(lines, colours):
 
 def resolve(value, style="blocks"):
     """A theme's "art" value as a list of pieces, biggest first. A name
-    gives the picture's sizes in the style (blocks or detailed; none for
-    og) and then the OG ones, large and coloured, then small; a list of
-    lines is a single piece in the accent colour. None for anything else
+    gives the picture's sizes in the style (blocks, detailed or combined;
+    none for og; a picture with no combined version is drawn in blocks)
+    and then the OG ones, large and coloured, then small; a list of lines
+    is a single piece in the accent colour. None for anything else
     (including "none")."""
     if isinstance(value, str) and value in ART:
-        pieces = list({"blocks": blocks, "detailed": detailed}.get(style, lambda n: [])(value))
+        pieces = list({"blocks": blocks, "detailed": detailed,
+                       "combined": lambda n: combined(n) or blocks(n)}
+                      .get(style, lambda n: [])(value))
         if value in LARGE:
             pieces.append(_og(*LARGE[value]))
         return pieces + [_og(ART[value], {})]
@@ -556,6 +575,29 @@ class Picture:
                 row.append(code)
             self._codes.append(row)
         self._reset = reset
+        self._wider = {}
+
+    def wider(self, width):
+        """The picture `width` columns wide, for a spanning picture on a
+        screen wider than it was drawn at: its scenery grows on to the left
+        (see _grow). Anything else, or a width it already fits, gives the
+        picture itself back."""
+        if not self.span or width <= self.width:
+            return self
+        if width not in self._wider:
+            order = _grow(self, width - self.width)
+            if order is None:
+                return self
+            if len(self._wider) > 8:          # a window being dragged wider
+                self._wider.clear()
+            pic = object.__new__(Picture)
+            pic.span, pic.height, pic.width = True, self.height, width
+            pic.lines = tuple("".join(line[c] for c in order) + line for line in self.lines)
+            pic._codes = [[codes[c] for c in order] + codes for codes in self._codes]
+            pic.keep = tuple(k + len(order) for k in self.keep)
+            pic._reset, pic._wider = self._reset, {}
+            self._wider[width] = pic
+        return self._wider[width]
 
     def row(self, r, start=0):
         """Row r from column `start` on, styled; runs of one colour share
@@ -569,6 +611,45 @@ class Picture:
                 out.append(self._reset + cur)
             out.append(ch)
         return "".join(out).rstrip() + self._reset
+
+
+def _grow(pic, n):
+    """n columns of new scenery for the left of a spanning picture, as the
+    indices of its own columns to copy, left to right; None if it has too
+    little scenery left of its focus to grow from.
+
+    Built leftwards like a texture is grown: runs of the picture's own
+    background columns, each run starting at a column whose right-hand
+    neighbour looks like the column it's put next to, so every seam lines
+    up. Runs are of random length from random places (seeded by the
+    picture, so it's the same every frame), which keeps it from looking
+    like the same strip over and over."""
+    room = min(pic.keep)
+    if room < 12:
+        return None
+    cols = [tuple((pic.lines[r][c], pic._codes[r][c]) for r in range(pic.height))
+            for c in range(room)]
+    same = [[sum(x == y for x, y in zip(a, b)) for b in cols] for a in cols]
+    rng = random.Random(pic.width * 7919 + pic.height * 31 + room)
+    out, cur, run = [], 0, 0          # cur: the column at the left edge so far
+    recent = []                       # where the last few runs came from
+    while len(out) < n:
+        if run > 0 and cur > 0:
+            cur, run = cur - 1, run - 1               # carry on along the run
+        else:
+            # jump somewhere else: not close by, not where the last few runs
+            # came from, and where the seam fits well
+            near = room // 4
+            far = [j for j in range(room - 1)
+                   if all(abs(j - k) > near for k in recent + [cur - 1])] \
+                or [j for j in range(room - 1) if abs(j + 1 - cur) > near] \
+                or list(range(room - 1))
+            best = max(same[cur][j + 1] for j in far)
+            fits = [j for j in far if same[cur][j + 1] >= best - max(2, pic.height // 6)]
+            cur, run = rng.choice(fits), rng.randint(room // 6, room // 2)
+            recent = (recent + [cur])[-3:]
+        out.append(cur)
+    return out[::-1]
 
 
 @lru_cache(maxsize=64)

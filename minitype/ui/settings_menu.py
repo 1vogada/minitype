@@ -358,11 +358,15 @@ def build_items(app):
                  tags=fun_tags + ("glitch", "flicker")),
         b.choice("art style", "art_style", ART_STYLES,
                  help="the theme's corner picture: blocks (pixel art in block "
-                      "characters), detailed (shaded ASCII) or og (the original, "
-                      "simpler ones). If blocks show as boxes or question "
-                      "marks, your terminal's font lacks them: pick detailed",
+                      "characters), detailed (shaded ASCII), og (the original, "
+                      "simpler ones) or combined (blocks, shades, braille and "
+                      "text all at once, for the best look; so far vaporwave's, "
+                      "the rest show in blocks). If blocks show as boxes or "
+                      "question marks, your terminal's font lacks them: pick "
+                      "detailed",
                  tags=fun_tags + ("art", "picture", "ascii", "og", "classic",
-                                  "detailed", "blocks", "pixel", "decoration")),
+                                  "detailed", "blocks", "pixel", "decoration",
+                                  "combined", "braille", "best")),
         b.choice("art colours", "art_colours", ART_COLOURS,
                  help="shaded: the picture in softer shades and hues of the "
                       "theme's colours, darker and cooler in shadow, lighter "

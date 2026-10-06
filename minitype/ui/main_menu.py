@@ -117,7 +117,7 @@ def build_items(app):
         Item("s", "settings", lambda: settings_menu(app),
              value=lambda: " ".join(s.flags()),
              help="rules, challenges, word lists, look and feel", section="app"),
-        Item("q", "quit", lambda: QUIT, section="app"),
+        Item("q", "quit", lambda: QUIT, section="quit", tab=True),
     ]
 
 

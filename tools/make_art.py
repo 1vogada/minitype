@@ -1,11 +1,13 @@
 """Build minitype/terminal/art_detailed.py from the scenes in
 tools/art_scenes.py: every picture in ASCII ("detailed") and in block
-characters ("blocks"), at each of its sizes.
+characters ("blocks"), at each of its sizes; and the pictures that have a
+"combined" version (every technique at once) from tools/art_combined.py.
 
     python tools/make_art.py              all of them
     python tools/make_art.py moon rose    just these (the rest are kept)
     python tools/make_art.py --show moon  print a scene in ASCII
     python tools/make_art.py --blocks moon  print it in blocks
+    python tools/make_art.py --combined palm  print its combined version
 """
 
 import base64
@@ -17,6 +19,7 @@ import zlib
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
+import art_combined                     # noqa: E402
 import artgen                           # noqa: E402
 from art_scenes import SCENES           # noqa: E402
 
@@ -25,11 +28,12 @@ OUT = os.path.join(HERE, "..", "minitype", "terminal", "art_detailed.py")
 HEADER = '''"""The detailed corner pictures, made by tools/make_art.py from the scenes
 in tools/art_scenes.py - edit those and rebuild rather than this file.
 
-DETAILED holds each picture in ASCII and BLOCKS in block characters, by
+DETAILED holds each picture in ASCII, BLOCKS in block characters and
+COMBINED (for the pictures that have one) in every technique at once, by
 name, packed: base85 of zlib of JSON [span, sizes]. span says whether its
 background runs across the whole bottom of the screen, and each size,
 biggest first, is [width, rows, keep]. Each row is [indent, characters,
-codes] in ASCII, plus background codes in blocks: a code for every
+codes] in ASCII, plus background codes in blocks and combined: a code for every
 character, its colour and how light it is (see art.CODES), " " for none.
 keep is where each row's focus starts: text may cut into a row left of
 it, never right of it.
@@ -77,19 +81,30 @@ def build(name):
     return squeeze([sc.span, ascii_]), squeeze([sc.span, blocks])
 
 
+def build_combined(name):
+    make, theme = art_combined.SCENES[name]
+    pal = art_combined.Palette(theme)
+    sc = make(pal)
+    sizes = []
+    for rows in sc.sizes:
+        lines, parts, tones, bparts, btones, keep = art_combined.render(sc, rows, pal)
+        sizes.append(pack(lines, parts, tones, keep, bparts, btones))
+    return squeeze([sc.span, sizes])
+
+
 def load():
     if not os.path.exists(OUT):
-        return {}, {}
+        return {}, {}, {}
     ns = {}
     with open(OUT, encoding="utf-8") as f:
         exec(f.read(), ns)
-    return ns.get("DETAILED", {}), ns.get("BLOCKS", {})
+    return ns.get("DETAILED", {}), ns.get("BLOCKS", {}), ns.get("COMBINED", {})
 
 
-def write(detailed, blocks):
+def write(detailed, blocks, combined):
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
         f.write(HEADER)
-        for title, data in (("DETAILED", detailed), ("BLOCKS", blocks)):
+        for title, data in (("DETAILED", detailed), ("BLOCKS", blocks), ("COMBINED", combined)):
             f.write(f"{title} = {{\n")
             for name in SCENES:
                 if name in data:
@@ -102,6 +117,17 @@ def write(detailed, blocks):
 
 
 def main(args):
+    if args and args[0] == "--combined":
+        if sys.stdout.encoding.lower() != "utf-8":
+            sys.stdout.reconfigure(encoding="utf-8")
+        for name in args[1:]:
+            make, theme = art_combined.SCENES[name]
+            pal = art_combined.Palette(theme)
+            sc = make(pal)
+            for rows in sc.sizes:
+                print(f"===== {name} {rows}")
+                print("\n".join(l[-120:] for l in art_combined.render(sc, rows, pal)[0]))
+        return
     if args and args[0] in ("--show", "--blocks"):
         if sys.stdout.encoding.lower() != "utf-8":
             sys.stdout.reconfigure(encoding="utf-8")
@@ -115,11 +141,13 @@ def main(args):
                 print("\n".join(l[-120:] for l in lines))
         return
     names = args or list(SCENES)
-    detailed, blocks = ({}, {}) if not args else load()
+    detailed, blocks, combined = ({}, {}, {}) if not args else load()
     for name in names:
         detailed[name], blocks[name] = build(name)
+        if name in art_combined.SCENES:
+            combined[name] = build_combined(name)
         print("built", name)
-    write(detailed, blocks)
+    write(detailed, blocks, combined)
 
 
 if __name__ == "__main__":

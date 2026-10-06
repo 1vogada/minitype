@@ -250,6 +250,8 @@ def overlay_art(rows, versions, width, pinned_n, behind=False):
     by letter, and only floating text gets a solid card."""
     bottom = len(rows) - pinned_n - (2 if pinned_n else 1)
     avail = width - 1
+    # on a screen wider than a spanning picture, its scenery grows to fill it
+    versions = [pic.wider(avail) for pic in versions]
     if behind:
         for pic in versions:
             w = min(pic.width, avail) if pic.span else pic.width

@@ -56,6 +56,8 @@ class Item:
     enter: Optional[Callable[[], Any]] = None   # enter / hotkey, when it differs from action
     tags: Tuple[str, ...] = ()                  # extra words a #tag search finds it by
     preview: Optional[Callable[[], list]] = None  # styled lines shown under the help
+    tab: bool = False                           # a section of its own (quit): its
+                                                # section button runs it
 
     def activate(self):
         return (self.enter or self.action)()
@@ -209,7 +211,8 @@ class Menu:
         Returns None for keys that work the same as anywhere else.
 
         On the section buttons, up/down pick a section and enter or right
-        steps into its rows (esc steps back out, see back_out). On the
+        steps into its rows (esc steps back out, see back_out); a tab
+        item's button runs it on enter instead. On the
         rows, left/right only change the value, and do nothing on rows
         that have none."""
         if self.on_sections:
@@ -217,6 +220,8 @@ class Menu:
                 if sections:
                     self._switch_tab(-1 if key == keys.UP else 1)
                 return True, None
+            if item.tab:                      # a button that does something
+                return True, (item.activate() if key == keys.ENTER else None)
             if key in (keys.ENTER, keys.SHIFT_ENTER, keys.RIGHT):
                 self.on_sections = False
                 return True, None
@@ -314,7 +319,7 @@ class Menu:
                 if section is not None:
                     lines.append("")
                 section = item.section
-                if section:
+                if section and not item.tab:    # a tab row says it all itself
                     lines.append(f"  {st.dim}{section}{RESET}")
             sel = i == self.cursor
             if sel:

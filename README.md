@@ -53,6 +53,7 @@ minitype
   back out (and esc on the buttons leaves). In the rows left / right only
   change values. While you pick a section it has the `>` and highlight;
   in its rows it's marked `>>` and the row you're on is lit instead.
+  **quit** is a button of its own at the bottom: enter on it quits.
 - **settings**: just start typing to filter; only settings whose name
   contains what you typed stay. Start a word with `#` to search tags and
   sections instead (`#colour`, `#mistakes`, `#look`). The search bar shows
@@ -186,7 +187,10 @@ Skipping pages:
   itself doesn't fit, a smaller one is used. The help under the selected
   menu row is the exception: it goes in a box drawn over the art, so the
   art keeps its size as you move. Lowkey disguised hides it along with
-  the border
+  the border. On a screen wider than a picture was drawn for, its
+  scenery (sea, hills, grid...) grows on to the left to fill it, from
+  runs of its own columns joined where they line up, so it doesn't look
+  like one strip repeated
 - **art behind text** (settings → look, off by default): the art always
   shows at full size, behind everything. Text is drawn over it letter by
   letter and the art shows between the letters; highlights stay solid,
@@ -208,8 +212,14 @@ Skipping pages:
   - **effect speed** (0.25x-4x) and **flow direction** for gradients
   - **art style**: *blocks* (default: pixel art in half and quadrant blocks,
     with braille dots for fine lines and textures), *detailed* (shaded
-    ASCII) or *og*, the original, simpler pictures. If blocks show as boxes
-    or question marks, your terminal's font lacks them: pick detailed
+    ASCII), *og*, the original, simpler pictures, or *combined*: every
+    technique at once, each cell drawn with whichever fits it best -
+    shades (░▒▓) for smooth gradients, eighth blocks for crisp horizons
+    and stripes, quadrants for edges, braille for fine lines and text for
+    stars and shine. So far vaporwave has one (a striped sun over a neon
+    grid, with palms); other themes show their blocks picture. If blocks
+    show as boxes or question marks, your terminal's font lacks them:
+    pick detailed
   - **art colours**: *shaded* (softer shades and hues of the theme's
     colours: darker and cooler in shadow, lighter and warmer in the
     light) or *flat* (the theme's colours as they are)
