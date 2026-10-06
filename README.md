@@ -287,7 +287,8 @@ settings; if one has a mistake, the theme row's help says what's wrong.
 - **gallery** (main menu → app): every theme full screen, exactly as it
   looks - colours, background, art and a typing sample. Up / down (or
   `` ` `` / `~`) flip through the themes, left / right through the art styles
-  (revamp, blocks, detailed, og, combined); enter uses what's on screen,
+  (revamp, blocks, detailed, og, combined), `v` where the art shows (off,
+  menus, everywhere) and `b` art behind text; enter uses what's on screen,
   esc keeps yours
 - **profile**: totals, top and average speed, a speed chart, all your PBs
 - daily goal in minutes, shown on the menu and results
