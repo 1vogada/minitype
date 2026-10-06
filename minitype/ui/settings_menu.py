@@ -432,7 +432,67 @@ def build_items(app):
                help="forget all key errors and bad words",
                tags=("clear", "data", "mistakes", "forget")),
     ]
-    return items
+    return arrange(items)
+
+
+# Where every setting goes, section by section, in order, keyed by where
+# it's built (section, label) - and its new name, if it has one. Rows are
+# built grouped by what they touch; this lays them out by what you're
+# looking for.
+LAYOUT = [
+    ("rules", [("test", "difficulty"), ("test", "stop on error"), ("test", "backspace"),
+               ("test", "corrected letters"), ("test", "indicate typos"), ("test", "blind")]),
+    ("challenges", [("challenges", "min speed"), ("challenges", "min accuracy"),
+                    ("challenges", "memory"), ("challenges", "funbox")]),
+    ("text", [("words", "word list"), ("test", "punctuation"), ("test", "all lowercase"),
+              ("test", "numbers"), ("words", "quotes from"), ("words", "book page"),
+              ("words", "book filter"), ("words", "bulgarian books"),
+              ("words", "shlokavitsa style")]),
+    ("drills", [("drills", "bad keys"), ("drills", "bad key %"), ("drills", "edit keys"),
+                ("drills", "bad words"), ("drills", "bad word %")]),
+    ("theme", [("look", "theme"), ("look", "theme creator"), ("look", "theme background"),
+               ("look", "accent letters"), ("look", "gradients"), ("look", "gradient flow"),
+               ("look", "heat"), ("look", "bold / italic")]),
+    ("art", [("look", "theme art", "show art"), ("fun", "art style"),
+             ("look", "picture"), ("look", "picture colours"),
+             ("fun", "art colours", "art shading"), ("look", "art behind text")]),
+    ("effects", [("fun", "bounce"), ("fun", "shake"), ("fun", "pop"), ("fun", "fade"),
+                 ("fun", "caret effect"), ("fun", "glitch"), ("fun", "effect speed"),
+                 ("fun", "flow direction")]),
+    ("typing screen", [("look", "caret"), ("look", "word gap"), ("look", "tape"),
+                       ("look", "ghost"), ("look", "pace caret"),
+                       ("header", "timer", "show timer"), ("header", "progress", "show progress"),
+                       ("header", "live wpm", "show live wpm"), ("header", "combo", "show combo"),
+                       ("look", "keyboard", "on-screen keyboard"),
+                       ("look", "layout", "keyboard layout"), ("look", "lowkey"),
+                       ("look", "sound")]),
+    ("interface", [("look", "ui style"), ("look", "sidebar tabs"), ("look", "border"),
+                   ("look", "key hints")]),
+    ("results", [("results", "speed chart"), ("results", "key heatmap"),
+                 ("results", "personal best"), ("results", "worst keys"),
+                 ("results", "session keys"), ("results", "bad words"), ("results", "session")]),
+    ("progress", [("progress", "daily goal"), ("progress", "save to disk"), ("progress", "reset")]),
+]
+
+
+def arrange(items):
+    """The rows laid out by LAYOUT: their sections, order and names. The
+    old section stays a tag, so #look and the like still find them; a row
+    LAYOUT doesn't know goes at the end of its own section."""
+    by_key = {(it.section, it.label): it for it in items}
+    out, placed = [], set()
+    for section, rows in LAYOUT:
+        for spec in rows:
+            it = by_key.get(spec[:2])
+            if it is None:
+                continue
+            placed.add(id(it))
+            it.tags = tuple(it.tags) + (it.section, it.label)
+            it.section = section
+            if len(spec) > 2:
+                it.label = spec[2]
+            out.append(it)
+    return out + [it for it in items if id(it) not in placed]
 
 
 def search_keys(menu, key):

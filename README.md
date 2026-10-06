@@ -64,6 +64,9 @@ minitype
   into the search, they switch sections. Esc clears the search, then leaves.
 - **during a test**: esc menu, tab restart, ctrl-backspace deletes a word;
   in zen mode enter finishes
+- **settings** are in sections: rules, challenges, text, drills, theme,
+  art, effects, typing screen, interface, results, progress. Old section
+  names still work as search tags (#look, #fun, #header, #words)
 - **anywhere**: ctrl-q wipes the screen and exits; ctrl-o opens the
   settings. In the middle of a test it's paused (the clock stops), and
   coming back a box asks "Resume?": yes carries on where you were, no
@@ -98,7 +101,7 @@ accented letters become their ASCII forms, markdown-style formatting and
 divider lines are dropped, line breaks become spaces, and a Project
 Gutenberg licence header and footer are cut off.
 
-To strip more out, set a **filter** (in the book list, or settings → words
+To strip more out, set a **filter** (in the book list, or settings → text
 → book filter): the symbols you type there are removed from every book,
 for example `,.;:!?"'`. Type `punct` for all punctuation. Quotes and
 dashes are already plain `"` `'` `-` by then, so filtering those catches
@@ -118,7 +121,7 @@ picks how they're typed:
 Converting doesn't change the number of words, so your page is the same in
 both modes.
 
-Each book is split into pages (50 words by default; settings → words →
+Each book is split into pages (50 words by default; settings → text →
 book page). Finishing a page moves your bookmark on, and bookmarks are
 kept in `settings.json`.
 
@@ -155,9 +158,9 @@ Skipping pages:
 
 - three menu styles: **list**, **sidebar** (details beside the menu) and
   **tabs** (one section at a time). The sidebar can also show a tab bar on
-  top, or the sections as buttons down the left (settings → look → sidebar
+  top, or the sections as buttons down the left (settings → interface → sidebar
   tabs)
-- 45 themes (settings → look → theme; a sample line under the row shows
+- 45 themes (settings → theme → theme; a sample line under the row shows
   each one as you flip through):
   - plain: default, ocean, forest, sunset, dracula, nord, gruvbox,
     solarized, monokai, catppuccin, rose pine, matrix, amber, paper (for
@@ -180,7 +183,7 @@ Skipping pages:
   off, ascii (`+ - |` only), line, rounded (default), double, heavy,
   block (solid `█`) or thick (solid, with double-width sides so every
   edge looks equally heavy)
-- **theme art**: a picture that fits the theme in
+- **show art** (settings → art): a picture that fits the theme in
   the bottom-right corner (a palm island at sunset for ocean, a bat over
   a castle under the moon for dracula, a campfire for ember, a neon grid
   for synthwave, ...), painted in shades of the theme's colours: off,
@@ -197,7 +200,7 @@ Skipping pages:
   scenery (sea, hills, grid...) grows on to the left to fill it, from
   runs of its own columns joined where they line up, so it doesn't look
   like one strip repeated
-- **art behind text** (settings → look, off by default): the art always
+- **art behind text** (settings → art, off by default): the art always
   shows at full size, behind everything. Text is drawn over it letter by
   letter and the art shows between the letters; highlights stay solid,
   and only the help box under the selected row gets a solid card
@@ -208,7 +211,7 @@ Skipping pages:
   paint it), *always* (every theme gets one: a very dark tint of its
   accent, or a pale one for light themes; use this in a light-mode
   terminal so dark themes still look right) or *off* (your terminal's own)
-- **fun** (settings → fun), purely visual, never changes what you type:
+- **effects** (settings → effects), purely visual, never changes what you type:
   - **bounce**: letters bob up and down, *gentle* near the caret or *wild*
   - **shake**: the text jolts sideways after a wrong key
   - **pop**: the last few letters you typed flash bright
@@ -216,7 +219,7 @@ Skipping pages:
   - **caret effect**: *pulse* (blinks) or *rainbow* (cycles colour)
   - **glitch**: letters further ahead flicker into symbols now and then
   - **effect speed** (0.25x-4x) and **flow direction** for gradients
-  - **art style**: *revamp* (default: hand-drawn ASCII line art, one
+  - **art style** (settings → art): *revamp* (default: hand-drawn ASCII line art, one
     picture per theme, over scenery that runs across the bottom of the
     screen - sea, city, grass, snow, a code wall - in shape-matched ASCII:
     each character picked by where its ink sits in the cell, measured from
@@ -230,12 +233,12 @@ Skipping pages:
     grid, with palms); other themes show their blocks picture. If blocks
     show as boxes or question marks, your terminal's font lacks them:
     pick detailed
-  - **art colours**: *shaded* (softer shades and hues of the theme's
+  - **art shading** (settings → art): *shaded* (softer shades and hues of the theme's
     colours: darker and cooler in shadow, lighter and warmer in the
     light) or *flat* (the theme's colours as they are)
   Each follows the theme by default ("theme") or can be forced on or off.
   The party, glitch and bubbly themes come with modifiers switched on
-- **theme creator** (settings → look): build a theme from scratch or from
+- **theme creator** (settings → theme): build a theme from scratch or from
   any theme, with every colour, the background, gradient, flow, heat,
   bold / italic and the fun modifiers, and a live preview. Save it to
   `themes.json` or save and switch to it straight away
@@ -273,6 +276,8 @@ settings; if one has a mistake, the theme row's help says what's wrong.
   qwertz or azerty; in learn mode keys are coloured by speed
 - ghost caret (your last run), pace caret (fixed wpm), error beep
 - every part of the test header and results screen can be switched on or off
+  (settings → typing screen: show timer, progress, live wpm, combo;
+  settings → results)
 
 ## Results and progress
 
