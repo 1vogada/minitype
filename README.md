@@ -386,6 +386,9 @@ tools/
                        artgen_ascii.py, glyphs.py)
 ```
 
+Tests: `python tests/run_all.py` runs every check (each prints ALL OK).
+See `docs/HANDOFF.md` for the state of the project and how to carry on.
+
 To add a test mode, add a `TestSpec` source in `engine/runner.py` and an
 `Item` in `ui/main_menu.py`. To add a setting, add a field to `Settings` and
 a row in `ui/settings_menu.py`.

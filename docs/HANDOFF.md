@@ -1,0 +1,79 @@
+# Handoff: where minitype stands, and how to carry on
+
+Read this first when picking the project up (you or an AI coding agent).
+Then `docs/art-notes.md` for anything about the corner art.
+
+## Repo and workflow
+- GitHub: `1vogada/minitype`. Work happens on `main` (the old `art-blocks`
+  branch was merged in and is kept level with it).
+- Commit author: `1vogada <112830070+1vogada@users.noreply.github.com>`;
+  **no** "Co-Authored-By: Claude" trailers; never rewrite the first 3 commits.
+- Agent habit the owner likes: commit locally without asking, push only
+  when asked ("push it"); when asked to do several things, push after each.
+- Run the app: `python -m minitype` (Python 3.10+, no dependencies).
+- Tests: `python tests/run_all.py` (or `python tests/run_all.py decor`).
+  Each `*_check.py` prints `ALL OK`; 24 checks + smoke4. They run against
+  the real modules with the terminal mocked. `tests/menu_look.py` prints a
+  menu frame as text (`python tests/menu_look.py 120 34 ember sidebar left`)
+  and `tests/shows_check.py` reports which art the app actually draws at
+  each window size.
+- Lint: `python -m pyflakes minitype tools` should be clean.
+- Gotchas when editing with an agent: shell heredocs mangle `\\` and
+  quotes in art/strings - write edit scripts to files; in a raw string a
+  line ending in `\\` before `"""` breaks; files have CRLF line endings.
+
+## Map of the code
+- `minitype/app.py` main loop (menu -> test -> results); registers ctrl-o.
+- `minitype/context.py` `App`: settings, stats, `styles()` (applies theme,
+  background, border, art incl. remix picture/colours, panel, behind).
+- `minitype/settings.py` every setting (dataclass) + `CHOICES` validation.
+- `minitype/config.py` choice lists (ART_STYLES, ART_SCOPES, ...).
+- `minitype/terminal/console.py` drawing: `present()` (scroll, art,
+  border, panel, dialog overlay), `overlay_art()` (placement, behind mode,
+  `_layer` letters on art), `_panel()`, `set_overlay()` dialogs.
+- `minitype/terminal/keys.py` key reading; ctrl-q panic; ctrl-o hook.
+- `minitype/terminal/art.py` art data loading (`revamp`, `blocks`,
+  `detailed`, `combined`, og), `resolve()`, `Picture` (painting, `row()`,
+  `wider()` growth on wide screens).
+- `minitype/terminal/style.py` themes, palettes (`art_palette`), Styles.
+- `minitype/ui/` screens: `main_menu.py` (tabs: gamemode, practice,
+  gallery, settings, profile, quit), `settings_menu.py` (rows built by
+  section, then laid out by `LAYOUT`/`arrange`), `gallery.py`,
+  `anywhere.py` (ctrl-o settings + Resume? dialog), `menu.py` (Menu, Item,
+  Hints; `tab=True` items are section buttons that act), `screen.py`
+  (menu_loop, ` and ~ theme keys).
+- `minitype/engine/` typing test (`runner.py`: pause/resume, lowercase rule).
+- `tools/` art builders (see art-notes): `make_art.py`, `make_revamp.py`,
+  `art_scenes.py`, `artgen.py`, `artgen_ascii.py`, `art_combined.py`,
+  `art_wow.py`, `revamp_art.py`, `glyphs.py`, `sketch.py`.
+
+## Features added in this stretch (newest last)
+- Help text floats over the art in a box; selected row always lit; `>>`
+  marks the section you're in.
+- Art behind text (text drawn over full-size art; letters keep the art's
+  colour behind them). Text panel (art full size, text in a bordered panel
+  with a ░ shadow, hints in their own panel).
+- Theme background: theme / always / off.
+- Combined art style; blocks/detailed/og/revamp styles; art grows on wide
+  screens; revamp is the default style.
+- Quit, gallery, settings, profile are main menu tabs (no "app" tab).
+- ` / ~ next / previous theme on menus; ctrl-o settings from anywhere
+  (pauses a test; "Resume?" yes/no after); all-lowercase rule.
+- Gallery: up/down theme, left/right art style, [ ] picture (remix), c
+  picture colours, v show art, p text panel, b art behind text, / search;
+  enter keeps, esc restores.
+- Settings sections: rules, challenges, text, drills, theme, art,
+  effects, typing screen, interface, results, progress.
+- Background bars fix (blank after a bg cell takes its own code).
+
+## In progress / next (as the owner asked)
+1. Art revamp ("wow" pictures, `tools/art_wow.py`, 28/22/16 rows): done
+   for ocean, midnight, forest, ember, default, candy (tilted, all pink,
+   "bubblegum pop"). The other 34 themes still use the hand-drawn revamp.
+   The owner loves the vaporwave combined background and the deep sea
+   picture - use them as the bar.
+2. Dithering and "bleeding" at the art's edges so it doesn't cut off
+   hard against the rest of the screen (the top edge of a full-width
+   picture is a straight line today).
+3. A dithering setting: 2 modes - (1) vertical + horizontal fade with
+   custom amounts, (2) round, from the corner - with sliders.

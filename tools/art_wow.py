@@ -457,7 +457,7 @@ def candy(pal):
                 return t, pleat
         return None
 
-    def field(x, y):
+    def upright(x, y):
         dx, dy = (x - cx) / rx, (y - cy) / ry
         r = math.hypot(dx, dy)
         if r <= 1:
@@ -478,6 +478,15 @@ def candy(pal):
             return wrap(0.25 + 0.55 * pleat * (1 - t * 0.35) + 0.2 * (1 - t)), 1.0, True, "wrap"
         glow = math.exp(-(((x - cx) / 0.75) ** 2 + ((y - cy) / 0.45) ** 2))
         return pal.path("- a1")(glow * 0.4), 1.0, False, "bg"
+
+    tilt = math.radians(-22)                    # the sweet lies at an angle
+    ct, st_ = math.cos(tilt), math.sin(tilt)
+
+    def field(x, y):
+        """The upright sweet, turned: look up where this point was before
+        the turn."""
+        u, v = x - cx, y - cy
+        return upright(cx + u * ct + v * st_, cy - u * st_ + v * ct)
 
     def texts(rows, x_left, cw, unit):
         rnd = random.Random(21)
