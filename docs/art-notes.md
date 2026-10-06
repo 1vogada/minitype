@@ -58,7 +58,8 @@ avoid unrelated churn.) Preview by rendering cells to HTML in the theme's
 RGB and viewing it in a browser.
 
 ## Revamp "wow" pictures (tools/art_wow.py) - the new direction
-28 rows tall, one per theme, built with the combined renderer
+In three sizes (28, 22, 16 rows - the app draws the biggest that fits;
+one size alone never showed in a 30-row window), built with the combined renderer
 (`tools/art_combined.py`) and stored as revamp art by `make_revamp.py`
 (`build_wow`); themes without one still use the hand-drawn picture.
 Done so far: island (ocean), moon (midnight), pines (forest), fire (ember),

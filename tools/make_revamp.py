@@ -149,12 +149,16 @@ def build(name):
 
 def build_wow(name):
     """A picture from tools/art_wow.py: every technique at once, in its
-    theme's colours, art_wow.ROWS tall."""
+    theme's colours, at each of its sizes, biggest first (the app draws the
+    biggest that fits)."""
     make = art_wow.WOW[name]
     pal = art_combined.Palette(make(art_combined.Palette("default")).theme)
     sc = make(pal)
-    lines, parts, tones, bparts, btones, keep = art_combined.render(sc, art_wow.ROWS, pal)
-    return squeeze([sc.span, [pack(lines, parts, tones, keep, bparts, btones)]])
+    sizes = []
+    for rows in sc.sizes:
+        lines, parts, tones, bparts, btones, keep = art_combined.render(sc, rows, pal)
+        sizes.append(pack(lines, parts, tones, keep, bparts, btones))
+    return squeeze([sc.span, sizes])
 
 
 def load():

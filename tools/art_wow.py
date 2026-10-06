@@ -14,6 +14,7 @@ import random
 from art_combined import Scene, mix
 
 ROWS = 28
+SIZES = (28, 22, 16)       # biggest first: smaller windows get a smaller one
 
 
 # ---------------------------------------------------------------- pieces
@@ -169,7 +170,7 @@ def island(pal):
             out.append((int((x - x_left) / cw), int(y / unit), "v", pal.rgb("d1"), x > 0))
         return out
 
-    return Scene(1.9, field, lines, texts, span=True, sizes=(ROWS,), theme="ocean")
+    return Scene(1.9, field, lines, texts, span=True, sizes=SIZES, theme="ocean")
 
 
 # ---------------------------------------------------------------- midnight
@@ -234,7 +235,7 @@ def moon(pal):
         cols = [pal.rgb("t8"), pal.rgb("t9"), pal.rgb("a8"), pal.rgb("w9")]
         return stars(field, rows, x_left, cw, unit, rows * 9, 0.7, cols, 3)
 
-    return Scene(1.9, field, None, texts, span=True, sizes=(ROWS,), theme="midnight")
+    return Scene(1.9, field, None, texts, span=True, sizes=SIZES, theme="midnight")
 
 
 # ---------------------------------------------------------------- forest
@@ -284,7 +285,7 @@ def pines(pal):
         return stars(field, rows, x_left, cw, unit, rows * 4, 0.3, [pal.rgb("t8"), pal.rgb("w8")], 9,
                      chars="..·'")
 
-    return Scene(1.9, field, None, texts, span=True, sizes=(ROWS,), theme="forest")
+    return Scene(1.9, field, None, texts, span=True, sizes=SIZES, theme="forest")
 
 
 # ---------------------------------------------------------------- ember
@@ -354,7 +355,7 @@ def fire(pal):
                         rnd.choice([pal.rgb("w9"), pal.rgb("a8"), pal.rgb("e8")]), True))
         return out
 
-    return Scene(1.9, field, None, texts, span=True, sizes=(ROWS,), theme="ember")
+    return Scene(1.9, field, None, texts, span=True, sizes=SIZES, theme="ember")
 
 
 # ---------------------------------------------------------------- default
@@ -420,7 +421,7 @@ def keyboard(pal):
             out.append((col, row, ch, pal.rgb("t9") if ch in pressed else pal.rgb("d1"), True))
         return out
 
-    return Scene(1.9, field, None, texts, span=True, sizes=(ROWS,), theme="default",
+    return Scene(1.9, field, None, texts, span=True, sizes=SIZES, theme="default",
                  inks={"room": "d", "case": "d", "shadow": "d", "key": "dtg", "desk": "d"})
 
 
