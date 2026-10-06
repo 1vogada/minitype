@@ -35,6 +35,7 @@ BORDERS = {
 # the theme's frame and corner art, set by set_decor()
 _decor = {"border": None, "border_style": "", "art": None, "art_scope": "menus",
           "behind": False}
+_overlay = []           # lines of a box drawn over the middle of every frame (a dialog)
 
 
 def enable_vt():
@@ -162,6 +163,8 @@ def present(lines, focus=None, pinned=(), scene="menu"):
         rows = overlay_art(rows, art, w - 1, len(pinned), d["behind"])
     if d["border"]:
         rows = frame(rows, d["border"], d["border_style"], w - 1)
+    if _overlay:
+        rows = _over(rows, _overlay)
     bg = _background
     # with a theme background, every reset puts the background straight
     # back, and the line ends (and the rest of the screen) are cleared
@@ -320,6 +323,41 @@ def set_decor(border=None, border_style="", art=None, art_scope="menus",
     behind draws the art behind the text at full size (see overlay_art)."""
     _decor.update(border=BORDERS.get(border), border_style=border_style,
                   art=art or None, art_scope=art_scope, behind=behind)
+
+
+def set_overlay(lines):
+    """A box (its lines, styled) to draw over the middle of every frame
+    until it's set to None: a dialog over the screen behind it."""
+    _overlay[:] = lines or []
+
+
+def _over(rows, box):
+    """The rows with the box laid over their middle."""
+    rows = list(rows)
+    bw = max(visible_len(b) for b in box)
+    top = max(0, (len(rows) - len(box)) // 2)
+    width = max((visible_len(r) for r in rows), default=0)
+    left = max(0, (max(width, bw) - bw) // 2)
+    for k, line in enumerate(box):
+        r = top + k
+        if r < len(rows):
+            rows[r] = _splice(rows[r], left, pad(line, bw))
+    return rows
+
+
+def _splice(row, col, piece):
+    """The row with piece written over it from column col."""
+    cells = _cells(row)
+    cells += [("", " ")] * max(0, col - len(cells))
+    new = _cells(piece)
+    cells = cells[:col] + new + cells[col + len(new):]
+    out, cur = [], None
+    for codes, ch in cells:
+        if codes != cur:
+            out.append(RESET + codes)
+            cur = codes
+        out.append(ch)
+    return "".join(out) + RESET
 
 
 def set_background(code):

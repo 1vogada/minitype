@@ -5,6 +5,7 @@ from .engine.spec import TestSpec
 from .nav import MENU, QUIT
 from .terminal import console, keys
 from .terminal.style import RESET
+from .ui.anywhere import open_settings
 from .ui.main_menu import main_menu
 from .ui.results import show_results
 
@@ -15,6 +16,7 @@ def main():
     console.set_title("cmd")
     console.cursor(False)
     app = App()
+    keys.on_settings_key(lambda: open_settings(app))      # ctrl-o, from anywhere
     try:
         app.load()
         console.clear()

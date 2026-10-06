@@ -131,6 +131,10 @@ def build_items(app):
         b.flag("punctuation", "punctuation",
                "capitals, commas, full stops and quotes",
                tags=("text", "symbols", "capitals")),
+        b.flag("all lowercase", "lowercase",
+               "every word in lower case, whatever the source: quotes, "
+               "books, code and your own text too (no capitals to shift for)",
+               tags=("text", "capitals", "lower", "case", "shift")),
         b.flag("numbers", "numbers", "sprinkle numbers into word tests",
                tags=("text", "digits")),
         b.flag("blind", "blind", "no feedback until the results",

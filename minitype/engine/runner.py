@@ -13,8 +13,8 @@ from .render import draw
 from .result import TestResult
 from .scoring import score
 
-FOOTER = "esc menu   tab restart   ctrl-bksp word   ctrl-q hide"
-ZEN_FOOTER = "enter finish   esc menu   ctrl-q hide"
+FOOTER = "esc menu   tab restart   ctrl-bksp word   ctrl-o settings   ctrl-q hide"
+ZEN_FOOTER = "enter finish   esc menu   ctrl-o settings   ctrl-q hide"
 BOOK_FOOTER = ("esc menu   tab restart   pgdn next page   pgup previous page   "
                "ctrl-q hide")
 REDRAW_EVERY = 0.1
@@ -56,6 +56,7 @@ class TypingTest:
         self.prev_t = None
         self.word_start = None  # when the first char of the current word landed
         self.popped_hints = False
+        self.abandoned = False  # left from the ctrl-o settings: back to the menu
         self.n_before = app.learn.unlocked() if self.learning else 0
 
     # ---------------------------------------------------------------- words
@@ -79,9 +80,22 @@ class TypingTest:
         else:
             words = app.generator.make(
                 spec.amount if spec.kind == "words" else 200, src)
-        return funbox.apply(words, app.settings.funbox)
+        words = funbox.apply(words, app.settings.funbox)
+        if app.settings.lowercase:
+            words = [w.lower() for w in words]
+        return words
 
     # ---------------------------------------------------------------- flow
+
+    def resume_after(self, pause):
+        """Carry on after `pause` seconds away (the settings): every clock
+        the test keeps moves on by that much, as if no time had passed."""
+        self.start += pause
+        for name in ("prev_t", "word_start"):
+            if getattr(self, name) is not None:
+                setattr(self, name, getattr(self, name) + pause)
+        if self.last_error >= 0:
+            self.last_error += pause
 
     def finished(self, now):
         if self.done:
@@ -460,10 +474,30 @@ def keyboard_lines(app, test):
 
 def run_test(app, spec):
     test = (ZenTest if spec.kind == "zen" else TypingTest)(app, spec)
+
+    def paint(now=None):
+        now = now or time.time()
+        st = app.styles()
+        head, marks = test.status(now)
+        draw(st, app.settings, head, test.words, test.typed,
+             test.wi, max(10, console.size()[0] - 4), test.footer(), marks, test.wrong,
+             keyboard_lines(app, test), test.hidden(now),
+             test.error_marks(), test.combo, now, test.last_error,
+             test.typo_keys)
+    app.current_test = (test, paint)       # for ctrl-o: pause, settings, resume?
+    try:
+        return _run(app, test, paint)
+    finally:
+        app.current_test = None
+
+
+def _run(app, test, paint):
     last_draw = 0.0
     dirty = True
     while True:
         now = time.time()
+        if test.abandoned:
+            return MENU
         test.check_rules(now)
         if test.finished(now):
             break
@@ -472,12 +506,7 @@ def run_test(app, spec):
         st = app.styles()
         every = REDRAW_ANIMATED if st.animated else REDRAW_EVERY
         if dirty or now - last_draw > every:
-            head, marks = test.status(now)
-            draw(st, app.settings, head, test.words, test.typed,
-                 test.wi, max(10, size[0] - 4), test.footer(), marks, test.wrong,
-                 keyboard_lines(app, test), test.hidden(now),
-                 test.error_marks(), test.combo, now, test.last_error,
-                 test.typo_keys)
+            paint(now)
             last_draw = now
             dirty = False
 

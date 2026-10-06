@@ -8,6 +8,7 @@ from ..terminal.style import RESET
 from ..util import cycle
 from ..words import books
 from .book_menu import book_menu
+from .gallery import gallery
 from .learn_menu import learn_menu
 from .menu import Item, Menu, title_lines
 from .profile import goal_line, profile_screen
@@ -15,7 +16,7 @@ from .prompt import prompt
 from .screen import menu_loop
 from .settings_menu import settings_menu
 
-HINTS = ("enter start   tab next section   ` next theme   "
+HINTS = ("enter start   tab next section   ` ~ theme   ctrl-o settings   "
          "esc quit   ctrl-q hide")
 
 
@@ -114,6 +115,10 @@ def build_items(app):
 
         Item("p", "profile", lambda: profile_screen(app),
              help="totals, speed chart and personal bests", section="app"),
+        Item("g", "gallery", lambda: gallery(app), lambda: s.theme,
+             help="every theme full screen as it really looks: left/right "
+                  "to flip through, enter to use one",
+             section="app"),
         Item("s", "settings", lambda: settings_menu(app),
              value=lambda: " ".join(s.flags()),
              help="rules, challenges, word lists, look and feel", section="app"),

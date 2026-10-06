@@ -17,7 +17,7 @@ import os
 import select
 import sys
 
-from .keynames import (BACKSPACE, CSI, CTRL_BACKSPACE, CTRL_C, CTRL_D, CTRL_Q,
+from .keynames import (BACKSPACE, CSI, CTRL_BACKSPACE, CTRL_C, CTRL_D, CTRL_O, CTRL_Q,
                        CTRL_W, DELETE, END, ENTER, ESC, HOME, INSERT, PGDN,
                        PGUP, SHIFT_ENTER, SHIFT_TAB, TAB, UNKNOWN)
 
@@ -33,6 +33,7 @@ _CONTROL = {
     "\x03": CTRL_C,
     "\x04": CTRL_D,
     "\x11": CTRL_Q,
+    "\x0f": CTRL_O,
     "\x17": CTRL_W,
 }
 

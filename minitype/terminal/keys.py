@@ -15,7 +15,7 @@ import os
 import time
 
 from . import console
-from .keynames import (BACKSPACE, CTRL_BACKSPACE, CTRL_C, CTRL_D, CTRL_Q,
+from .keynames import (BACKSPACE, CTRL_BACKSPACE, CTRL_C, CTRL_D, CTRL_O, CTRL_Q,
                        CTRL_W, DELETE, DOWN, END, ENTER, ESC, HOME, INSERT,
                        LEFT, PGDN, PGUP, RESIZE, RIGHT, SHIFT_ENTER, SHIFT_TAB,
                        TAB, UNKNOWN, UP)
@@ -23,8 +23,9 @@ from .keynames import (BACKSPACE, CTRL_BACKSPACE, CTRL_C, CTRL_D, CTRL_Q,
 __all__ = [
     "UP", "DOWN", "LEFT", "RIGHT", "HOME", "END", "PGUP", "PGDN", "INSERT",
     "DELETE", "ENTER", "SHIFT_ENTER", "TAB", "SHIFT_TAB", "ESC", "BACKSPACE",
-    "CTRL_BACKSPACE", "CTRL_C", "CTRL_D", "CTRL_Q", "CTRL_W", "UNKNOWN",
+    "CTRL_BACKSPACE", "CTRL_C", "CTRL_D", "CTRL_O", "CTRL_Q", "CTRL_W", "UNKNOWN",
     "RESIZE", "setup", "restore", "key_ready", "read_key", "is_char",
+    "on_settings_key",
 ]
 
 if os.name == "nt":
@@ -48,10 +49,21 @@ def key_ready():
     return backend.ready()
 
 
+_settings = {"open": None, "busy": False}
+
+
+def on_settings_key(fn):
+    """What ctrl-o does from anywhere (open the settings): fn() is called
+    from inside read_key, which then returns RESIZE so the screen redraws.
+    Not again while it's already open."""
+    _settings["open"] = fn
+
+
 def read_key(panic=True, resize=True):
     """Block for one key press. Ctrl-q is the global panic key: it wipes the
-    screen and exits from anywhere unless panic is False. While waiting, a
-    change of terminal size returns RESIZE so the caller can redraw."""
+    screen and exits from anywhere unless panic is False. Ctrl-o opens the
+    settings from anywhere (see on_settings_key). While waiting, a change of
+    terminal size returns RESIZE so the caller can redraw."""
     if resize:
         start = console.size()
         while not key_ready():
@@ -61,6 +73,13 @@ def read_key(panic=True, resize=True):
     key = backend.read()
     if panic and key == CTRL_Q:
         console.bail()
+    if key == CTRL_O and _settings["open"] and not _settings["busy"]:
+        _settings["busy"] = True
+        try:
+            _settings["open"]()
+        finally:
+            _settings["busy"] = False
+        return RESIZE
     return key
 
 

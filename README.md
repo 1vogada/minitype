@@ -48,8 +48,8 @@ minitype
   esc goes back. Rows with a hotkey show it beside the label. Shift+enter
   steps a value backwards. The row you're on has a `>` and is highlighted;
   the section (tab) you're in is marked `>>`. `` ` `` switches to the next
-  theme from any menu (not while you're typing, e.g. in the settings
-  search)
+  theme from any menu and `~` (shift-`` ` ``) to the one before (not while
+  you're typing, e.g. in the settings search)
 - **sidebar with section buttons on the left**: you start on the buttons.
   Up / down pick a section, enter or right steps into its rows, esc steps
   back out (and esc on the buttons leaves). In the rows left / right only
@@ -64,7 +64,10 @@ minitype
   into the search, they switch sections. Esc clears the search, then leaves.
 - **during a test**: esc menu, tab restart, ctrl-backspace deletes a word;
   in zen mode enter finishes
-- **anywhere**: ctrl-q wipes the screen and exits
+- **anywhere**: ctrl-q wipes the screen and exits; ctrl-o opens the
+  settings. In the middle of a test it's paused (the clock stops), and
+  coming back a box asks "Resume?": yes carries on where you were, no
+  leaves the test
 - key hints can be switched off; pressing any key that does nothing brings
   them back
 
@@ -144,7 +147,8 @@ Skipping pages:
 - minimum speed and minimum accuracy: fall below and the test fails
 - funbox: reversed words, CAPS, rAnDoM case, mirrored text
 - memory: the words disappear a few seconds in
-- punctuation, numbers, blind mode
+- punctuation, numbers, blind mode, all lowercase (every word in lower
+  case, whatever the source)
 - drills for your weak keys and words you got wrong
 
 ## Look and feel
@@ -275,6 +279,9 @@ settings; if one has a mistake, the theme row's help says what's wrong.
 - speed chart across the test with errors marked
 - keyboard heatmap coloured by how often each key was missed
 - personal bests per mode, with a banner when you beat one
+- **gallery** (main menu → app): every theme full screen, exactly as it
+  looks - colours, background, art and a typing sample. Left / right (or
+  `` ` `` / `~`) flip through, enter uses the one on screen, esc keeps yours
 - **profile**: totals, top and average speed, a speed chart, all your PBs
 - daily goal in minutes, shown on the menu and results
 

@@ -65,6 +65,7 @@ class Settings:
     corrected: str = "marked"    # fixed letters: marked (warn colour), normal, or red
     typos: str = "off"           # show the wrong key: off, below, replace, both
     punctuation: bool = False
+    lowercase: bool = False      # every word in lower case: quotes, books, custom text too
     numbers: bool = False        # sprinkle numbers into normal word tests
     blind: bool = False          # no feedback until the results screen
     time_amount: int = 30        # seconds, for the time mode
@@ -160,7 +161,8 @@ class Settings:
             flags.append(f"stop-{self.stop_on_error}")
         if self.backspace != "normal":
             flags.append("no-bksp" if self.backspace == "off" else "freedom")
-        for on, name in ((self.punctuation, "punct"), (self.numbers, "num"),
+        for on, name in ((self.punctuation, "punct"), (self.lowercase, "lower"),
+                         (self.numbers, "num"),
                          (self.blind, "blind"), (self.ghost, "ghost"),
                          (self.tape, "tape")):
             if on:

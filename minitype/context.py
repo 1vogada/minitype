@@ -26,6 +26,7 @@ class App:
         self.cursors = {}   # menu name -> selected row, kept between visits
         self.notice = ""    # one-off message for the next menu draw
         self.theme_draft = None   # the theme creator's work in progress
+        self.current_test = None  # (test, redraw) while a test runs, for ctrl-o
 
     def styles(self, custom=None, art=None):
         """The current theme's colours, with every effect and fun-modifier
