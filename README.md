@@ -281,7 +281,9 @@ settings; if one has a mistake, the theme row's help says what's wrong.
 - personal bests per mode, with a banner when you beat one
 - **gallery** (main menu → app): every theme full screen, exactly as it
   looks - colours, background, art and a typing sample. Left / right (or
-  `` ` `` / `~`) flip through, enter uses the one on screen, esc keeps yours
+  `` ` `` / `~`) flip through the themes, up / down through the art styles
+  (revamp, blocks, detailed, og, combined); enter uses what's on screen,
+  esc keeps yours
 - **profile**: totals, top and average speed, a speed chart, all your PBs
 - daily goal in minutes, shown on the menu and results
 
