@@ -616,12 +616,15 @@ class Picture:
 
     def row(self, r, start=0):
         """Row r from column `start` on, styled; runs of one colour share
-        a code."""
+        a code. A blank keeps the colour before it (it shows no ink),
+        unless a background is involved: then it takes its own, so a
+        background never runs on into blanks that don't have one."""
         out, cur = [], None
         line, codes = self.lines[r], self._codes[r]
         for c in range(start, len(line)):
             ch = line[c]
-            if ch != " " and codes[c] != cur:
+            blank_ok = ch == " " and "48;" not in codes[c] and "48;" not in (cur or "")
+            if not blank_ok and codes[c] != cur:
                 cur = codes[c]
                 out.append(self._reset + cur)
             out.append(ch)
