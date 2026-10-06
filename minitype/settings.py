@@ -14,6 +14,11 @@ from .words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 
 # fields whose value must be one of a set (a function when the set can
 # change while the app runs, like themes from themes.json)
+def _art_names():
+    from .terminal.art import ART_NAMES
+    return ART_NAMES
+
+
 CHOICES = {
     "difficulty": DIFFICULTIES,
     "stop_on_error": STOP_MODES,
@@ -31,6 +36,8 @@ CHOICES = {
     "corrected": CORRECTED,
     "border": BORDER_STYLES,
     "art": ART_SCOPES,
+    "art_picture": lambda: ["theme"] + _art_names(),
+    "art_recolour": ["theme", "own"],
     "art_style": ART_STYLES,
     "art_colours": ART_COLOURS,
     "theme_background": THEME_BACKGROUNDS,
@@ -102,6 +109,8 @@ class Settings:
     art_style: str = "revamp"    # revamp / blocks / detailed / og / combined
     art_colours: str = "shaded"  # shaded (softer shades and hues) / flat
     art_behind: bool = False     # art always full size, text drawn over it
+    art_picture: str = "theme"   # the theme's own picture, or any picture's name (a remix)
+    art_recolour: str = "theme"  # a remixed picture in the theme's colours, or its own theme's
     # a theme's effects, each of which can be switched off
     theme_background: str = "theme"   # theme / always / off
     theme_gradient: bool = True

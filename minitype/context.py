@@ -4,7 +4,9 @@ from .learn.progress import LearnProgress
 from .settings import Settings
 from .stats import SessionStats
 from .terminal import console
+from .terminal.art import THEME_ART
 from .terminal.art import paint as paint_art
+from .terminal.art import resolve as resolve_art
 from .terminal.style import Styles, theme_art
 from .words.bank import WordBank
 from .words.generator import WordGenerator
@@ -47,7 +49,15 @@ class App:
         console.set_background(st.background)
         stealth = s.lowkey == "disguised"
         versions = theme_art(s.theme, s.art_style) if art is None else art
-        palette = st.art_palette(shaded=s.art_colours == "shaded")
+        shaded = s.art_colours == "shaded"
+        palette = st.art_palette(shaded=shaded)
+        if art is None and s.art_picture != "theme":
+            # a remix: another theme's picture, in this theme's colours or
+            # in its own theme's
+            versions = resolve_art(s.art_picture, s.art_style) or versions
+            home = next((t for t, n in THEME_ART.items() if n == s.art_picture), None)
+            if s.art_recolour == "own" and home:
+                palette = Styles(home).art_palette(shaded=shaded)
         console.set_decor(
             border=None if stealth or s.border == "off" else s.border,
             border_style=st.title,

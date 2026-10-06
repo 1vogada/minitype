@@ -16,6 +16,7 @@ from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICU
                       FUN_BOUNCE, FUN_SWITCH, FUN_CARET, EFFECT_SPEEDS,
                       FLOW_DIRECTIONS, CORRECTED, TYPOS, BORDER_STYLES,
                       ART_SCOPES, ART_STYLES, ART_COLOURS, THEME_BACKGROUNDS)
+from ..terminal.art import ART_NAMES, THEME_ART
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import storage
 from ..terminal import console, keys
@@ -237,6 +238,17 @@ def build_items(app):
                       "steps aside when the corner has text in it",
                  tags=("art", "ascii", "picture", "graphic", "decoration",
                        "appearance", "theme")),
+        b.choice("picture", "art_picture", ["theme"] + ART_NAMES,
+                 value=lambda: s.art_picture if s.art_picture != "theme"
+                 else f"theme's ({THEME_ART.get(s.theme, 'its own')})",
+                 help="which picture: the theme's own, or any other theme's "
+                      "(a remix: candy with the keyboard, say). Also in the "
+                      "gallery with [ and ]",
+                 tags=("art", "picture", "remix", "image", "background")),
+        b.choice("picture colours", "art_recolour", ["theme", "own"],
+                 help="a remixed picture in this theme's colours, or in the "
+                      "colours of the theme it comes from",
+                 tags=("art", "picture", "remix", "colours", "colors")),
         b.flag("art behind text", "art_behind",
                "the art always shows at full size, behind everything: text "
                "is drawn over it and the art shows between the letters. "
