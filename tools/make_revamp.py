@@ -20,6 +20,8 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path[:0] = [HERE, os.path.join(HERE, "..")]
 
+import art_combined                               # noqa: E402
+import art_wow                                    # noqa: E402
 import artgen                                     # noqa: E402
 import artgen_ascii                               # noqa: E402
 from art_scenes import SCENES                     # noqa: E402
@@ -28,9 +30,11 @@ from revamp_art import OPAQUE, PICTURES           # noqa: E402
 from minitype.terminal.art import LETTER_OF, _parts_of   # noqa: E402
 
 OUT = os.path.join(HERE, "..", "minitype", "terminal", "art_revamp.py")
-HEADER = '''"""The revamp corner pictures, made by tools/make_revamp.py from the
-hand-drawn subjects in tools/revamp_art.py over scenery rendered from
-tools/art_scenes.py - edit those and rebuild rather than this file.
+HEADER = '''"""The revamp corner pictures, made by tools/make_revamp.py: the big
+pictures in tools/art_wow.py (every technique at once, for the themes that
+have one) and otherwise the hand-drawn subjects in tools/revamp_art.py
+over scenery rendered from tools/art_scenes.py - edit those and rebuild
+rather than this file.
 
 REVAMP holds each picture by name, packed like art_detailed.py: base85 of
 zlib of JSON [span, [size]], the size [width, rows, keep], each row
@@ -137,8 +141,20 @@ def compose(name):
 
 
 def build(name):
+    if name in art_wow.WOW:
+        return build_wow(name)
     lines, parts, tones, keep, span = compose(name)
     return squeeze([span, [pack(lines, parts, tones, keep)]])
+
+
+def build_wow(name):
+    """A picture from tools/art_wow.py: every technique at once, in its
+    theme's colours, art_wow.ROWS tall."""
+    make = art_wow.WOW[name]
+    pal = art_combined.Palette(make(art_combined.Palette("default")).theme)
+    sc = make(pal)
+    lines, parts, tones, bparts, btones, keep = art_combined.render(sc, art_wow.ROWS, pal)
+    return squeeze([sc.span, [pack(lines, parts, tones, keep, bparts, btones)]])
 
 
 def load():
@@ -168,8 +184,9 @@ def main(args):
     if sys.stdout.encoding.lower() != "utf-8":
         sys.stdout.reconfigure(encoding="utf-8")
     if args and args[0] == "--show":
+        names = [n for n in args[1:] or list(PICTURES) if n not in art_wow.WOW]
         width = int(os.environ.get("WIDTH", "90"))
-        for name in args[1:] or list(PICTURES):
+        for name in names:
             lines = compose(name)[0]
             print(f"===== {name} ({len(lines)} rows)")
             print("\n".join(l[-width:].rstrip() for l in lines))

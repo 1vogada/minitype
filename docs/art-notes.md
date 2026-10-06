@@ -57,6 +57,28 @@ python -c "import sys; sys.path.insert(0,'tools'); import make_art as m; d,b,c=m
 avoid unrelated churn.) Preview by rendering cells to HTML in the theme's
 RGB and viewing it in a browser.
 
+## Revamp "wow" pictures (tools/art_wow.py) - the new direction
+28 rows tall, one per theme, built with the combined renderer
+(`tools/art_combined.py`) and stored as revamp art by `make_revamp.py`
+(`build_wow`); themes without one still use the hand-drawn picture.
+Done so far: island (ocean), moon (midnight), pines (forest), fire (ember),
+keyboard (default). Shared helpers: `ridge`, `pine`, `palm`, `sphere_light`,
+`stars`. Lessons:
+- Only the SUBJECT may be focus (sun, palm, moon, fire, keyboard). Sky,
+  sea and ground must be focus=False, or a 28-row picture never fits
+  beside the menu and the app falls back to og.
+- Gradients along `pal.path(...)` (palette colours) - never free RGB.
+- `Scene(inks={tag: "letters"})` limits which palette colours an area may
+  use (a dark grey room drifted to dark green / red without it).
+- Colour distance is brightness + chroma (`dist`), not weighted RGB.
+- Silhouettes: when a cell's covered part is the ground colour, the
+  encoder uses the COMPLEMENT glyph (fg = the other part, bg = ground) -
+  otherwise thin dark shapes (palm trunks) vanish.
+- Gaps between shapes (keycaps) must be wider than a cell or they merge.
+- Preview: `wow_preview.py` (scratchpad) renders to HTML; block glyphs
+  fall back to wider fonts in the browser, so ragged right edges there
+  are a preview artifact, not the art.
+
 ## Revamp (hand-drawn) - how it was done
 `tools/revamp_art.py`: `picture(name, text, colours=..., tones=..., paint=,
 shade=, ground=, tile=, below=, solid=, tile_under=)`. Blanks enclosed by the

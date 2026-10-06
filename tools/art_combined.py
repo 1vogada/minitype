@@ -54,6 +54,13 @@ MASKS.append(("▔", _mask(lambda x, y: y == 0)))
 MASKS.append(("▎", _mask(lambda x, y: x == 0)))
 MASKS.append(("▊", _mask(lambda x, y: x <= 2)))
 MASKS.append(("▕", _mask(lambda x, y: x == SX - 1)))
+# a glyph and the one inking exactly its blank part
+COMPLEMENT = {}
+for _c, _m in MASKS:
+    _rest = tuple(i for i in range(N) if i not in set(_m))
+    for _c2, _m2 in MASKS:
+        if _m2 == _rest:
+            COMPLEMENT[_c] = _c2
 SHADES = ((0.25, "░"), (0.5, "▒"), (0.75, "▓"))
 SHADE_COST = 250                 # shades read grainy: a mix must beat a solid by this
 EDGE_COST = 20
@@ -65,9 +72,15 @@ BRAILLE_BITS = ((0x01, 0x08), (0x02, 0x10), (0x04, 0x20), (0x40, 0x80))
 # ---------------------------------------------------------------- colour
 
 def dist(a, b):
-    """How unlike two colours look (weighted for the eye)."""
-    dr, dg, db = a[0] - b[0], a[1] - b[1], a[2] - b[2]
-    return 2 * dr * dr + 4 * dg * dg + 3 * db * db
+    """How unlike two colours look: brightness and colour apart, so a
+    dark grey stays nearer a lighter grey than a dark red of the same
+    brightness (hues don't jump in the shadows)."""
+    ya = 0.299 * a[0] + 0.587 * a[1] + 0.114 * a[2]
+    yb = 0.299 * b[0] + 0.587 * b[1] + 0.114 * b[2]
+    dy = ya - yb
+    dr = (a[0] - ya) - (b[0] - yb)
+    db = (a[2] - ya) - (b[2] - yb)
+    return 9 * dy * dy + 4 * (dr * dr + db * db)
 
 
 def mix(a, b, t):
@@ -109,6 +122,7 @@ class Palette:
         self.all = self.colours + [(None, self.ground)]
         self._near = {}
         self._by_key = dict(self.colours)
+        self.allowed = None          # palette letters a cell may use (see Scene.inks)
 
     def rgb(self, key):
         """A colour by its short name: "e6" is error, tone 6; "-" the ground."""
@@ -129,10 +143,12 @@ class Palette:
 
     def nearest(self, c, k=1, ground=True):
         """The k palette entries closest to c, nearest first."""
-        key = (int(c[0]) >> 2, int(c[1]) >> 2, int(c[2]) >> 2, k, ground)
+        key = (int(c[0]) >> 2, int(c[1]) >> 2, int(c[2]) >> 2, k, ground, self.allowed)
         hit = self._near.get(key)
         if hit is None:
             pool = self.all if ground else self.colours
+            if self.allowed:
+                pool = [e for e in pool if e[0] is None or e[0][0] in self.allowed] or pool
             hit = sorted(pool, key=lambda e: dist(c, e[1]))[:k]
             self._near[key] = hit
         return hit
@@ -145,9 +161,12 @@ class Scene:
     rgb or fn(x, y), focus, hidden(x, y) or None)]; texts(rows, x_left,
     cw, unit) -> [(col, row, char, rgb, focus)]."""
 
-    def __init__(self, aspect, field, lines=None, texts=None, span=True,
+    def __init__(self, aspect, field, lines=None, texts=None, span=True, inks=None,
                  sizes=(26, 20, 14, 10), theme="default"):
         self.aspect, self.field, self.span, self.sizes, self.theme = aspect, field, span, sizes, theme
+        # {tag: palette letters}: the colours a cell of that kind may be
+        # drawn in, so a dark grey room can't drift to a dark green
+        self.inks = inks or {}
         self.lines = lines or (lambda rows: [])
         self.texts = texts or (lambda rows, x_left, cw, unit: [])
 
@@ -225,6 +244,8 @@ def render(scene, rows, pal=None):
             mean = cell[3] if cell else ground
             if cell:
                 focus[r][c] = cell[1]
+            tag = max(cell[2], key=cell[2].get) if cell else None
+            pal.allowed = scene.inks.get(tag)
             back = pal.nearest(mean)[0][0] if cell else None
             text = texts.get((r, c))
             if text:
@@ -245,9 +266,10 @@ def render(scene, rows, pal=None):
                 continue
             if not cell:
                 continue
-            ch, fg, bg = encode(cell[0], mean, pal, shades=max(cell[2], key=cell[2].get) != "floor")
+            ch, fg, bg = encode(cell[0], mean, pal, shades=tag != "floor")
             if ch != " " or bg is not None:
                 put(r, c, ch, fg, bg)
+    pal.allowed = None
 
     return _trim(scene, chars, parts, tones, bparts, btones, focus)
 
@@ -290,6 +312,14 @@ def encode(samples, mean, pal, shades=True):
             bk, brgb = pal.nearest(mb)[0]
             err = sum(dist(s, frgb) for s in a) + sum(dist(s, brgb) for s in b) + n * EDGE_COST
             consider(err, ch, fk, bk)
+            # the covered part is the background itself (a silhouette): draw
+            # the other part instead, with the complementary glyph, and
+            # leave this one the true background
+            comp = COMPLEMENT.get(ch)
+            if comp and pal.nearest(ma)[0][0] is None:
+                ok, orgb = pal.nearest(mb, ground=False)[0]
+                err = sum(dist(s, pal.ground) for s in a) + sum(dist(s, orgb) for s in b) + n * EDGE_COST
+                consider(err, comp, ok, None)
     _, ch, fg, bg = best
     return ch, fg, bg
 
