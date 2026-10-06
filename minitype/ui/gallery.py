@@ -9,12 +9,12 @@ from ..terminal.style import INV, RESET
 from .menu import Hints, title_lines
 from .preview import theme_sample
 
-HINTS = ("left/right (or ` ~) theme   up/down art style   "
+HINTS = ("up/down (or ` ~) theme   left/right art style   "
          "enter use these   esc keep yours")
 
 
 def gallery(app):
-    """Show the themes; left / right flip through them, up / down through
+    """Show the themes; up / down flip through them, left / right through
     the art styles. Enter keeps what's on screen, esc puts back the theme
     and art style you had. Returns None (back to the menu)."""
     names = style.theme_names()
@@ -44,13 +44,13 @@ def gallery(app):
         if key == keys.RESIZE:
             continue
         handled = True
-        if key in (keys.RIGHT, keys.TAB, "`", "l"):
+        if key in (keys.DOWN, keys.TAB, "`", "j"):
             i = (i + 1) % len(names)
-        elif key in (keys.LEFT, keys.SHIFT_TAB, "~", "h"):
+        elif key in (keys.UP, keys.SHIFT_TAB, "~", "k"):
             i = (i - 1) % len(names)
-        elif key in (keys.DOWN, "j"):
+        elif key in (keys.RIGHT, "l"):
             a = (a + 1) % len(ART_STYLES)
-        elif key in (keys.UP, "k"):
+        elif key in (keys.LEFT, "h"):
             a = (a - 1) % len(ART_STYLES)
         elif key == keys.HOME:
             i = 0

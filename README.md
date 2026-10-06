@@ -280,8 +280,8 @@ settings; if one has a mistake, the theme row's help says what's wrong.
 - keyboard heatmap coloured by how often each key was missed
 - personal bests per mode, with a banner when you beat one
 - **gallery** (main menu → app): every theme full screen, exactly as it
-  looks - colours, background, art and a typing sample. Left / right (or
-  `` ` `` / `~`) flip through the themes, up / down through the art styles
+  looks - colours, background, art and a typing sample. Up / down (or
+  `` ` `` / `~`) flip through the themes, left / right through the art styles
   (revamp, blocks, detailed, og, combined); enter uses what's on screen,
   esc keeps yours
 - **profile**: totals, top and average speed, a speed chart, all your PBs
