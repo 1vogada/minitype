@@ -46,11 +46,13 @@ minitype
 - **menus**: arrow keys move, enter selects or starts, left/right change a
   value, tab / shift-tab (or `[` `]`, PgUp / PgDn) jump between sections,
   esc goes back. Rows with a hotkey show it beside the label. Shift+enter
-  steps a value backwards.
+  steps a value backwards. The row you're on has a `>` and is highlighted;
+  the section (tab) you're in is marked `>>`.
 - **sidebar with section buttons on the left**: you start on the buttons.
   Up / down pick a section, enter or right steps into its rows, esc steps
   back out (and esc on the buttons leaves). In the rows left / right only
-  change values.
+  change values. While you pick a section it has the `>` and highlight;
+  in its rows it's marked `>>` and the row you're on is lit instead.
 - **settings**: just start typing to filter; only settings whose name
   contains what you typed stay. Start a word with `#` to search tags and
   sections instead (`#colour`, `#mistakes`, `#look`). The search bar shows
@@ -181,8 +183,10 @@ Skipping pages:
   corner. Each comes in four sizes, 10 to 26 rows tall, and the biggest
   that fits is drawn. It
   never covers text: the background steps around it, and if the picture
-  itself doesn't fit, a smaller one is used. Lowkey disguised hides it
-  along with the border
+  itself doesn't fit, a smaller one is used. The help under the selected
+  menu row is the exception: it goes in a box drawn over the art, so the
+  art keeps its size as you move. Lowkey disguised hides it along with
+  the border
 - every effect can be switched off on its own, for any theme: theme
   background, gradients, gradient flow, heat, and bold / italic (all on
   by default; the sample line shows the change as you toggle)

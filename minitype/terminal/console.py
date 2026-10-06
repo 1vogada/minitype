@@ -9,6 +9,10 @@ import sys
 
 ANSI = re.compile(r"\x1b\[[0-9;?]*[A-Za-z]|\x1b\][^\x07]*\x07")
 RESET = "\x1b[0m"
+# put in a line, it marks the rest of the line as floating: text that may
+# go over the corner art (a menu's help box) and so doesn't push the art
+# smaller. It takes no room, and present() takes it out before drawing
+FLOAT = "\x1b]minitype-float\x07"
 MIN_W, MIN_H = 20, 5
 
 _last_size = None
@@ -147,8 +151,7 @@ def present(lines, focus=None, pinned=(), scene="menu"):
         top = max(0, min(f - body_h // 2, len(lines) - body_h))
     view = lines[top:top + body_h]
     d = _decor
-    art = d["art"] if d["art"] and (d["art_scope"] == "everywhere"
-                                    or scene == "menu") else None
+    art = d["art"] if art_shown(scene) else None
     if pinned or art or d["border"]:
         view += [""] * (body_h - len(view))     # full height: pinned / art / frame
     view += pinned
@@ -161,10 +164,27 @@ def present(lines, focus=None, pinned=(), scene="menu"):
     # with a theme background, every reset puts the background straight
     # back, and the line ends (and the rest of the screen) are cleared
     # while it's active, which fills them with it
-    out = "\x1b[K\n".join(bg + row.replace(RESET, RESET + bg) + RESET + bg
-                          for row in rows)
+    out = "\x1b[K\n".join(bg + row.replace(FLOAT, "").replace(RESET, RESET + bg)
+                          + RESET + bg for row in rows)
     write("\x1b[H" + out + "\x1b[K\x1b[J" + (RESET if bg else ""))
     flush()
+
+
+def art_shown(scene="menu"):
+    """Whether present() puts the corner art on a frame of this scene."""
+    d = _decor
+    return bool(d["art"]) and (d["art_scope"] == "everywhere" or scene == "menu")
+
+
+def _text_ends(row):
+    """Where the row's fixed text ends and where all of it ends. They
+    differ when the row has floating text (see FLOAT), which the art is
+    placed without."""
+    full = visible_len(row)
+    i = row.find(FLOAT)
+    if i < 0:
+        return full, full
+    return len(ANSI.sub("", row[:i]).rstrip()), full
 
 
 def overlay_art(rows, versions, width, pinned_n):
@@ -174,7 +194,8 @@ def overlay_art(rows, versions, width, pinned_n):
     the right two-thirds of the screen, is drawn. A spanning picture loses
     what doesn't fit on its left, and the background part of a row steps
     back from text rather than cover it. If none fits the frame is left
-    without art."""
+    without art. Floating text doesn't count when fitting it: it stays
+    on top, and the art shows again after it."""
     bottom = len(rows) - pinned_n - (2 if pinned_n else 1)
     avail = width - 1
     for pic in versions:
@@ -183,7 +204,8 @@ def overlay_art(rows, versions, width, pinned_n):
         top, col = bottom - pic.height + 1, avail - w
         if top < 1 or col < 0:
             continue
-        ends = [visible_len(rows[top + k]) for k in range(pic.height)]
+        spans = [_text_ends(rows[top + k]) for k in range(pic.height)]
+        ends = [solid for solid, _ in spans]
         starts = [col + pic.keep[k] - skip for k in range(pic.height)
                   if pic.keep[k] < pic.width]
         if not starts or min(starts) < width // 3 or any(
@@ -196,11 +218,14 @@ def overlay_art(rows, versions, width, pinned_n):
         last_text = max((k for k in range(pic.height) if ends[k]), default=-1)
         rows = list(rows)
         for k in range(pic.height):
-            start = max(0, ends[k] + 2 - col, box if k <= last_text else 0)
+            solid, full = spans[k]
+            start = max(0, solid + 2 - col, box if k <= last_text else 0)
+            if full > solid:             # floating text: the art goes on after it
+                start = max(start, full + 1 - col)
             if start >= w:
                 continue
             r = rows[top + k]
-            rows[top + k] = (r + RESET + " " * (col + start - ends[k])
+            rows[top + k] = (r + RESET + " " * (col + start - full)
                              + pic.row(k, skip + start))
         return rows
     return rows

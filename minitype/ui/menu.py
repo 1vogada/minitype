@@ -241,20 +241,23 @@ class Menu:
     # ---------------------------------------------------------------- drawing
 
     def _row(self, st, item, sel, label_width, with_value=True, active=True):
-        """One row. `active` is False when focus is in the other column:
-        the selection still shows, but dimmed."""
+        """One row; the selected one has a pointer and its label is
+        highlighted. `active` is False when focus is in the other column:
+        the selection still shows, but dimmed and not highlighted."""
         lit = st.title if active else st.dim
         pointer = f"{lit}>{RESET}" if sel else " "
-        lab = lit if sel else st.dim
         if self.show_keys:
             key = f"{item.key:<1}" if len(item.key) <= 1 else item.key
-            line = f" {pointer}{st.title}{key}{RESET}  {lab}"
+            line = f" {pointer}{st.title}{key}{RESET} "
         else:
-            line = f" {pointer} {lab}"
+            line = f" {pointer}"
+        # the label with a space either side, so the highlight has a margin
+        lab = (f"{lit}{INV}" if active else lit) if sel else st.dim
+        line += f"{lab} {item.label} {RESET}"
         if item.value is None or not with_value:
-            return line + f"{item.label}{RESET}"
+            return line
         w = max(label_width, len(item.label) + 2)
-        return line + f"{item.label:<{w}}{RESET}{item.value()}"
+        return line + " " * (w - len(item.label) - 1) + item.value()
 
     def render(self, st, label_width=0):
         """Lines for the menu and the index of the selected one."""
@@ -276,15 +279,26 @@ class Menu:
 
     def _help_under(self, st, item, width):
         """The item's help, wrapped and indented to sit under its label, so
-        it stays next to the selection however far the menu has scrolled."""
+        it stays next to the selection however far the menu has scrolled.
+
+        With corner art on, it's boxed and floating (console.FLOAT): the
+        art keeps its size and the box goes over it, readable on top."""
         text = item.help_text()
         indent = HELP_INDENT if self.show_keys else HELP_INDENT - 1
-        lines = [" " * indent + f"{st.dim}{ln}{RESET}"
-                 for ln in textwrap.wrap(text, max(10, width - indent - 2))] \
+        boxed = console.art_shown()
+        room = max(10, width - indent - (4 if boxed else 2))
+        lines = [f"{st.dim}{ln}{RESET}" for ln in textwrap.wrap(text, room)] \
             if text else []
         if item.preview:
-            lines += [" " * indent + ln for ln in item.preview()]
-        return lines
+            lines += item.preview()
+        if not boxed or not lines:
+            return [" " * indent + ln for ln in lines]
+        inner = min(max(map(console.visible_len, lines)), room)
+        edge = " " * (indent - 2) + console.FLOAT + st.dim
+        return ([f"{edge}┌{'─' * (inner + 2)}┐{RESET}"]
+                + [f"{edge}│{RESET} {console.pad(ln, inner)} {st.dim}│{RESET}"
+                   for ln in lines]
+                + [f"{edge}└{'─' * (inner + 2)}┘{RESET}"])
 
     def _rows(self, st, indices, label_width, with_value=True, inline_help=True,
               width=None, headings=True, active=True):
@@ -311,13 +325,15 @@ class Menu:
         return lines, focus
 
     def _tab_bar(self, st):
+        """The sections in a row; the one you're in is marked >> (the
+        highlight is kept for the selected row)."""
         cur = self.selected.section
         tabs = []
         for sec in self.sections():
             name = sec or "-"
-            tabs.append(f"{st.title}{INV} {name} {RESET}" if sec == cur
-                        else f"{st.dim} {name} {RESET}")
-        return "  " + "".join(tabs)
+            tabs.append(f"{st.title}>> {name}{RESET}" if sec == cur
+                        else f"{st.dim}   {name}{RESET}")
+        return " " + "  ".join(tabs)
 
     def _panel(self, st, item, width):
         """Details of the selected item, for the sidebar."""
@@ -378,10 +394,10 @@ class Menu:
             name = s or "-"
             if s != cur:
                 left.append(f"   {st.dim}{name}{RESET}")
-            elif on:                          # focus here: pointer and bright
+            elif on:                          # choosing a section: pointer and highlight
                 left.append(f" {st.title}>{INV} {name} {RESET}")
-            else:
-                left.append(f"  {st.title}{INV} {name} {RESET}")
+            else:                             # in its rows: marked, the row is lit
+                left.append(f" {st.title}>> {name}{RESET}")
         right, focus = self._rows(st, self._in_section(cur), label_width,
                                   width=width - lw - 3, headings=False,
                                   active=not on)
@@ -394,7 +410,7 @@ class Menu:
         cells = []
         for i, item in enumerate(self.items):
             if i == self.cursor:
-                cells.append(f"{st.title}>{item.key} {item.label}{RESET}")
+                cells.append(f"{st.title}>{INV}{item.key} {item.label}{RESET}")
             else:
                 cells.append(f"{st.dim} {item.key} {item.label}{RESET}")
         return "  " + "  ".join(cells)
