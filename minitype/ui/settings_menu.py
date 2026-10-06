@@ -15,7 +15,8 @@ from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICU
                       SIDEBAR_TABS, STOP_MODES, UI_STYLES, WORD_GAPS,
                       FUN_BOUNCE, FUN_SWITCH, FUN_CARET, EFFECT_SPEEDS,
                       FLOW_DIRECTIONS, CORRECTED, TYPOS, BORDER_STYLES,
-                      ART_SCOPES, ART_STYLES, ART_COLOURS, THEME_BACKGROUNDS)
+                      ART_SCOPES, ART_STYLES, ART_COLOURS, THEME_BACKGROUNDS,
+                      ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS)
 from ..terminal.art import ART_NAMES, THEME_ART
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import storage
@@ -249,6 +250,27 @@ def build_items(app):
                  help="a remixed picture in this theme's colours, or in the "
                       "colours of the theme it comes from",
                  tags=("art", "picture", "remix", "colours", "colors")),
+        b.choice("art fade", "art_fade", ART_FADES,
+                 help="how the art dissolves into the screen instead of "
+                      "stopping on a straight line (dithered, its colour "
+                      "thinning through shades): edges fades its top and "
+                      "left side (fade top / fade side), corner keeps a round "
+                      "patch from the bottom right corner (fade round). Also "
+                      "in the gallery with d",
+                 tags=("art", "fade", "dither", "dithering", "edge", "bleed", "round")),
+        b.choice("fade top", "fade_top", FADE_TOPS,
+                 value=lambda: f"{s.fade_top} rows",
+                 help="edges fade: how many rows the art's top fades over",
+                 tags=("art", "fade", "dither", "vertical")),
+        b.choice("fade side", "fade_side", FADE_SIDES,
+                 value=lambda: f"{s.fade_side} cols",
+                 help="edges fade: how many columns the art's left side fades over",
+                 tags=("art", "fade", "dither", "horizontal")),
+        b.choice("fade round", "fade_round", FADE_ROUNDS,
+                 value=lambda: f"{s.fade_round}%",
+                 help="corner fade: how big the round patch is, from the "
+                      "bottom right corner, as a share of the picture",
+                 tags=("art", "fade", "dither", "corner", "round")),
         b.flag("text panel", "art_panel",
                "the art full size over the whole screen, and the text in a "
                "panel of its own on top of it, bordered like the screen, "
@@ -472,7 +494,9 @@ LAYOUT = [
                ("look", "heat"), ("look", "bold / italic")]),
     ("art", [("look", "theme art", "show art"), ("fun", "art style"),
              ("look", "picture"), ("look", "picture colours"),
-             ("fun", "art colours", "art shading"), ("look", "text panel"),
+             ("fun", "art colours", "art shading"), ("look", "art fade"),
+             ("look", "fade top"), ("look", "fade side"), ("look", "fade round"),
+             ("look", "text panel"),
              ("look", "art behind text")]),
     ("effects", [("fun", "bounce"), ("fun", "shake"), ("fun", "pop"), ("fun", "fade"),
                  ("fun", "caret effect"), ("fun", "glitch"), ("fun", "effect speed"),

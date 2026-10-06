@@ -2,7 +2,7 @@
 looks - its colours, background, border, art and a typing sample. Flip
 through the themes and the art settings and pick."""
 
-from ..config import ART_SCOPES, ART_STYLES
+from ..config import ART_FADES, ART_SCOPES, ART_STYLES
 from ..terminal import console, keys, style
 from ..terminal.art import ART_NAMES, THEME_ART
 from ..terminal.style import INV, RESET
@@ -11,7 +11,8 @@ from .preview import theme_sample
 
 SEARCH_HINTS = "type to search   up/down matches   enter done   esc clear"
 HINTS = ("/ search   up/down (or ` ~) theme   left/right art style   [ ] picture   "
-         "c its colours   v show art   p text panel   b art behind text   enter use these   "
+         "c its colours   v show art   d art fade   p text panel   b art behind text   "
+         "enter use these   "
          "esc keep yours")
 
 # the art settings the gallery changes besides the theme: (field, label,
@@ -19,6 +20,7 @@ HINTS = ("/ search   up/down (or ` ~) theme   left/right art style   [ ] picture
 ROWS = [
     ("art_style", "art style", ART_STYLES, (keys.RIGHT, "l"), (keys.LEFT, "h"), "left/right"),
     ("art", "show art", ART_SCOPES, ("v",), ("V",), "v"),
+    ("art_fade", "art fade", ART_FADES, ("d",), ("D",), "d"),
     ("art_panel", "text panel", [False, True], ("p",), ("P",), "p"),
     ("art_behind", "art behind text", [False, True], ("b",), ("B",), "b"),
     ("art_picture", "picture", ["theme"] + ART_NAMES, ("]",), ("[",), "[ ]"),

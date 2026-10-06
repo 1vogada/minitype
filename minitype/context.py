@@ -63,7 +63,8 @@ class App:
             border_style=st.title,
             art=None if stealth or s.art == "off" else
             [paint_art(piece, palette) for piece in versions],
-            art_scope=s.art, behind=s.art_behind, panel=s.art_panel, shadow=st.dim)
+            art_scope=s.art, behind=s.art_behind, panel=s.art_panel, shadow=st.dim,
+            fade=(s.art_fade, s.fade_top, s.fade_side, s.fade_round))
         return st
 
     def load_words(self, name):

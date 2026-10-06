@@ -591,6 +591,26 @@ class Picture:
             self._codes.append(row)
         self._reset = reset
         self._wider = {}
+        self.back = bool(piece.back_parts)        # it has background colours
+
+    def faded(self, mode, top=5, side=12, radius=70):
+        """The picture dissolving into the screen at its edges instead of
+        stopping on a straight line: "edges" fades the top `top` rows and
+        the left `side` columns, "corner" keeps a round patch from the
+        bottom right corner (`radius` percent of the picture) and fades
+        out from there. Cells fade by an ordered dither: solid colour steps
+        down through ▓ ▒ ░ in its own colour (it bleeds out), thinner
+        marks drop out. Only for pictures with backgrounds (blocks,
+        combined); the same settings give the same picture back."""
+        if mode not in ("edges", "corner"):
+            return self
+        key = (mode, top, side, radius)
+        cache = self.__dict__.setdefault("_faded", {})
+        if key not in cache:
+            if len(cache) > 8:
+                cache.clear()
+            cache[key] = _fade(self, mode, top, side, radius)
+        return cache[key]
 
     def wider(self, width):
         """The picture `width` columns wide, for a spanning picture on a
@@ -623,7 +643,7 @@ class Picture:
         line, codes = self.lines[r], self._codes[r]
         for c in range(start, len(line)):
             ch = line[c]
-            blank_ok = ch == " " and "48;" not in codes[c] and "48;" not in (cur or "")
+            blank_ok = ch == " " and "\x1b[48;" not in codes[c] and "\x1b[48;" not in (cur or "")
             if not blank_ok and codes[c] != cur:
                 cur = codes[c]
                 out.append(self._reset + cur)
@@ -668,6 +688,60 @@ def _grow(pic, n):
             recent = (recent + [cur])[-3:]
         out.append(cur)
     return out[::-1]
+
+
+_BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
+_SHADES = "░▒▓"
+
+
+def _fade(pic, mode, top, side, radius):
+    """A copy of the picture with its edges dithered away (see faded)."""
+    h, w = pic.height, pic.width
+
+    def smooth(t):
+        t = min(1.0, max(0.0, t))
+        return t * t * (3 - 2 * t)
+
+    def alpha(r, c):
+        if mode == "edges":
+            a = smooth((r + 0.5) / top) if top else 1.0
+            return a * (smooth((c + 0.5) / side) if side else 1.0)
+        reach = max(h, w / 2) * radius / 100        # columns count half: cells are tall
+        d = ((h - r) ** 2 + ((w - c) / 2) ** 2) ** 0.5
+        return 1.0 - smooth((d - reach * 0.55) / (reach * 0.45))
+
+    lines, codes = [], []
+    for r in range(h):
+        row, rc = list(pic.lines[r]), list(pic._codes[r])
+        for c in range(w):
+            a = alpha(r, c)
+            if a >= 0.999:
+                continue
+            v = a + (_BAYER[r % 4][c % 4] / 16 - 0.47) * 0.4
+            ch, code = row[c], rc[c]
+            if v < 0.12 or ch == " " and "\x1b[48;" not in code:
+                row[c], rc[c] = " ", ""
+                continue
+            solid = ch == "█" or "\x1b[48;" in code
+            if solid and v < 0.9:
+                # its colour, thinned: the background colour (or the full
+                # block's) as the ink of a shade
+                bg = re.findall(r"\x1b\[48;([0-9;]*)m", code)
+                fg = re.findall(r"\x1b\[38;([0-9;]*)m", code)
+                colour = bg[-1] if bg else (fg[-1] if fg else None)
+                if colour is None:
+                    continue
+                row[c] = _SHADES[0 if v < 0.4 else 1 if v < 0.65 else 2]
+                rc[c] = "\x1b[38;" + colour + "m"
+            elif not solid and v < 0.5:
+                row[c], rc[c] = " ", ""
+        lines.append("".join(row))
+        codes.append(rc)
+    out = object.__new__(Picture)
+    out.__dict__.update(pic.__dict__)
+    out.lines, out._codes, out._wider = tuple(lines), codes, {}
+    out.__dict__["_faded"] = {}
+    return out
 
 
 @lru_cache(maxsize=64)

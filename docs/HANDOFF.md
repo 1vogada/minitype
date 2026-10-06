@@ -72,8 +72,8 @@ Then `docs/art-notes.md` for anything about the corner art.
    "bubblegum pop"). The other 34 themes still use the hand-drawn revamp.
    The owner loves the vaporwave combined background and the deep sea
    picture - use them as the bar.
-2. Dithering and "bleeding" at the art's edges so it doesn't cut off
-   hard against the rest of the screen (the top edge of a full-width
-   picture is a straight line today).
-3. A dithering setting: 2 modes - (1) vertical + horizontal fade with
-   custom amounts, (2) round, from the corner - with sliders.
+2. Done: art fade (`Picture.faded`, `art._fade`): ordered dither + ▓▒░
+   bleed at the edges of pictures with backgrounds. Settings art_fade
+   (edges / corner / off), fade_top, fade_side, fade_round; `d` in the
+   gallery. Possible next: fade the art where it meets text beside it
+   (rows next to the menu), and a bleed above the picture's top.

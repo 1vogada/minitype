@@ -174,7 +174,7 @@ bb = App(); bb.settings.theme = "ember"; bb.settings.art_behind = True; bb.style
 raw = present([""] * 20 + ["  " + "x" * 100], W2, H2)
 row = [r for r in raw.split("\n") if "xxxx" in strip(r)][0]
 cells = console._cells(row)
-on_art = [codes for codes, ch in cells if ch == "x" and "48;" in codes]
+on_art = [codes for codes, ch in cells if ch == "x" and "\x1b[48;" in codes]
 assert on_art, "letters over the art take its colour behind them"
 print("ALL OK")
 

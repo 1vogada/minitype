@@ -98,5 +98,5 @@ for t, name in list(THEME_ART.items())[::3]:
         pic = paint(piece, pal)
         for r in range(pic.height):
             for c, (codes, ch) in enumerate(console._cells(pic.row(r))):
-                assert not (ch == " " and "48;" not in pic._codes[r][c] and "48;" in codes), (t, name, r, c)
+                assert not (ch == " " and "\x1b[48;" not in pic._codes[r][c] and "\x1b[48;" in codes), (t, name, r, c)
 print("ALL OK")

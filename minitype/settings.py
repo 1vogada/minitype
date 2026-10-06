@@ -8,7 +8,8 @@ from .config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS,
                      WORD_GAPS, FUN_BOUNCE, FUN_SWITCH, FUN_CARET,
                      EFFECT_SPEEDS, FLOW_DIRECTIONS, CORRECTED, TYPOS,
                      BORDER_STYLES, ART_SCOPES, ART_STYLES, ART_COLOURS,
-                     THEME_BACKGROUNDS)
+                     THEME_BACKGROUNDS,
+                     ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS)
 from .terminal.style import theme_names
 from .words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 
@@ -38,6 +39,10 @@ CHOICES = {
     "art": ART_SCOPES,
     "art_picture": lambda: ["theme"] + _art_names(),
     "art_recolour": ["theme", "own"],
+    "art_fade": ART_FADES,
+    "fade_top": FADE_TOPS,
+    "fade_side": FADE_SIDES,
+    "fade_round": FADE_ROUNDS,
     "art_style": ART_STYLES,
     "art_colours": ART_COLOURS,
     "theme_background": THEME_BACKGROUNDS,
@@ -110,6 +115,10 @@ class Settings:
     art_colours: str = "shaded"  # shaded (softer shades and hues) / flat
     art_behind: bool = False     # art always full size, text drawn over it
     art_panel: bool = False      # art full size, the text in a bordered panel over it
+    art_fade: str = "edges"      # how the art dissolves at its edges: edges / corner / off
+    fade_top: int = 5            # edges: rows it fades over at the top
+    fade_side: int = 12          # edges: columns it fades over at the left
+    fade_round: int = 70         # corner: how big the round patch is, % of the picture
     art_picture: str = "theme"   # the theme's own picture, or any picture's name (a remix)
     art_recolour: str = "theme"  # a remixed picture in the theme's colours, or its own theme's
     # a theme's effects, each of which can be switched off

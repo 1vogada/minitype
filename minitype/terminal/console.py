@@ -34,7 +34,7 @@ BORDERS = {
 }
 # the theme's frame and corner art, set by set_decor()
 _decor = {"border": None, "border_style": "", "art": None, "art_scope": "menus",
-          "behind": False, "panel": False, "shadow": ""}
+          "behind": False, "panel": False, "shadow": "", "fade": None}
 _overlay = []           # lines of a box drawn over the middle of every frame (a dialog)
 
 
@@ -255,10 +255,10 @@ def _layer(row, pic, card):
     for x in range(max(len(text), len(pic))):
         t = text[x] if x < len(text) else ("", " ")
         a = pic[x] if x < len(pic) else ("", " ")
-        solid = (t[1] != " " or "\x1b[7m" in t[0] or "48;" in t[0]
+        solid = (t[1] != " " or "\x1b[7m" in t[0] or "\x1b[48;" in t[0]
                  or card[0] <= x < card[1])
         codes, ch = t if solid or (a[1] == " " and not a[0]) else a
-        if solid and t[1] != " " and not card[0] <= x < card[1] and "48;" not in t[0] \
+        if solid and t[1] != " " and not card[0] <= x < card[1] and "\x1b[48;" not in t[0] \
                 and "\x1b[7m" not in t[0]:
             codes = t[0] + _behind(a)         # printed on the art, not punched out of it
         if codes != cur:
@@ -285,6 +285,10 @@ def overlay_art(rows, versions, width, pinned_n, behind=False):
     avail = width - 1
     # on a screen wider than a spanning picture, its scenery grows to fill it
     versions = [pic.wider(avail) for pic in versions]
+    fade = _decor.get("fade")
+    if fade and fade[0] != "off":
+        # pictures with backgrounds dissolve into the screen at their edges
+        versions = [pic.faded(*fade) if getattr(pic, "back", False) else pic for pic in versions]
     if behind:
         for pic in versions:
             w = min(pic.width, avail) if pic.span else pic.width
@@ -346,7 +350,7 @@ def frame(rows, chars, style, inner):
 
 
 def set_decor(border=None, border_style="", art=None, art_scope="menus",
-              behind=False, panel=False, shadow=""):
+              behind=False, panel=False, shadow="", fade=None):
     """The theme's frame and corner art for present(): border is a BORDERS
     key or None; art the picture's sizes, biggest first, each a list of
     Pictures (see art.py), or None; art_scope "menus" or "everywhere";
@@ -355,7 +359,7 @@ def set_decor(border=None, border_style="", art=None, art_scope="menus",
     shadowed in `shadow` (a colour code)."""
     _decor.update(border=BORDERS.get(border), border_style=border_style,
                   art=art or None, art_scope=art_scope, behind=behind,
-                  panel=panel, shadow=shadow)
+                  panel=panel, shadow=shadow, fade=fade)
 
 
 def _panel(rows, text, width, top):
