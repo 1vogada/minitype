@@ -291,7 +291,7 @@ settings; if one has a mistake, the theme row's help says what's wrong.
 - speed chart across the test with errors marked
 - keyboard heatmap coloured by how often each key was missed
 - personal bests per mode, with a banner when you beat one
-- **gallery** (a main menu tab, `g`): every theme full screen, exactly as it
+- **gallery** (a main menu tab, `g`; `/` searches the themes by name): every theme full screen, exactly as it
   looks - colours, background, art and a typing sample. Up / down (or
   `` ` `` / `~`) flip through the themes, left / right through the art styles
   (revamp, blocks, detailed, og, combined), `[` `]` the picture and `c`
