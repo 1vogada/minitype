@@ -55,7 +55,8 @@ minitype
   back out (and esc on the buttons leaves). In the rows left / right only
   change values. While you pick a section it has the `>` and highlight;
   in its rows it's marked `>>` and the row you're on is lit instead.
-  **quit** is a button of its own at the bottom: enter on it quits.
+  **gallery**, **settings**, **profile** and **quit** are buttons of
+  their own: enter on one opens it (or quits).
 - **settings**: just start typing to filter; only settings whose name
   contains what you typed stay. Start a word with `#` to search tags and
   sections instead (`#colour`, `#mistakes`, `#look`). The search bar shows
@@ -284,7 +285,7 @@ settings; if one has a mistake, the theme row's help says what's wrong.
 - speed chart across the test with errors marked
 - keyboard heatmap coloured by how often each key was missed
 - personal bests per mode, with a banner when you beat one
-- **gallery** (main menu → app): every theme full screen, exactly as it
+- **gallery** (a main menu tab, `g`): every theme full screen, exactly as it
   looks - colours, background, art and a typing sample. Up / down (or
   `` ` `` / `~`) flip through the themes, left / right through the art styles
   (revamp, blocks, detailed, og, combined), `[` `]` the picture and `c`

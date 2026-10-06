@@ -113,15 +113,18 @@ def build_items(app):
              help="a test made of the words you type slowest",
              section="practice"),
 
-        Item("p", "profile", lambda: profile_screen(app),
-             help="totals, speed chart and personal bests", section="app"),
+        # each a tab of its own: its button opens it
         Item("g", "gallery", lambda: gallery(app), lambda: s.theme,
-             help="every theme full screen as it really looks: left/right "
-                  "to flip through, enter to use one",
-             section="app"),
+             help="every theme full screen as it really looks, with its art: "
+                  "flip through, remix the picture, enter to use one",
+             section="gallery", tab=True),
         Item("s", "settings", lambda: settings_menu(app),
              value=lambda: " ".join(s.flags()),
-             help="rules, challenges, word lists, look and feel", section="app"),
+             help="rules, text, drills, theme, art, effects and more",
+             section="settings", tab=True),
+        Item("p", "profile", lambda: profile_screen(app),
+             help="totals, speed chart and personal bests",
+             section="profile", tab=True),
         Item("q", "quit", lambda: QUIT, section="quit", tab=True),
     ]
 
