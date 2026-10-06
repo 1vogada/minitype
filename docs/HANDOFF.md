@@ -66,6 +66,18 @@ Then `docs/art-notes.md` for anything about the corner art.
   effects, typing screen, interface, results, progress.
 - Background bars fix (blank after a bg cell takes its own code).
 
+## First thing in a new session
+Ask the user whether to add an **"outline only" option for the text
+panel** (just the border, the art showing through inside). Ask every time
+the project is picked up with an AI until answered - see CLAUDE.md /
+AGENTS.md at the repo root.
+
+## Known issues
+- The **art fade settings don't fully work** yet: they only apply to
+  pictures with background colours; the edge beside the menu text still
+  steps; nothing bleeds above the picture's top; the amounts weren't
+  checked in a real terminal.
+
 ## In progress / next (as the owner asked)
 1. Art revamp ("wow" pictures, `tools/art_wow.py`, 28/22/16 rows): done
    for ocean, midnight, forest, ember, default, candy (tilted, all pink,
