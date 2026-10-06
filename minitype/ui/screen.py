@@ -1,7 +1,17 @@
-from ..terminal import console, keys
+from ..terminal import console, keys, style
 from .menu import Hints
 
 HINT_GAP = "   "
+THEME_KEY = "`"              # on any menu: the next theme, no trip to settings
+
+
+def next_theme(app, step=1):
+    """Switch to the next theme (built-in, then your own) and say which."""
+    names = style.theme_names()
+    cur = names.index(app.settings.theme) if app.settings.theme in names else -1
+    app.settings.theme = names[(cur + step) % len(names)]
+    app.notice = f"theme  {app.settings.theme}   (` for the next)"
+    return True
 
 
 def screen_hints(menu, text):
@@ -28,7 +38,8 @@ def menu_loop(app, menu, draw, hint_text, extra=None, on_back=None,
     effect immediately, and a resize simply redraws at the new size.
     Settings are written to disk after every key that did something.
     In the two-column layout, esc in the rows goes back to the sections
-    before it leaves the screen.
+    before it leaves the screen. ` switches to the next theme, unless the
+    screen takes the key itself (a search box you're typing in).
     """
     hints = Hints(app)
     while True:
@@ -47,6 +58,8 @@ def menu_loop(app, menu, draw, hint_text, extra=None, on_back=None,
         if key in back_keys:
             return on_back() if on_back else None
         handled, result = extra(key) if extra else (False, None)
+        if not handled and key == THEME_KEY:
+            handled, result = next_theme(app), None
         if not handled:
             handled, result = menu.handle(key)
         hints.note(key, handled)

@@ -1,7 +1,9 @@
 """Art for the corner of the screen, one picture per theme.
 
 Each comes in several sizes, biggest first, and the biggest that fits on
-screen is drawn. The "art style" setting picks which: blocks (pixel art in
+screen is drawn. The "art style" setting picks which: revamp (the
+default: hand-drawn line art over shaded ASCII scenery, one size, from
+tools/make_revamp.py into art_revamp.py), blocks (pixel art in
 block characters, each cell two colours), detailed (shaded ASCII) or
 combined (every technique at once, for the pictures that have it; the
 rest show in blocks), made by tools/make_art.py into art_detailed.py and
@@ -27,6 +29,7 @@ from .art_detailed import BLOCKS as _BLOCKS
 from .art_detailed import COMBINED as _COMBINED
 from .art_detailed import DETAILED as _DETAILED
 from .art_large import LARGE as _LARGE
+from .art_revamp import REVAMP as _REVAMP
 
 
 def _art(text):
@@ -418,7 +421,7 @@ PARTS = ("dim", "text", "error", "extra", "accent", "good", "warn")
 PART_LETTERS = dict(zip("dtexagw", PARTS))
 LETTER_OF = {part: letter for letter, part in PART_LETTERS.items()}
 
-ART_STYLES = ("blocks", "detailed", "og", "combined")
+ART_STYLES = ("revamp", "blocks", "detailed", "og", "combined")
 
 
 # art_detailed.py stores a character's colour letter and tone (0-9, how
@@ -492,6 +495,16 @@ def blocks(name):
 
 
 @lru_cache(maxsize=None)
+def revamp(name):
+    """A picture's revamp version (hand-drawn line art over shaded
+    scenery, one size) as a one-piece list; [] if it has none."""
+    if name not in _REVAMP:
+        return []
+    span, sizes = _load(_REVAMP[name])
+    return [_unpack(span, size) for size in sizes]
+
+
+@lru_cache(maxsize=None)
 def combined(name):
     """A picture's combined sizes (every technique at once: blocks, eighths,
     shades, braille and text), biggest first; [] for the pictures that
@@ -513,14 +526,16 @@ def _og(lines, colours):
 
 def resolve(value, style="blocks"):
     """A theme's "art" value as a list of pieces, biggest first. A name
-    gives the picture's sizes in the style (blocks, detailed or combined;
-    none for og; a picture with no combined version is drawn in blocks)
+    gives the picture's sizes in the style (revamp, blocks, detailed or
+    combined; none for og; a picture with no combined version is drawn in
+    blocks)
     and then the OG ones, large and coloured, then small; a list of lines
     is a single piece in the accent colour. None for anything else
     (including "none")."""
     if isinstance(value, str) and value in ART:
         pieces = list({"blocks": blocks, "detailed": detailed,
-                       "combined": lambda n: combined(n) or blocks(n)}
+                       "combined": lambda n: combined(n) or blocks(n),
+                       "revamp": revamp}
                       .get(style, lambda n: [])(value))
         if value in LARGE:
             pieces.append(_og(*LARGE[value]))

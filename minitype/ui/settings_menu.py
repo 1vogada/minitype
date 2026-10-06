@@ -357,7 +357,8 @@ def build_items(app):
                       "now and then (never the next few)",
                  tags=fun_tags + ("glitch", "flicker")),
         b.choice("art style", "art_style", ART_STYLES,
-                 help="the theme's corner picture: blocks (pixel art in block "
+                 help="the theme's corner picture: revamp (hand-drawn ASCII "
+                      "line art over shaded scenery), blocks (pixel art in block "
                       "characters), detailed (shaded ASCII), og (the original, "
                       "simpler ones) or combined (blocks, shades, braille and "
                       "text all at once, for the best look; so far vaporwave's, "

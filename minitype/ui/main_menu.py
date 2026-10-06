@@ -15,7 +15,7 @@ from .prompt import prompt
 from .screen import menu_loop
 from .settings_menu import settings_menu
 
-HINTS = ("enter start   tab next section   "
+HINTS = ("enter start   tab next section   ` next theme   "
          "esc quit   ctrl-q hide")
 
 

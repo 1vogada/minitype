@@ -23,8 +23,8 @@ CORRECTED = ["marked", "normal", "red"]     # how a fixed mistake looks
 BORDER_STYLES = ["off", "ascii", "line", "rounded", "double", "heavy", "block",
                  "thick"]
 ART_SCOPES = ["off", "menus", "everywhere"]  # where the theme's picture shows
-ART_STYLES = ["blocks", "detailed", "og", "combined"]   # pixel art, shaded ASCII, the
-                                                       # originals, or every technique at once
+ART_STYLES = ["revamp", "blocks", "detailed", "og", "combined"]   # hand-drawn line art,
+                    # pixel art, shaded ASCII, the originals, or every technique at once
 # theme: themes that have a background paint it; always: every theme does,
 # one made from its colours if it has none (for light terminals); off
 THEME_BACKGROUNDS = ["theme", "always", "off"]
