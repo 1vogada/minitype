@@ -15,6 +15,7 @@ from art_combined import Scene, mix
 
 ROWS = 28
 SIZES = (28, 22, 16)       # biggest first: smaller windows get a smaller one
+SHADE = 60                  # shades cheap: gradients in ░▒▓, as in the vaporwave sky
 
 
 # ---------------------------------------------------------------- pieces
@@ -170,7 +171,7 @@ def island(pal):
             out.append((int((x - x_left) / cw), int(y / unit), "v", pal.rgb("d1"), x > 0))
         return out
 
-    return Scene(1.9, field, lines, texts, span=True, sizes=SIZES, theme="ocean")
+    return Scene(1.9, field, lines, texts, span=True, sizes=SIZES, shade_cost=SHADE, theme="ocean")
 
 
 # ---------------------------------------------------------------- midnight
@@ -235,7 +236,7 @@ def moon(pal):
         cols = [pal.rgb("t8"), pal.rgb("t9"), pal.rgb("a8"), pal.rgb("w9")]
         return stars(field, rows, x_left, cw, unit, rows * 9, 0.7, cols, 3)
 
-    return Scene(1.9, field, None, texts, span=True, sizes=SIZES, theme="midnight")
+    return Scene(1.9, field, None, texts, span=True, sizes=SIZES, shade_cost=SHADE, theme="midnight")
 
 
 # ---------------------------------------------------------------- forest
@@ -285,7 +286,7 @@ def pines(pal):
         return stars(field, rows, x_left, cw, unit, rows * 4, 0.3, [pal.rgb("t8"), pal.rgb("w8")], 9,
                      chars="..·'")
 
-    return Scene(1.9, field, None, texts, span=True, sizes=SIZES, theme="forest")
+    return Scene(1.9, field, None, texts, span=True, sizes=SIZES, shade_cost=SHADE, theme="forest")
 
 
 # ---------------------------------------------------------------- ember
@@ -355,7 +356,7 @@ def fire(pal):
                         rnd.choice([pal.rgb("w9"), pal.rgb("a8"), pal.rgb("e8")]), True))
         return out
 
-    return Scene(1.9, field, None, texts, span=True, sizes=SIZES, theme="ember")
+    return Scene(1.9, field, None, texts, span=True, sizes=SIZES, shade_cost=SHADE, theme="ember")
 
 
 # ---------------------------------------------------------------- default
@@ -421,8 +422,85 @@ def keyboard(pal):
             out.append((col, row, ch, pal.rgb("t9") if ch in pressed else pal.rgb("d1"), True))
         return out
 
-    return Scene(1.9, field, None, texts, span=True, sizes=SIZES, theme="default",
+    return Scene(1.9, field, None, texts, span=True, sizes=SIZES, shade_cost=SHADE, theme="default",
                  inks={"room": "d", "case": "d", "shadow": "d", "key": "dtg", "desk": "d"})
 
 
-WOW = {"island": island, "moon": moon, "pines": pines, "fire": fire, "keyboard": keyboard}
+# ---------------------------------------------------------------- candy
+
+def candy(pal):
+    """Bubblegum pop: a big wrapped sweet, bow-tie shaped and pink all
+    over - a round candy with a pink swirl and a shine, its wrapper twisted
+    at both ends and fanning out in pleated wings; bubbles, sparkles and
+    small sweets in a pink glow behind."""
+    cx, cy, rx, ry = 1.2, 0.5, 0.25, 0.2
+    knot = 0.035                                # the twist's half width
+    wing = 0.34                                 # how far each wing reaches
+    light = sphere_light(cx, cy, max(rx, ry), -0.5, -0.65)
+    body = pal.path("a4 a6 a8 a9 t8")      # all pink: bubblegum
+    stripe = pal.path("a1 a4 a6 a8")
+    wrap = pal.path("a1 a4 a6 a8 a9")
+
+    def wing_at(x, y):
+        """0..1 along a wing (0 at the twist) and the pleat shading, or
+        None outside the wings."""
+        for side in (-1, 1):
+            kx = cx + side * (rx + knot)
+            t = (x - kx) * side / wing          # 0 at the twist .. 1 at the edge
+            if not 0 <= t <= 1:
+                continue
+            ang = math.atan2(y - cy, (x - kx) * side)
+            half = 0.045 + t * 0.19
+            edge = half - (0.018 * abs(math.sin(ang * 9)) if t > 0.8 else 0)
+            if abs(y - cy) <= edge and not (t > 0.97 and abs(math.sin(ang * 9)) > 0.6):
+                pleat = 0.5 + 0.5 * math.sin(ang * 18)
+                return t, pleat
+        return None
+
+    def field(x, y):
+        dx, dy = (x - cx) / rx, (y - cy) / ry
+        r = math.hypot(dx, dy)
+        if r <= 1:
+            lit = light(x, y)
+            swirl = math.sin(math.atan2(dy, dx) * 3 + r * 7) > 0.55
+            c = stripe(lit) if swirl else body(lit)
+            sx, sy = (x - (cx - rx * 0.4)) / (rx * 0.25), (y - (cy - ry * 0.5)) / (ry * 0.18)
+            if sx * sx + sy * sy <= 1:
+                c = pal.rgb("t9")                 # the shine
+            return c, 1.0, True, "candy"
+        for side in (-1, 1):                      # the twists
+            kx = cx + side * (rx + knot * 0.6)
+            if abs(x - kx) <= knot and abs(y - cy) <= 0.05 - abs(x - kx) * 0.4:
+                return pal.rgb("a1"), 1.0, True, "wrap"
+        w = wing_at(x, y)
+        if w:
+            t, pleat = w
+            return wrap(0.25 + 0.55 * pleat * (1 - t * 0.35) + 0.2 * (1 - t)), 1.0, True, "wrap"
+        glow = math.exp(-(((x - cx) / 0.75) ** 2 + ((y - cy) / 0.45) ** 2))
+        return pal.path("- a1")(glow * 0.4), 1.0, False, "bg"
+
+    def texts(rows, x_left, cw, unit):
+        rnd = random.Random(21)
+        out = []
+        for _ in range(rows * 3):
+            x, y = rnd.uniform(-3.0, 1.9), rnd.uniform(0.0, 0.98)
+            if field(x, y)[3] != "bg":
+                continue
+            out.append((int((x - x_left) / cw), int(y / unit), rnd.choice("+*.·'oO°"),
+                        rnd.choice([pal.rgb("t8"), pal.rgb("a8"), pal.rgb("a6"), pal.rgb("a9")]), False))
+        for k in range(6):                        # little wrapped sweets
+            x, y = -2.6 + k * 0.5 + rnd.uniform(-0.1, 0.1), rnd.uniform(0.15, 0.85)
+            if field(x, y)[3] != "bg" or field(x + 0.12, y)[3] != "bg":
+                continue
+            c0 = int((x - x_left) / cw)
+            for j, ch in enumerate("><(@)><"):
+                out.append((c0 + j, int(y / unit), ch,
+                            pal.rgb("a9") if ch == "@" else pal.rgb("a6"), False))
+        return out
+
+    return Scene(1.9, field, None, texts, span=True, sizes=SIZES, shade_cost=SHADE, theme="candy",
+                 inks={"candy": "at", "wrap": "a", "bg": "a"})
+
+
+WOW = {"island": island, "moon": moon, "pines": pines, "fire": fire, "keyboard": keyboard,
+       "lollipop": candy}

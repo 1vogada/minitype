@@ -249,6 +249,11 @@ def build_items(app):
                  help="a remixed picture in this theme's colours, or in the "
                       "colours of the theme it comes from",
                  tags=("art", "picture", "remix", "colours", "colors")),
+        b.flag("text panel", "art_panel",
+               "the art full size over the whole screen, and the text in a "
+               "panel of its own on top of it, bordered like the screen, "
+               "with a shadow. Also in the gallery with p",
+               tags=("art", "panel", "box", "background", "layer", "border")),
         b.flag("art behind text", "art_behind",
                "the art always shows at full size, behind everything: text "
                "is drawn over it and the art shows between the letters. "
@@ -467,7 +472,8 @@ LAYOUT = [
                ("look", "heat"), ("look", "bold / italic")]),
     ("art", [("look", "theme art", "show art"), ("fun", "art style"),
              ("look", "picture"), ("look", "picture colours"),
-             ("fun", "art colours", "art shading"), ("look", "art behind text")]),
+             ("fun", "art colours", "art shading"), ("look", "text panel"),
+             ("look", "art behind text")]),
     ("effects", [("fun", "bounce"), ("fun", "shake"), ("fun", "pop"), ("fun", "fade"),
                  ("fun", "caret effect"), ("fun", "glitch"), ("fun", "effect speed"),
                  ("fun", "flow direction")]),

@@ -10,7 +10,7 @@ from .menu import Hints, title_lines
 from .preview import theme_sample
 
 HINTS = ("up/down (or ` ~) theme   left/right art style   [ ] picture   "
-         "c its colours   v show art   b art behind text   enter use these   "
+         "c its colours   v show art   p text panel   b art behind text   enter use these   "
          "esc keep yours")
 
 # the art settings the gallery changes besides the theme: (field, label,
@@ -18,6 +18,7 @@ HINTS = ("up/down (or ` ~) theme   left/right art style   [ ] picture   "
 ROWS = [
     ("art_style", "art style", ART_STYLES, (keys.RIGHT, "l"), (keys.LEFT, "h"), "left/right"),
     ("art", "show art", ART_SCOPES, ("v",), ("V",), "v"),
+    ("art_panel", "text panel", [False, True], ("p",), ("P",), "p"),
     ("art_behind", "art behind text", [False, True], ("b",), ("B",), "b"),
     ("art_picture", "picture", ["theme"] + ART_NAMES, ("]",), ("[",), "[ ]"),
     ("art_recolour", "picture colours", ["theme", "own"], ("c",), ("C",), "c"),

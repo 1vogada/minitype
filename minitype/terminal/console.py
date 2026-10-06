@@ -34,7 +34,7 @@ BORDERS = {
 }
 # the theme's frame and corner art, set by set_decor()
 _decor = {"border": None, "border_style": "", "art": None, "art_scope": "menus",
-          "behind": False}
+          "behind": False, "panel": False, "shadow": ""}
 _overlay = []           # lines of a box drawn over the middle of every frame (a dialog)
 
 
@@ -159,7 +159,15 @@ def present(lines, focus=None, pinned=(), scene="menu"):
         view += [""] * (body_h - len(view))     # full height: pinned / art / frame
     view += pinned
     rows = [clip(line, w - 1) for line in view]
-    if art:
+    if art and d["panel"]:
+        # the art full size over the whole screen, the text in a panel of
+        # its own on top of it, the key hints in another along the bottom
+        body, hints = rows[:body_h], [r for r in rows[body_h:] if visible_len(r)]
+        art_rows = overlay_art([""] * len(rows), art, w - 1, 0, True)
+        rows = _panel(art_rows, body, w - 1, 0)
+        if hints:
+            rows = _panel(rows, hints, w - 1, len(rows) - len(hints) - 2)
+    elif art:
         rows = overlay_art(rows, art, w - 1, len(pinned), d["behind"])
     if d["border"]:
         rows = frame(rows, d["border"], d["border_style"], w - 1)
@@ -173,6 +181,11 @@ def present(lines, focus=None, pinned=(), scene="menu"):
                           + RESET + bg for row in rows)
     write("\x1b[H" + out + "\x1b[K\x1b[J" + (RESET if bg else ""))
     flush()
+
+
+def panel_shown(scene="menu"):
+    """Whether present() puts the text in a panel over the art."""
+    return _decor["panel"] and art_shown(scene)
 
 
 def art_shown(scene="menu"):
@@ -217,6 +230,20 @@ def _art_cells(pic, k, start, col):
     return tuple([("", " ")] * col + _cells(pic.row(k, start)))
 
 
+def _behind(cell):
+    """The background a letter takes over this art cell: the art's own
+    background, or a full block's colour; "" over blank art."""
+    codes, ch = cell
+    m = re.findall(r"\x1b\[48;[0-9;]*m", codes)
+    if m:
+        return m[-1]
+    if ch in "█▓":
+        m = re.findall(r"\x1b\[38;([0-9;]*)m", codes)
+        if m:
+            return "\x1b[48;" + m[-1] + "m"
+    return ""
+
+
 def _layer(row, pic, card):
     """The row drawn over a row of the art (cells from _art_cells). The art
     shows through wherever the row has a plain blank; letters, and blanks
@@ -231,6 +258,9 @@ def _layer(row, pic, card):
         solid = (t[1] != " " or "\x1b[7m" in t[0] or "48;" in t[0]
                  or card[0] <= x < card[1])
         codes, ch = t if solid or (a[1] == " " and not a[0]) else a
+        if solid and t[1] != " " and not card[0] <= x < card[1] and "48;" not in t[0] \
+                and "\x1b[7m" not in t[0]:
+            codes = t[0] + _behind(a)         # printed on the art, not punched out of it
         if codes != cur:
             out.append(RESET + codes)
             cur = codes
@@ -316,13 +346,49 @@ def frame(rows, chars, style, inner):
 
 
 def set_decor(border=None, border_style="", art=None, art_scope="menus",
-              behind=False):
+              behind=False, panel=False, shadow=""):
     """The theme's frame and corner art for present(): border is a BORDERS
     key or None; art the picture's sizes, biggest first, each a list of
     Pictures (see art.py), or None; art_scope "menus" or "everywhere";
-    behind draws the art behind the text at full size (see overlay_art)."""
+    behind draws the art behind the text at full size (see overlay_art);
+    panel draws it full size with the text in a bordered panel of its own,
+    shadowed in `shadow` (a colour code)."""
     _decor.update(border=BORDERS.get(border), border_style=border_style,
-                  art=art or None, art_scope=art_scope, behind=behind)
+                  art=art or None, art_scope=art_scope, behind=behind,
+                  panel=panel, shadow=shadow)
+
+
+def _panel(rows, text, width, top):
+    """The text rows in a bordered box from row `top` at the left of the
+    rows (the art), in the frame's border style, with a shaded drop
+    shadow. Blank rows at the end of the text are left off."""
+    content = list(text)
+    while content and not visible_len(content[-1].rstrip()):
+        content.pop()
+    if not content or top < 0:
+        return rows
+    chars = _decor["border"] or BORDERS["rounded"]
+    tl, tr, bl, br, across, down = chars
+    style = _decor["border_style"]
+    inner = min(width - 2 * len(down) - 1, max(visible_len(t) for t in content) + 1)
+    height = min(len(rows) - 2 - top, len(content))
+    side = style + down + RESET
+    box = [style + tl + across * inner + tr + RESET]
+    box += [side + pad(t, inner) + side for t in content[:height]]
+    box += [style + bl + across * inner + br + RESET]
+    out = list(rows)
+    bw = inner + 2 * len(down)
+    shade = (_decor["shadow"] or style) + "░" + RESET
+    for k, line in enumerate(box):
+        r = top + k
+        if r < len(out):
+            out[r] = _splice(out[r], 0, line)
+        if 0 < k and r < len(out) and bw < width:
+            out[r] = _splice(out[r], bw, shade)            # shadow down the right side
+    r = top + len(box)
+    if r < len(out):
+        out[r] = _splice(out[r], 1, shade * min(bw, width - 1))   # and along the bottom
+    return out
 
 
 def set_overlay(lines):

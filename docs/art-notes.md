@@ -80,6 +80,12 @@ keyboard (default). Shared helpers: `ridge`, `pine`, `palm`, `sphere_light`,
   fall back to wider fonts in the browser, so ragged right edges there
   are a preview artifact, not the art.
 
+User feedback (2026-10-06): loves the vaporwave combined BACKGROUND (the
+shaded gradient sky) and the DEEP SEA picture; asked for more ░▒▓
+shading (wow scenes now use shade_cost 60 vs 250); candy should be
+"bubblegum pop": a bow-tie wrapped sweet, pink all over (done).
+Done so far: island, moon, pines, fire, keyboard, lollipop (candy).
+
 ## Revamp (hand-drawn) - how it was done
 `tools/revamp_art.py`: `picture(name, text, colours=..., tones=..., paint=,
 shade=, ground=, tile=, below=, solid=, tile_under=)`. Blanks enclosed by the

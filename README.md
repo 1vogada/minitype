@@ -201,9 +201,15 @@ Skipping pages:
   scenery (sea, hills, grid...) grows on to the left to fill it, from
   runs of its own columns joined where they line up, so it doesn't look
   like one strip repeated
+- **text panel** (settings → art, off by default, `p` in the gallery):
+  the art full size over the whole screen and the text in a panel of its
+  own on top, bordered like the screen with a shaded drop shadow; the key
+  hints get a panel of their own along the bottom
 - **art behind text** (settings → art, off by default): the art always
   shows at full size, behind everything. Text is drawn over it letter by
-  letter and the art shows between the letters; highlights stay solid,
+  letter and the art shows between the letters (each letter keeps the
+  art's colour behind it, so it's printed on the picture, not cut out of
+  it); highlights stay solid,
   and only the help box under the selected row gets a solid card
 - every effect can be switched off on its own, for any theme: theme
   background, gradients, gradient flow, heat, and bold / italic (all on

@@ -438,8 +438,9 @@ class Hints:
         if not (self.app.settings.hints or self.popped):
             return []
         width = console.size()[0]
+        room = width - (8 if console.panel_shown() else 4)      # a panel's border takes some
         return [""] + [f"  {st.dim}{ln}{RESET}"
-                       for ln in textwrap.wrap(text, max(10, width - 4))]
+                       for ln in textwrap.wrap(text, max(10, room))]
 
 
 def title_lines(app, st, name):

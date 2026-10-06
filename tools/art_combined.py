@@ -161,12 +161,14 @@ class Scene:
     rgb or fn(x, y), focus, hidden(x, y) or None)]; texts(rows, x_left,
     cw, unit) -> [(col, row, char, rgb, focus)]."""
 
-    def __init__(self, aspect, field, lines=None, texts=None, span=True, inks=None,
+    def __init__(self, aspect, field, lines=None, texts=None, span=True, inks=None, shade_cost=None,
                  sizes=(26, 20, 14, 10), theme="default"):
         self.aspect, self.field, self.span, self.sizes, self.theme = aspect, field, span, sizes, theme
         # {tag: palette letters}: the colours a cell of that kind may be
         # drawn in, so a dark grey room can't drift to a dark green
         self.inks = inks or {}
+        # what a ░▒▓ mix must beat a solid colour by; lower shades more
+        self.shade_cost = SHADE_COST if shade_cost is None else shade_cost
         self.lines = lines or (lambda rows: [])
         self.texts = texts or (lambda rows, x_left, cw, unit: [])
 
@@ -266,7 +268,7 @@ def render(scene, rows, pal=None):
                 continue
             if not cell:
                 continue
-            ch, fg, bg = encode(cell[0], mean, pal, shades=tag != "floor")
+            ch, fg, bg = encode(cell[0], mean, pal, shades=tag != "floor", shade_cost=scene.shade_cost)
             if ch != " " or bg is not None:
                 put(r, c, ch, fg, bg)
     pal.allowed = None
@@ -274,7 +276,7 @@ def render(scene, rows, pal=None):
     return _trim(scene, chars, parts, tones, bparts, btones, focus)
 
 
-def encode(samples, mean, pal, shades=True):
+def encode(samples, mean, pal, shades=True, shade_cost=SHADE_COST):
     """The character, foreground and background (palette keys; None for
     the ground) that best draw these samples."""
     n = len(samples)
@@ -298,7 +300,7 @@ def encode(samples, mean, pal, shades=True):
                 continue
             for a, ch in SHADES:
                 # shades read a little grainy: only worth it when they're closer
-                err = var + n * dist(mean, mix(brgb, frgb, a)) + n * SHADE_COST
+                err = var + n * dist(mean, mix(brgb, frgb, a)) + n * shade_cost
                 consider(err, ch, fk, bk)
     # an edge: worth trying only if the samples aren't all alike
     if var > n * 150:

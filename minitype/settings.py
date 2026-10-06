@@ -109,6 +109,7 @@ class Settings:
     art_style: str = "revamp"    # revamp / blocks / detailed / og / combined
     art_colours: str = "shaded"  # shaded (softer shades and hues) / flat
     art_behind: bool = False     # art always full size, text drawn over it
+    art_panel: bool = False      # art full size, the text in a bordered panel over it
     art_picture: str = "theme"   # the theme's own picture, or any picture's name (a remix)
     art_recolour: str = "theme"  # a remixed picture in the theme's colours, or its own theme's
     # a theme's effects, each of which can be switched off
