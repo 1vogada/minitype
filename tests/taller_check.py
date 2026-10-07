@@ -45,15 +45,23 @@ assert d2.taller(5) is d2
 console._decor["fade"] = None
 W = pic.width + 2
 for H, want in ((pic.height + 2, 1), (pic.height + 6, 5), (200, int(pic.height * TALLER))):
-    rows = console.overlay_art([""] * H, [pic], W, 0, True)
+    rows = console.overlay_art([""] * H, [pic], W, 0, False)
     drawn = sum(1 for r in rows if r)
     assert drawn == pic.height + want, (H, drawn, want)
 # no room at all: the picture still fits by its own height, with no filler
-rows = console.overlay_art([""] * (pic.height + 1), [pic], W, 0, True)
+rows = console.overlay_art([""] * (pic.height + 1), [pic], W, 0, False)
 assert sum(1 for r in rows if r) == pic.height
 # too short for the picture itself: nothing (the filler doesn't make it fit)
-rows = console.overlay_art([""] * pic.height, [pic], W, 0, True)
+rows = console.overlay_art([""] * pic.height, [pic], W, 0, False)
 assert not any(rows)
+# behind the text it fills the screen edge to edge: every row (its sky
+# carried right up to the top), the last one too, and the full width
+for H in (pic.height, pic.height + 6, 120):
+    rows = console.overlay_art([""] * H, [pic], W, 0, True)
+    assert all(rows) and len(rows) == H, H
+    assert all(console.visible_len(r) == W for r in rows), H
+rows = console.overlay_art([""] * (pic.height - 1), [pic], W, 0, True)
+assert not any(rows), "still needs room for the picture itself"
 # beside text, the filler keeps to the right of it like the picture does
 rows = ["  some menu text here"] * 12 + [""] * 60
 out = console.overlay_art(rows, [pic], W + 60, 0, False)

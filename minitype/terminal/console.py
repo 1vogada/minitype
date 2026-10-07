@@ -246,12 +246,29 @@ def _behind(cell):
     return ""
 
 
+CARD_DIM = 0.35       # a help box over the art: the art's colour, this bright
+
+
+def _scrim(cell, keep=CARD_DIM):
+    """A background for a help box over this art cell: the art's own
+    colour darkened (its background, else its ink), so the picture still
+    shows faintly through the box instead of a black hole; "" over blank
+    art or colours that aren't truecolour."""
+    codes, ch = cell
+    m = re.findall(r"\x1b\[48;2;(\d+);(\d+);(\d+)m", codes) or \
+        re.findall(r"\x1b\[38;2;(\d+);(\d+);(\d+)m", codes)
+    if not m:
+        return ""
+    r, g, b = (int(int(v) * keep) for v in m[-1])
+    return f"\x1b[48;2;{r};{g};{b}m"
+
+
 def _layer(row, pic, card):
     """The row drawn over a row of the art (cells from _art_cells). The art
     shows through wherever the row has a plain blank; letters, and blanks
     with a highlight or background of their own, cover it. `card` is the
     (from, to) columns of floating text (a help box), which covers the art
-    whole."""
+    whole, in a darkened shade of the art behind it (see _scrim)."""
     text = _cells(row)
     out, cur = [], None
     for x in range(max(len(text), len(pic))):
@@ -260,6 +277,8 @@ def _layer(row, pic, card):
         solid = (t[1] != " " or "\x1b[7m" in t[0] or "\x1b[48;" in t[0]
                  or card[0] <= x < card[1])
         codes, ch = t if solid or (a[1] == " " and not a[0]) else a
+        if card[0] <= x < card[1] and "\x1b[48;" not in t[0] and "\x1b[7m" not in t[0]:
+            codes = t[0] + _scrim(a)
         if solid and t[1] != " " and not card[0] <= x < card[1] and "\x1b[48;" not in t[0] \
                 and "\x1b[7m" not in t[0]:
             codes = t[0] + _behind(a)         # printed on the art, not punched out of it
@@ -282,18 +301,17 @@ def overlay_art(rows, versions, width, pinned_n, behind=False):
 
     With `behind`, the biggest picture that fits the screen is drawn
     whatever text there is, behind it: the text goes over the art letter
-    by letter, and only floating text gets a solid card."""
-    bottom = len(rows) - pinned_n - (2 if pinned_n else 1)
-    avail = width - 1
-    # on a screen wider than a spanning picture, its scenery grows to fill it
-    versions = [pic.wider(avail) for pic in versions]
+    by letter, and only floating text gets a solid card. It fills the
+    screen edge to edge: down to the last row (behind the key hints too),
+    the full width, and its sky carried on up to the top row."""
     if behind:
-        for pic in versions:
+        bottom, avail = len(rows) - 1, width
+        for pic in [pic.wider(avail) for pic in versions]:
             w = min(pic.width, avail) if pic.span else pic.width
             top, col = bottom - pic.height + 1, avail - w
-            if top < 1 or col < 0:
+            if top < 0 or col < 0:
                 continue
-            pic = _dressed(pic, top - 1)
+            pic = _dressed(pic, top, whole=True)
             top -= pic.extra
             rows = list(rows)
             for k in range(pic.height):
@@ -303,7 +321,10 @@ def overlay_art(rows, versions, width, pinned_n, behind=False):
                 rows[top + k] = _layer(r, _art_cells(pic, k, pic.width - w, col), card)
             return rows
         return rows
-    for pic in versions:
+    bottom = len(rows) - pinned_n - (2 if pinned_n else 1)
+    avail = width - 1
+    # on a screen wider than a spanning picture, its scenery grows to fill it
+    for pic in [pic.wider(avail) for pic in versions]:
         w = min(pic.width, avail) if pic.span else pic.width
         skip = pic.width - w                 # columns cut off the left
         top, col = bottom - pic.height + 1, avail - w
@@ -340,12 +361,13 @@ def overlay_art(rows, versions, width, pinned_n, behind=False):
     return rows
 
 
-def _dressed(pic, room):
+def _dressed(pic, room, whole=False):
     """The picture as it's drawn: with filler on top (up to art.TALLER of
-    its height, as far as the `room` above it goes - the filler never
-    decides whether it fits) and faded into the screen if that's on."""
+    its height - or, `whole`, all the way up - as far as the `room` above
+    it goes; the filler never decides whether it fits) and faded into the
+    screen if that's on."""
     from .art import TALLER
-    pic = pic.taller(min(room, int(pic.height * TALLER)))
+    pic = pic.taller(room if whole else min(room, int(pic.height * TALLER)))
     fade = _decor.get("fade")
     if fade and fade[0] != "off" and getattr(pic, "back", False):
         pic = pic.faded(*fade)      # pictures with backgrounds dissolve at their edges
