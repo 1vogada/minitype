@@ -124,8 +124,18 @@ assert console._decor["fade"][0] == "edges"
 assert Settings().see_through == 40
 _, a = frame(see_through=70)
 assert console._decor["see_through"] == 0.7
-art_cell = ("\x1b[38;2;200;100;50m", "X")
+art_cell = ("\x1b[38;2;200;100;50m", "█")
 assert console._scrim(art_cell, 0.5) == "\x1b[48;2;100;50;25m"
+# a light shade over a dark background looks mostly dark: the box does too
+light_dots = ("\x1b[38;2;240;240;240m\x1b[48;2;20;20;20m", "░")
+assert console._looks(light_dots) == (75, 75, 75), console._looks(light_dots)
+# a help box is the same shade inside a text panel and outside it
+row = "  x" + console.FLOAT + "help"
+pic = [light_dots] * 10
+inside = console._layer(row, pic, (3, 7), (0, 10))
+outside = console._layer(row, pic, (3, 7), None)
+tint = lambda r: re.findall(r"48;2;(\d+;\d+;\d+)m", r.split("help")[0][-40:])[-1]
+assert tint(inside) == tint(outside), (tint(inside), tint(outside))
 # a pause box over the art: the art shows through it, as dark as the setting says
 box = ["+------+", "| hi   |", "+------+"]
 under = ["\x1b[48;2;200;200;200m" + " " * 40] * 9

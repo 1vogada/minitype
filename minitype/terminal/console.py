@@ -304,18 +304,46 @@ def _see_through():
     return _decor.get("see_through", 0.4)
 
 
-def _scrim(cell, keep=None):
-    """A background for a help box over this art cell: the art's own
-    colour darkened (its background, else its ink), so the picture still
-    shows faintly through the box instead of a black hole; "" over blank
-    art or colours that aren't truecolour."""
+# how much of a cell a character's ink covers, for the colour a cell looks
+_INK = {"█": 1.0, "▓": 0.75, "▒": 0.5, "░": 0.25, "▀": 0.5, "▄": 0.5,
+        "▌": 0.5, "▐": 0.5, "▖": 0.25, "▗": 0.25, "▘": 0.25, "▝": 0.25,
+        "▚": 0.5, "▞": 0.5, "▙": 0.75, "▛": 0.75, "▜": 0.75, "▟": 0.75,
+        " ": 0.0}
+
+
+def _looks(cell):
+    """The colour an art cell looks from a step back: its ink and its
+    background mixed by how much of the cell the character covers (a ░
+    is mostly background, a █ all ink; eighth blocks by their eighths,
+    braille and letters a little). None for a cell with no colour."""
+    from .style import rgb_of_code
     codes, ch = cell
-    m = re.findall(r"\x1b\[48;2;(\d+);(\d+);(\d+)m", codes) or \
-        re.findall(r"\x1b\[38;2;(\d+);(\d+);(\d+)m", codes)
-    if not m:
+    ink, back = rgb_of_code(codes), rgb_of_code(codes, 48)
+    if ink is None and back is None:
+        return None
+    if ch in _INK:
+        cover = _INK[ch]
+    elif "▁" <= ch <= "▇":
+        cover = (ord(ch) - 0x2580) / 8
+    elif "▉" <= ch <= "▏":
+        cover = (0x2590 - ord(ch)) / 8
+    else:
+        cover = 0.2                                   # braille, letters, specks
+    back = back or rgb_of_code(_background, 48) or (18, 18, 22)
+    ink = ink or back
+    return tuple(int(b + (i - b) * cover) for i, b in zip(ink, back))
+
+
+@lru_cache(maxsize=8192)
+def _scrim(cell, keep):
+    """A background for a box over this art cell: the colour the cell
+    looks (see _looks), darkened to the see-through setting, so the picture
+    still shows faintly through instead of a black hole; "" over blank
+    art."""
+    looks = _looks(cell)
+    if looks is None:
         return ""
-    keep = _see_through() if keep is None else keep
-    r, g, b = (int(int(v) * keep) for v in m[-1])
+    r, g, b = (int(v * keep) for v in looks)
     return f"\x1b[48;2;{r};{g};{b}m"
 
 
@@ -340,16 +368,20 @@ def _layer(row, pic, card, dim=None):
     for x in range(max(len(text), len(pic))):
         t = text[x] if x < len(text) else ("", " ")
         a = pic[x] if x < len(pic) else ("", " ")
+        bare = a                                   # the art as it is, for a box's tint
         if dim and dim[0] <= x < dim[1] and a[0]:
             a = (_dimmed(a[0], _see_through()), a[1])
         solid = (t[1] != " " or "\x1b[7m" in t[0] or "\x1b[48;" in t[0]
                  or card[0] <= x < card[1])
         codes, ch = t if solid or (a[1] == " " and not a[0]) else a
         if card[0] <= x < card[1] and "\x1b[48;" not in t[0] and "\x1b[7m" not in t[0]:
-            codes = t[0] + _scrim(a)
+            # tinted by the art itself, not by the panel's dimmed copy of
+            # it: the box is the same shade inside a text panel and out
+            tint = _scrim(bare, _see_through())
+            codes = t[0] + tint
             fx = _decor.get("text_fx")
             if fx and (fx[0] != "off" or fx[1]) and t[1] != " ":
-                codes = _readable(t[0], _scrim(a), fx) + _scrim(a)
+                codes = _readable(t[0], tint, fx) + tint
         if solid and t[1] != " " and not card[0] <= x < card[1] and "\x1b[48;" not in t[0] \
                 and "\x1b[7m" not in t[0]:
             codes = t[0] + _behind(a)         # printed on the art, not punched out of it
@@ -590,7 +622,7 @@ def _over(rows, box):
         for j, (codes, ch) in enumerate(_cells(pad(line, bw))):
             u = under[left + j] if left + j < len(under) else ("", " ")
             if "\x1b[48;" not in codes and "\x1b[7m" not in codes:
-                codes = codes + _dimmed(_behind(u), keep)
+                codes = codes + _scrim(u, keep)
             new.append((codes, ch))
         rows[r] = _splice(rows[r], left, "".join(RESET + c + ch for c, ch in new))
     return rows
