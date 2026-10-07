@@ -89,7 +89,7 @@ class Painter:
             # underline turns red after a wrong key. On a space the
             # underline is bright, so it stands out from an underlined gap
             colour = st.caret_colour(now) if rainbow else None
-            self.caret = (colour or (st.bad if wrong else st.dim)) + UND
+            self.caret = (colour or (st.bad if wrong else st.untyped)) + UND
             self.caret_gap = (colour or (st.bad if wrong else st.title)) + UND
         if self.fx.caret_fx == "pulse" and int(now * PULSE_RATE * self.speed) % 2:
             self.caret, self.caret_gap = st.dim, ""        # the blink's off half
@@ -169,7 +169,7 @@ class Painter:
                 continue
             typed_ok = False
             if tc is None:
-                s = st.bad if (i < wi and not self.blind) else st.dim
+                s = st.bad if (i < wi and not self.blind) else st.untyped
                 if self.hidden and i >= wi:
                     c = HIDDEN
             elif self.blind:

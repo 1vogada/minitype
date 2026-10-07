@@ -35,7 +35,7 @@ BORDERS = {
 # the theme's frame and corner art, set by set_decor()
 _decor = {"border": None, "border_style": "", "art": None, "art_scope": "menus",
           "behind": False, "panel": False, "shadow": "", "fade": None, "text_fx": None,
-          "see_through": 0.4}
+          "see_through": 0.4, "menu_lighten": 0.0}
 _last_frame = []        # the last present()'s arguments, for repaint()
 _overlay = []           # lines of a box drawn over the middle of every frame (a dialog)
 
@@ -143,6 +143,12 @@ def present(lines, focus=None, pinned=(), scene="menu"):
     every `scene` if the art setting says so) and the border around it all."""
     global _last_size
     _last_frame[:] = [lines, focus, pinned, scene]
+    lighten = _decor.get("menu_lighten") or 0
+    if lighten and scene != "test":
+        # menu text a shade lighter - only the letters' own colour: the
+        # border, background and art are put on after this
+        lines = [_lighter(line, lighten) for line in lines]
+        pinned = [_lighter(line, lighten) for line in pinned]
     term = term_size()
     if term != _last_size:
         write("\x1b[2J")
@@ -460,7 +466,7 @@ def frame(rows, chars, style, inner):
 
 def set_decor(border=None, border_style="", art=None, art_scope="menus",
               behind=False, panel=False, shadow="", fade=None, text_fx=None,
-              see_through=0.4):
+              see_through=0.4, menu_lighten=0.0):
     """The theme's frame and corner art for present(): border is a BORDERS
     key or None; art the picture's sizes, biggest first, each a list of
     Pictures (see art.py), or None; art_scope "menus" or "everywhere";
@@ -468,11 +474,12 @@ def set_decor(border=None, border_style="", art=None, art_scope="menus",
     panel draws it full size with the text in a bordered panel of its own,
     shadowed in `shadow` (a colour code). text_fx is (contrast, bold,
     darkest, lightest) for letters drawn over the art (see _readable);
-    see_through how much of the art shows through boxes over it, 0..1."""
+    see_through how much of the art shows through boxes over it, 0..1;
+    menu_lighten how far towards white menu text is drawn, 0..1."""
     _decor.update(border=BORDERS.get(border), border_style=border_style,
                   art=art or None, art_scope=art_scope, behind=behind,
                   panel=panel, shadow=shadow, fade=fade, text_fx=text_fx,
-                  see_through=see_through)
+                  see_through=see_through, menu_lighten=menu_lighten)
 
 
 def _panel(rows, text, width, top):
@@ -518,6 +525,38 @@ def _panel(rows, text, width, top):
             out[r] = line
             dim[r] = (0, bw)
     return out, dim
+
+
+_CSI = re.compile(r"\x1b\[([0-9;]*)m")
+
+
+@lru_cache(maxsize=4096)
+def _lighter_seq(params, t):
+    """One escape sequence's parameters with its text colour (38;2 / 38;5)
+    moved t of the way to white; backgrounds and the rest untouched."""
+    from .style import rgb_of_256
+    nums = params.split(";")
+    out, i = [], 0
+    while i < len(nums):
+        n = nums[i]
+        if n in ("38", "48") and i + 1 < len(nums) and nums[i + 1] in ("2", "5"):
+            size = 5 if nums[i + 1] == "2" else 3
+            part = nums[i:i + size]
+            if n == "38" and len(part) == size:
+                rgb = tuple(int(v) for v in part[2:]) if size == 5 else rgb_of_256(int(part[2]))
+                rgb = tuple(int(c + (255 - c) * t) for c in rgb)
+                part = ["38", "2"] + [str(c) for c in rgb]
+            out += part
+            i += size
+            continue
+        out.append(n)
+        i += 1
+    return ";".join(out)
+
+
+def _lighter(line, t):
+    """The line with every text colour in it moved t towards white."""
+    return _CSI.sub(lambda m: "\x1b[" + _lighter_seq(m.group(1), t) + "m", line)
 
 
 def repaint():

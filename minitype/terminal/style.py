@@ -200,7 +200,7 @@ def fg(v):
     return _code(parse_colour(v), 38)
 
 
-def _lightened(code, t):
+def lightened(code, t):
     """A text colour code moved t (0..1) of the way to white; a code with
     no colour (or none at all) is left as it is."""
     colour = rgb_of_code(code)
@@ -640,7 +640,7 @@ class Styles:
     def __init__(self, theme="default", lowkey="off", accent_text=False,
                  background=True, gradient=True, flow=True, heat=True,
                  text_style=True, modifiers=None, speed=1.0, reverse=False,
-                 custom=None, lighten=0.0):
+                 custom=None):
         """The keyword switches turn a theme's effects off one by one:
         its background, gradient, the gradient's movement, heat, and
         bold / italic letters. background can also be "always": a theme
@@ -654,10 +654,10 @@ class Styles:
         reverse     gradients flow the other way
         custom      a (palette, effects) pair to use instead of `theme`
                     (the theme creator's draft)
-        lighten     0..1: every text colour moved that far towards white
 
         The art keeps the theme's own colours (`art_palette`): accent
-        letters and lighten change the text only."""
+        letters change the text only. `untyped` is the colour of words not
+        typed yet (the dim colour, unless the app lightens it)."""
         self.lowkey = lowkey
         self.quiet = theme == "mono" or lowkey == "disguised"
         self.speed = speed * (-1 if reverse else 1)
@@ -684,10 +684,7 @@ class Styles:
             self._art = tuple(palette)    # the theme's own colours, for the art
             if accent_text:
                 self.ok = self.title     # typed letters in the accent colour
-            if lighten > 0:
-                (self.dim, self.ok, self.bad, self.extra, self.title, self.good,
-                 self.warn) = (_lightened(c, lighten) for c in (
-                     self.dim, self.ok, self.bad, self.extra, self.title, self.good, self.warn))
+        self.untyped = self.dim
         if background == "always" and not effects.background and not self.quiet:
             effects = replace(effects, background=bg(self.made_background()))
         effects = _with_modifiers(effects, modifiers or {})

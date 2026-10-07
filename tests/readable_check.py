@@ -136,15 +136,32 @@ for st_, want in ((0.0, (0, 0, 0)), (0.5, (100, 100, 100))):
 console._decor["see_through"] = 0.4
 # ---------------------------------------------------------------- lighter text
 from minitype.terminal.style import Styles, rgb_of_code
-base, half, full = Styles("forest"), Styles("forest", lighten=0.5), Styles("forest", lighten=1.0)
-b, h = rgb_of_code(base.ok), rgb_of_code(half.ok)
-assert all(abs(hv - (bv + (255 - bv) * 0.5)) <= 2 for bv, hv in zip(b, h)), (b, h)
-assert rgb_of_code(full.title) == (255, 255, 255) and rgb_of_code(full.dim) == (255, 255, 255)
-assert Settings().text_lighten == 0
+assert Settings().text_lighten == 0 and Settings().untyped_lighten == 0
+# menu text: only the letters' own colour changes, never a background
+line = "\x1b[38;2;100;50;0mabc\x1b[48;2;10;20;30m \x1b[38;5;196;48;2;138;2;50mx"
+lit = console._lighter(line, 0.5)
+assert "38;2;177;152;127" in lit, lit
+assert "48;2;10;20;30" in lit and "48;2;138;2;50" in lit, "backgrounds untouched: " + lit
+# on screen: menu text lighter, the border, background and art the same
+f0, _ = frame(border="line", theme_background="always")
+f1, _ = frame(border="line", theme_background="always", text_lighten=60)
+assert backgrounds(f0) == backgrounds(f1), "background and art unchanged"
+top0, top1 = f0.split("\n")[0], f1.split("\n")[0]
+assert top0 == top1, "the border unchanged"
+assert f0 != f1, "the text did change"
 # neither lighter text nor accent letters changes the art: the same palette
-assert full.art_palette(True) == base.art_palette(True)
+base = Styles("forest")
 assert Styles("forest", accent_text=True).art_palette(True) == base.art_palette(True)
 assert Styles("forest", accent_text=True).ok == base.title, "the text does take the accent"
-items2 = sm.arrange(sm.build_items(App()))
-assert {it.section for it in items2 if it.label == "lighter text"} == {"theme", "ui"}
+# untyped: its own colour on the typing screen, the dim one by default
+assert base.untyped == base.dim
+a2 = App(); a2.settings.theme = "forest"; a2.settings.untyped_lighten = 50
+st2 = a2.styles()
+d, u = rgb_of_code(st2.dim), rgb_of_code(st2.untyped)
+assert all(abs(uv - (dv + (255 - dv) * 0.5)) <= 2 for dv, uv in zip(d, u)), (d, u)
+from minitype.engine.render import Painter
+p = Painter(st2, a2.settings, ["ab", "cd"], ["", ""], 0, {}, False, False)
+assert any(st2.untyped in c[0] for c in p.word(1)), "untyped words use it"
+items2 = sm.build_items(App())
+assert {it.section for it in items2 if it.label == "lighter untyped"} == {"theme", "ui"}
 print("ALL OK")

@@ -85,9 +85,13 @@ Then `docs/art-notes.md` for anything about the corner art.
   by arrange(); tests that index rows by label skip section "ui".
   see_through (0-100%) sets how bright the art shows through the help
   box, text panel and dialogs (`console._see_through`, `_over`).
-- Styles(lighten=) moves the text colours towards white (setting
-  text_lighten); the art palette comes from the theme's own colours
-  (`Styles._art`), so lighten and accent letters never change the art.
+- text_lighten: `console.present` lightens the text colours of menu
+  screens (not scene "test") before border/art/background go on
+  (`_lighter`, which parses each escape so backgrounds stay).
+  untyped_lighten: `Styles.untyped` (the dim colour by default), lightened
+  in App.styles(); the typing screen's untyped letters use it. The art
+  palette comes from the theme's own colours (`Styles._art`), so accent
+  letters never change the art.
 - Taller art: `Picture.taller(n)` puts n filler rows (the sky carried on
   up, `art._filler`) on top; `console._dressed` adds as many as there's
   room for (up to `art.TALLER` = half the height) after the picture is

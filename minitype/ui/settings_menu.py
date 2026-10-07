@@ -381,11 +381,18 @@ def build_items(app):
                      "text", "letters")),
         b.choice("lighter text", "text_lighten", SEE_THROUGH,
                  value=lambda: f"{s.text_lighten}%",
-                 help="every text colour of the theme moved this far towards "
-                      "white: 0% as the theme has it, 100% all white. The "
-                      "art keeps its own colours",
+                 help="menu text drawn this far towards white: 0% as the "
+                      "theme has it, 100% all white. Only the letters change: "
+                      "not the border, the background or the art",
                  tags=("colour", "color", "text", "light", "lighter", "bright",
                        "readable", "readability", "white")),
+        b.choice("lighter untyped", "untyped_lighten", SEE_THROUGH,
+                 value=lambda: f"{s.untyped_lighten}%",
+                 help="on the typing screen, the words you haven't typed yet "
+                      "drawn this far towards white, so they're easier to "
+                      "read ahead: 0% the theme's dim colour, 100% white",
+                 tags=("colour", "color", "text", "light", "lighter", "untyped",
+                       "words", "readable", "white", "typing")),
     ]
     def sample():
         return theme_sample(app)
@@ -581,7 +588,7 @@ LAYOUT = [
     ("drills", [("drills", "bad keys"), ("drills", "bad key %"), ("drills", "edit keys"),
                 ("drills", "bad words"), ("drills", "bad word %")]),
     ("theme", [("look", "theme"), ("look", "theme creator"), ("look", "theme background"),
-               ("look", "accent letters"), ("look", "lighter text"), ("look", "gradients"), ("look", "gradient flow"),
+               ("look", "accent letters"), ("look", "lighter text"), ("look", "lighter untyped"), ("look", "gradients"), ("look", "gradient flow"),
                ("look", "heat"), ("look", "bold / italic")]),
     ("art", [("look", "theme art", "show art"), ("fun", "art style"),
              ("look", "picture"), ("look", "picture colours"),
@@ -616,7 +623,7 @@ LAYOUT = [
 UI_TAB = [("interface", "ui style"), ("interface", "sidebar tabs"), ("interface", "border"),
           ("interface", "key hints"), ("theme", "theme background"), ("art", "show art"),
           ("art", "art behind text"), ("art", "text panel"), ("art", "text contrast"),
-          ("art", "bold text"), ("art", "see-through"), ("theme", "lighter text"), ("art fade", "fade (all pictures)"),
+          ("art", "bold text"), ("art", "see-through"), ("theme", "lighter text"), ("theme", "lighter untyped"), ("art fade", "fade (all pictures)"),
           ("typing screen", "show timer"), ("typing screen", "show progress"),
           ("typing screen", "show live wpm"), ("typing screen", "show combo"),
           ("typing screen", "on-screen keyboard"), ("typing screen", "lowkey")]

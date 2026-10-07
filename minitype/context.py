@@ -7,7 +7,7 @@ from .terminal import console
 from .terminal.art import THEME_ART
 from .terminal.art import paint as paint_art
 from .terminal.art import resolve as resolve_art
-from .terminal.style import Styles, rgb_of_code, theme_art
+from .terminal.style import Styles, lightened, rgb_of_code, theme_art
 from .words.bank import WordBank
 from .words.generator import WordGenerator
 from .words.quotes import QuoteBank
@@ -53,7 +53,7 @@ class App:
         console. `custom` is a (palette, effects) pair to show instead and
         `art` its picture (the theme creator's draft)."""
         s = self.settings
-        st = Styles(s.theme, s.lowkey, s.accent_text, lighten=s.text_lighten / 100,
+        st = Styles(s.theme, s.lowkey, s.accent_text,
                     background=s.theme_background, gradient=s.theme_gradient,
                     flow=s.theme_flow, heat=s.theme_heat,
                     text_style=s.theme_text_style,
@@ -62,6 +62,8 @@ class App:
                                "caret_fx": s.fun_caret, "glitch": s.fun_glitch},
                     speed=s.effect_speed, reverse=s.flow_direction == "backward",
                     custom=custom)
+        if s.untyped_lighten:
+            st.untyped = lightened(st.dim, s.untyped_lighten / 100)
         console.set_background(st.background)
         stealth = s.lowkey == "disguised"
         versions = theme_art(s.theme, s.art_style) if art is None else art
@@ -86,7 +88,7 @@ class App:
             fade=(s.art_fade, s.fade_top, s.fade_side, s.fade_round, s.fade_start,
                   s.fade_start_top, s.fade_angle, s.fade_curve) if s.fade_on else None,
             text_fx=(s.text_contrast, s.text_bold) + _extremes(palette, st.background),
-            see_through=s.see_through / 100)
+            see_through=s.see_through / 100, menu_lighten=s.text_lighten / 100)
         return st
 
     def picture_fade(self, picture):
