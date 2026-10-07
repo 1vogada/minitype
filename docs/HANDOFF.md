@@ -12,7 +12,7 @@ Then `docs/art-notes.md` for anything about the corner art.
   when asked ("push it"); when asked to do several things, push after each.
 - Run the app: `python -m minitype` (Python 3.10+, no dependencies).
 - Tests: `python tests/run_all.py` (or `python tests/run_all.py decor`).
-  Each `*_check.py` prints `ALL OK`; 24 checks + smoke4. They run against
+  Each `*_check.py` prints `ALL OK`; 25 checks with smoke4. They run against
   the real modules with the terminal mocked. `tests/menu_look.py` prints a
   menu frame as text (`python tests/menu_look.py 120 34 ember sidebar left`)
   and `tests/shows_check.py` reports which art the app actually draws at
@@ -73,9 +73,9 @@ the project is picked up with an AI until answered - see CLAUDE.md /
 AGENTS.md at the repo root.
 
 ## Known issues
-- The **art fade settings don't fully work** yet (the vertical fade is now
-  an exponential curve over the whole picture, subject kept whole - that
-  part is as intended): they only apply to
+- The **art fade settings don't fully work** yet (each amount is a
+  strength: 0% = no fade, 100% = no art, in between on an exponential
+  curve, subject kept whole - that part is as intended): they only apply to
   pictures with background colours; the edge beside the menu text still
   steps; nothing bleeds above the picture's top; the amounts weren't
   checked in a real terminal.
@@ -88,6 +88,7 @@ AGENTS.md at the repo root.
    picture - use them as the bar.
 2. Done: art fade (`Picture.faded`, `art._fade`): ordered dither + ▓▒░
    bleed at the edges of pictures with backgrounds. Settings art_fade
-   (edges / corner / off), fade_top, fade_side, fade_round; `d` in the
+   (edges / corner / off), fade_top, fade_side, fade_round (strengths,
+  0-100%); `d` in the
    gallery. Possible next: fade the art where it meets text beside it
    (rows next to the menu), and a bleed above the picture's top.

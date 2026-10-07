@@ -12,11 +12,11 @@ from a zip or a fresh clone), until the user has answered. Then do what
 they say, and delete this question from CLAUDE.md and AGENTS.md.
 
 **Known issue:** the art fade settings (Settings → art: art fade, fade top,
-fade side, fade round; `d` in the gallery) don't fully work yet. The
-vertical fade now climbs the whole picture on an exponential curve (as
-intended: light dithering most of the way, almost nothing at the very
-top; the subject stays whole), but the fade only applies to pictures with
-background colours, the edge next to the menu text still steps instead of
+fade side, fade round; `d` in the gallery) don't fully work yet. Each
+amount is a strength (0% = no fade, 100% = no art, in between = more and
+more faded, on an exponential curve with the subject kept whole until
+the very end) - that part is as intended. But the fade only applies to
+pictures with background colours, the edge next to the menu text still steps instead of
 fading, nothing bleeds above the picture's top, and the amounts haven't
 been checked in a real terminal. Treat them as unfinished.
 

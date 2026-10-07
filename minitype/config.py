@@ -23,9 +23,8 @@ CORRECTED = ["marked", "normal", "red"]     # how a fixed mistake looks
 BORDER_STYLES = ["off", "ascii", "line", "rounded", "double", "heavy", "block",
                  "thick"]
 ART_FADES = ["edges", "corner", "off"]       # how the art dissolves into the screen
-FADE_TOPS = [100, 75, 50, 25, 0]              # % of the art's height the edges fade climbs
-FADE_SIDES = [0, 4, 8, 12, 16, 24, 32, 48]    # columns it fades at the left
-FADE_ROUNDS = [30, 40, 50, 60, 70, 80, 90, 100]   # the corner fade's size, % of the picture
+FADE_LEVELS = list(range(0, 101, 10))          # a fade's strength: 0 none .. 100 no art left
+FADE_TOPS = FADE_SIDES = FADE_ROUNDS = FADE_LEVELS
 ART_SCOPES = ["off", "menus", "everywhere"]  # where the theme's picture shows
 ART_STYLES = ["revamp", "blocks", "detailed", "og", "combined"]   # hand-drawn line art,
                     # pixel art, shaded ASCII, the originals, or every technique at once

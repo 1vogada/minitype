@@ -260,20 +260,19 @@ def build_items(app):
                  tags=("art", "fade", "dither", "dithering", "edge", "bleed", "round")),
         b.choice("fade top", "fade_top", FADE_TOPS,
                  value=lambda: f"{s.fade_top}%",
-                 help="edges fade: how much of the art's height it climbs "
-                      "through, on an exponential curve - light dithering "
-                      "where it starts, thickening towards the top, almost "
-                      "nothing left at the very top. 100% runs the whole "
-                      "picture, 0% leaves the top alone",
+                 help="edges fade, down from the top: 0% leaves the art alone, "
+                      "100% leaves none of it; in between it eats further down "
+                      "on an exponential curve (light dithering where it "
+                      "starts, almost nothing left at the top)",
                  tags=("art", "fade", "dither", "vertical")),
         b.choice("fade side", "fade_side", FADE_SIDES,
-                 value=lambda: f"{s.fade_side} cols",
-                 help="edges fade: how many columns the art's left side fades over",
+                 value=lambda: f"{s.fade_side}%",
+                 help="edges fade, in from the left: 0% none, 100% no art left",
                  tags=("art", "fade", "dither", "horizontal")),
         b.choice("fade round", "fade_round", FADE_ROUNDS,
                  value=lambda: f"{s.fade_round}%",
-                 help="corner fade: how big the round patch is, from the "
-                      "bottom right corner, as a share of the picture",
+                 help="corner fade, closing in on the bottom right corner: 0% "
+                      "none, 100% no art left",
                  tags=("art", "fade", "dither", "corner", "round")),
         b.flag("text panel", "art_panel",
                "the art full size over the whole screen, and the text in a "
