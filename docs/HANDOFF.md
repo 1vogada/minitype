@@ -112,6 +112,9 @@ AGENTS.md at the repo root.
   checked in a real terminal.
 
 ## In progress / next (as the owner asked)
+The art work left is listed, with the owner's own notes, in
+`docs/ART-TODO.md`.
+
 1. Art revamp ("wow" pictures, `tools/art_wow.py`, 28/22/16 rows): done
    for ocean, midnight, forest, ember, default, candy (tilted, all pink,
    "bubblegum pop"). The other 34 themes still use the hand-drawn revamp.

@@ -21,6 +21,7 @@ pictures with background colours, the edge next to the menu text still steps ins
 fading, nothing bleeds above the picture's top, and the amounts haven't
 been checked in a real terminal. Treat them as unfinished.
 
-Then read `docs/HANDOFF.md` (state of the project, workflow, code map) and
-`docs/art-notes.md` (how the art is made). Run `python tests/run_all.py`
+Then read `docs/HANDOFF.md` (state of the project, workflow, code map),
+`docs/art-notes.md` (how the art is made) and `docs/ART-TODO.md` (the
+owner's notes on every picture: what to redesign and polish next). Run `python tests/run_all.py`
 before and after changes; every check prints ALL OK.
