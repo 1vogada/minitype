@@ -191,6 +191,8 @@ class Menu:
             return True, (item.back() if item.back is not None else None)
         elif key == keys.RIGHT and item.value is not None:
             return True, item.action()
+        elif key == keys.RIGHT and item.tab and not self.paged:
+            return True, item.activate()         # a section that opens a screen
         elif key == keys.LEFT and item.back is not None:
             return True, item.back()
         elif sections and (key in TAB_NEXT or (self.paged and key == keys.RIGHT)):
@@ -212,7 +214,8 @@ class Menu:
 
         On the section buttons, up/down pick a section and enter or right
         steps into its rows (esc steps back out, see back_out); a tab
-        item's button runs it on enter instead. On the
+        item's button (settings, gallery) runs it on enter or right instead,
+        like stepping into it. On the
         rows, left/right only change the value, and do nothing on rows
         that have none."""
         if self.on_sections:
@@ -221,7 +224,7 @@ class Menu:
                     self._switch_tab(-1 if key == keys.UP else 1)
                 return True, None
             if item.tab:                      # a button that does something
-                return True, (item.activate() if key == keys.ENTER else None)
+                return True, (item.activate() if key in (keys.ENTER, keys.RIGHT) else None)
             if key in (keys.ENTER, keys.SHIFT_ENTER, keys.RIGHT):
                 self.on_sections = False
                 return True, None
