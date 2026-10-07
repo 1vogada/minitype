@@ -513,3 +513,7 @@ def candy(pal):
 
 WOW = {"island": island, "moon": moon, "pines": pines, "fire": fire, "keyboard": keyboard,
        "lollipop": candy}
+
+# the rest of the themes' pictures live in art_wow2.py (it uses the pieces above)
+from art_wow2 import MORE  # noqa: E402
+WOW.update(MORE)
