@@ -628,6 +628,8 @@ class Picture:
             if len(self._wider) > 8:          # a window being dragged wider
                 self._wider.clear()
             pic = object.__new__(Picture)
+            pic.__dict__.update(self.__dict__)        # everything it knows (back, ...)
+            pic.__dict__["_faded"] = {}
             pic.span, pic.height, pic.width = True, self.height, width
             pic.lines = tuple("".join(line[c] for c in order) + line for line in self.lines)
             pic._codes = [[codes[c] for c in order] + codes for codes in self._codes]

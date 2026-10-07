@@ -38,6 +38,17 @@ assert inked(k, 0) < inked(pic, 0) / 2
 # bigger round keeps more
 assert sum(inked(pic.faded("corner", 100, 12, 100), r) for r in range(pic.height)) > \
     sum(inked(k, r) for r in range(pic.height))
+# on a screen wider than the picture it grows - and the grown one fades too
+# (it lost the "has backgrounds" flag once, so wide windows got no fade)
+wide = pic.wider(pic.width + 80)
+assert wide is not pic and wide.back
+assert wide.faded("edges", 100, 12, 70) is not wide
+app0 = App(); app0.settings.theme = "ocean"; app0.styles()
+console.term_size = lambda: (240, 60)
+out = []
+with mock.patch.object(console, "write", out.append), mock.patch.object(console, "flush", lambda: None):
+    console.present(["  x"] * 3, None)
+assert sum(out[-1].count(c) for c in "░▒▓") > sum(ch in "░▒▓" for l in revamp("island")[0].lines for ch in l),     "a 240-wide window fades the art"
 # pictures without backgrounds (ASCII) are left alone when drawn
 app = App(); app.settings.theme = "forest"; app.settings.art_style = "detailed"; app.styles()
 console.term_size = lambda: (150, 42)
