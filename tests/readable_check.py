@@ -134,4 +134,17 @@ for st_, want in ((0.0, (0, 0, 0)), (0.5, (100, 100, 100))):
     out = console._over(under, box)
     assert "\x1b[48;2;%d;%d;%dm" % want in out[4], (st_, out[4])
 console._decor["see_through"] = 0.4
+# ---------------------------------------------------------------- lighter text
+from minitype.terminal.style import Styles, rgb_of_code
+base, half, full = Styles("forest"), Styles("forest", lighten=0.5), Styles("forest", lighten=1.0)
+b, h = rgb_of_code(base.ok), rgb_of_code(half.ok)
+assert all(abs(hv - (bv + (255 - bv) * 0.5)) <= 2 for bv, hv in zip(b, h)), (b, h)
+assert rgb_of_code(full.title) == (255, 255, 255) and rgb_of_code(full.dim) == (255, 255, 255)
+assert Settings().text_lighten == 0
+# neither lighter text nor accent letters changes the art: the same palette
+assert full.art_palette(True) == base.art_palette(True)
+assert Styles("forest", accent_text=True).art_palette(True) == base.art_palette(True)
+assert Styles("forest", accent_text=True).ok == base.title, "the text does take the accent"
+items2 = sm.arrange(sm.build_items(App()))
+assert {it.section for it in items2 if it.label == "lighter text"} == {"theme", "ui"}
 print("ALL OK")

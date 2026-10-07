@@ -29,7 +29,11 @@ def run(style, presses):
 
 
 from minitype.ui.settings_menu import build_items
-HELP = {it.label: it.help_text() for it in build_items(App())}
+HELP, FIRST = {}, {}
+for _it in build_items(App()):
+    HELP.setdefault(_it.label, _it.help_text())
+    # two rows can share a label ("fade" in effects and in art fade): either help counts
+    FIRST.setdefault(_it.label, set()).add(_it.help_text().split()[0])
 
 
 def check_inline(frame):
@@ -38,10 +42,9 @@ def check_inline(frame):
     assert len(rows) <= SIZE[1], len(rows)
     sel = next(i for i, r in enumerate(rows) if r.startswith(" > "))
     label = re.match(r"^ > (.+?)(\s{2,}|$)", rows[sel]).group(1).strip()
-    first_word = HELP[label].split()[0]
     label_col = len(rows[sel]) - len(rows[sel][2:].lstrip()) - 0
     help_col = len(rows[sel + 1]) - len(rows[sel + 1].lstrip())
-    assert help_col > label_col and first_word in rows[sel + 1], rows[sel:sel + 2]
+    assert help_col > label_col and any(w in rows[sel + 1] for w in FIRST[label]), rows[sel:sel + 2]
 
 
 # every position of a long scrolled list keeps the help under the selection

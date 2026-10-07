@@ -239,6 +239,9 @@ Skipping pages:
   keeping its colour, just until it reads (4.5:1 contrast); *flip* turns it
   the theme's darkest or lightest colour, whichever reads better there;
   bold makes them heavier. The art itself is never changed
+- **lighter text** (settings → theme, also in ui): every text colour of
+  the theme moved that % towards white, 0% as the theme has it. The art
+  keeps its own colours - and so does it with **accent letters** on
 - **see-through** (settings → art, 40%): how much of the art shows
   through boxes drawn over it - the help box, the text panel, the pause
   and warning boxes. 0% solid, 100% the art at full brightness

@@ -200,6 +200,15 @@ def fg(v):
     return _code(parse_colour(v), 38)
 
 
+def _lightened(code, t):
+    """A text colour code moved t (0..1) of the way to white; a code with
+    no colour (or none at all) is left as it is."""
+    colour = rgb_of_code(code)
+    if not code or colour is None:
+        return code
+    return _code(tuple(int(c + (255 - c) * t) for c in colour), 38)
+
+
 def bg(v):
     return _code(parse_colour(v), 48)
 
@@ -631,7 +640,7 @@ class Styles:
     def __init__(self, theme="default", lowkey="off", accent_text=False,
                  background=True, gradient=True, flow=True, heat=True,
                  text_style=True, modifiers=None, speed=1.0, reverse=False,
-                 custom=None):
+                 custom=None, lighten=0.0):
         """The keyword switches turn a theme's effects off one by one:
         its background, gradient, the gradient's movement, heat, and
         bold / italic letters. background can also be "always": a theme
@@ -644,7 +653,11 @@ class Styles:
         speed       multiplies how fast everything animated moves
         reverse     gradients flow the other way
         custom      a (palette, effects) pair to use instead of `theme`
-                    (the theme creator's draft)"""
+                    (the theme creator's draft)
+        lighten     0..1: every text colour moved that far towards white
+
+        The art keeps the theme's own colours (`art_palette`): accent
+        letters and lighten change the text only."""
         self.lowkey = lowkey
         self.quiet = theme == "mono" or lowkey == "disguised"
         self.speed = speed * (-1 if reverse else 1)
@@ -653,6 +666,7 @@ class Styles:
             self.dim, self.ok, self.bad, self.extra = DIM, "", UND, UND + DIM
             self.title = "" if lowkey == "disguised" else WHITE
             self.good = self.warn = ""
+            self._art = (self.dim, self.ok, self.bad, self.extra, self.title, self.good, self.warn)
             # no colour, but movement still works (not when disguised)
             effects = replace(NO_EFFECTS, bounce=effects.bounce,
                               shake=effects.shake, glitch=effects.glitch)
@@ -667,8 +681,13 @@ class Styles:
                 italic=effects.italic and text_style)
             (self.dim, self.ok, self.bad, self.extra,
              self.title, self.good, self.warn) = palette
+            self._art = tuple(palette)    # the theme's own colours, for the art
             if accent_text:
                 self.ok = self.title     # typed letters in the accent colour
+            if lighten > 0:
+                (self.dim, self.ok, self.bad, self.extra, self.title, self.good,
+                 self.warn) = (_lightened(c, lighten) for c in (
+                     self.dim, self.ok, self.bad, self.extra, self.title, self.good, self.warn))
         if background == "always" and not effects.background and not self.quiet:
             effects = replace(effects, background=bg(self.made_background()))
         effects = _with_modifiers(effects, modifiers or {})
@@ -707,11 +726,12 @@ class Styles:
         softer shades and hues of it, see shade(). Block pictures colour
         backgrounds too, so every colour also comes as a background code,
         keyed ("bg", part) and ("bg", part, tone)."""
-        flat = {"dim": self.dim, "text": self.ok or self.title,
-                "error": self.bad if not self.quiet else self.title,
-                "extra": self.extra if not self.quiet else self.dim,
-                "accent": self.title, "good": self.good or self.title,
-                "warn": self.warn or self.title}
+        dim, ok, bad, extra, title, good, warn = self._art
+        flat = {"dim": dim, "text": ok or title,
+                "error": bad if not self.quiet else title,
+                "extra": extra if not self.quiet else dim,
+                "accent": title, "good": good or title,
+                "warn": warn or title}
         backs = {}
         for part, code in flat.items():
             colour = rgb_of_code(code)

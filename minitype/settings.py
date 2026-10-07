@@ -48,6 +48,7 @@ CHOICES = {
     "fade_start": FADE_STARTS,
     "text_contrast": TEXT_CONTRASTS,
     "see_through": SEE_THROUGH,
+    "text_lighten": SEE_THROUGH,
     "fade_start_top": FADE_STARTS,
     "fade_angle": FADE_ANGLES,
     "fade_curve": FADE_CURVES,
@@ -130,6 +131,7 @@ class Settings:
     # ---- look and feel
     theme: str = "default"
     accent_text: bool = False    # typed letters in the theme's accent colour
+    text_lighten: int = 0        # every text colour moved this % towards white
     border: str = "rounded"      # frame around the screen: off, ascii, line, rounded, double, heavy
     art: str = "menus"           # the theme's corner picture: off, menus, everywhere
     art_style: str = "revamp"    # revamp / blocks / detailed / og / combined

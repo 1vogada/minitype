@@ -53,7 +53,7 @@ class App:
         console. `custom` is a (palette, effects) pair to show instead and
         `art` its picture (the theme creator's draft)."""
         s = self.settings
-        st = Styles(s.theme, s.lowkey, s.accent_text,
+        st = Styles(s.theme, s.lowkey, s.accent_text, lighten=s.text_lighten / 100,
                     background=s.theme_background, gradient=s.theme_gradient,
                     flow=s.theme_flow, heat=s.theme_heat,
                     text_style=s.theme_text_style,

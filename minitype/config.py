@@ -38,7 +38,7 @@ NUMBER_RANGES = {
     "weak_pct": (0, 100), "bad_words_pct": (0, 100), "book_page": (10, 2000),
     "fade_top": (0, 100), "fade_side": (0, 100), "fade_round": (0, 100),
     "fade_start": (1, 100), "fade_start_top": (1, 100), "fade_angle": (-80, 80),
-    "fade_curve": (0, 10), "see_through": (0, 100), "pace": (0, 300), "effect_speed": (0.25, 4.0),
+    "fade_curve": (0, 10), "see_through": (0, 100), "text_lighten": (0, 100), "pace": (0, 300), "effect_speed": (0.25, 4.0),
     "daily_goal": (0, 600),
 }
 ART_SCOPES = ["off", "menus", "everywhere"]  # where the theme's picture shows
