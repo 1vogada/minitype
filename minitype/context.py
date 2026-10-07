@@ -7,11 +7,26 @@ from .terminal import console
 from .terminal.art import THEME_ART
 from .terminal.art import paint as paint_art
 from .terminal.art import resolve as resolve_art
-from .terminal.style import Styles, theme_art
+from .terminal.style import Styles, rgb_of_code, theme_art
 from .words.bank import WordBank
 from .words.generator import WordGenerator
 from .words.quotes import QuoteBank
 from .words.themed import LAYOUT_DEPENDENT
+
+
+def _lum(c):
+    def lin(v):
+        v /= 255
+        return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+    return 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2])
+
+
+def _extremes(palette, background):
+    """The theme's darkest and lightest colours (its art palette and its
+    background), for flipping text over the art."""
+    cols = [c for c in (rgb_of_code(v) for v in palette.values()) if c]
+    cols.append(rgb_of_code(background, 48) or (18, 18, 22))
+    return min(cols, key=_lum), max(cols, key=_lum)
 
 
 class App:
@@ -69,7 +84,8 @@ class App:
             [paint_art(piece, palette) for piece in versions],
             art_scope=s.art, behind=s.art_behind, panel=s.art_panel, shadow=st.dim,
             fade=(s.art_fade, s.fade_top, s.fade_side, s.fade_round, s.fade_start,
-                  s.fade_start_top, s.fade_angle, s.fade_curve))
+                  s.fade_start_top, s.fade_angle, s.fade_curve) if s.fade_on else None,
+            text_fx=(s.text_contrast, s.text_bold) + _extremes(palette, st.background))
         return st
 
     def picture_fade(self, picture):

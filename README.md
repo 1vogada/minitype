@@ -234,6 +234,13 @@ Skipping pages:
   (-80° to 80°; positive fades further in at the top), and **fade
   curve** sets how sharp the exponential is (0 a straight line, 3 the
   default, 10 light almost all the way, then a quick drop)
+- **text contrast** and **bold text** (settings → art): letters drawn over
+  the art that get lost in it. *nudge* moves each letter lighter or darker,
+  keeping its colour, just until it reads (4.5:1 contrast); *flip* turns it
+  the theme's darkest or lightest colour, whichever reads better there;
+  bold makes them heavier. The art itself is never changed
+- **fade (all pictures)** (settings → art fade): turns the fade off
+  everywhere at once; each picture keeps its own fade settings
 - **text panel** (settings → art, off by default, `p` in the gallery):
   the art full size over the whole screen and the text in a panel of its
   own on top, bordered like the screen with a shaded drop shadow; the key

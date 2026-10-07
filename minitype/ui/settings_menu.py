@@ -21,7 +21,8 @@ from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICU
                       FLOW_DIRECTIONS, CORRECTED, TYPOS, BORDER_STYLES,
                       ART_SCOPES, ART_STYLES, ART_COLOURS, THEME_BACKGROUNDS,
                       ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS,
-                      FADE_STARTS, FADE_ANGLES, FADE_CURVES, NUMBER_RANGES)
+                      FADE_STARTS, FADE_ANGLES, FADE_CURVES, NUMBER_RANGES,
+                      TEXT_CONTRASTS)
 from ..terminal.art import ART_NAMES, THEME_ART
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import storage
@@ -343,6 +344,21 @@ def build_items(app):
                "the art makes room for text",
                tags=("art", "picture", "background", "layer", "behind",
                      "appearance", "theme")),
+        b.choice("text contrast", "text_contrast", TEXT_CONTRASTS,
+                 help="letters drawn over the art (art behind text) that get "
+                      "lost in it: nudge moves each one lighter or darker, "
+                      "keeping its colour, just until it reads; flip turns it "
+                      "the theme's darkest or lightest colour, whichever reads "
+                      "better there. The art itself is left as it is",
+                 tags=("art", "text", "contrast", "readable", "readability", "legible", "behind")),
+        b.flag("bold text", "text_bold",
+               "letters drawn over the art in bold, so they stand out more",
+               tags=("art", "text", "bold", "readable", "readability", "behind")),
+        b.flag("fade on", "fade_on",
+               "the art fade for every picture at once: off turns it off "
+               "everywhere, and each picture keeps its own fade settings "
+               "for when it's back on",
+               tags=("art", "fade", "dither", "global", "all")),
         b.item("theme creator", lambda: theme_creator(app),
                lambda: "make your own",
                help="build a theme from scratch or from any theme: every "
@@ -555,8 +571,8 @@ LAYOUT = [
     ("art", [("look", "theme art", "show art"), ("fun", "art style"),
              ("look", "picture"), ("look", "picture colours"),
              ("fun", "art colours", "art shading"), ("look", "text panel"),
-             ("look", "art behind text")]),
-    ("art fade", [("look", "art fade", "fade"), ("look", "fade top"),
+             ("look", "art behind text"), ("look", "text contrast"), ("look", "bold text")]),
+    ("art fade", [("look", "fade on", "fade (all pictures)"), ("look", "art fade", "fade"), ("look", "fade top"),
                   ("look", "fade start top"), ("look", "fade side"),
                   ("look", "fade start"), ("look", "fade angle"),
                   ("look", "fade round"), ("look", "fade curve")]),

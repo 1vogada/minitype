@@ -10,7 +10,8 @@ from .config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS,
                      BORDER_STYLES, ART_SCOPES, ART_STYLES, ART_COLOURS,
                      THEME_BACKGROUNDS,
                      ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS,
-                     FADE_STARTS, FADE_ANGLES, FADE_CURVES, NUMBER_RANGES)
+                     FADE_STARTS, FADE_ANGLES, FADE_CURVES, NUMBER_RANGES,
+                     TEXT_CONTRASTS)
 from .terminal.style import theme_names
 from .words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 
@@ -45,6 +46,7 @@ CHOICES = {
     "fade_side": FADE_SIDES,
     "fade_round": FADE_ROUNDS,
     "fade_start": FADE_STARTS,
+    "text_contrast": TEXT_CONTRASTS,
     "fade_start_top": FADE_STARTS,
     "fade_angle": FADE_ANGLES,
     "fade_curve": FADE_CURVES,
@@ -133,6 +135,9 @@ class Settings:
     art_colours: str = "shaded"  # shaded (softer shades and hues) / flat
     art_behind: bool = False     # art always full size, text drawn over it
     art_panel: bool = False      # art full size, the text in a bordered panel over it
+    text_contrast: str = "off"   # letters over the art: off, nudge (until they read), flip
+    text_bold: bool = False      # letters over the art in bold
+    fade_on: bool = True         # the art fade at all (every picture's own fade settings kept)
     art_fade: str = "edges"      # how the art dissolves at its edges: edges / corner / off
     fade_top: int = 50           # edges, from the top: 0 no fade .. 100 no art
     fade_side: int = 20          # edges, from the left: 0 no fade .. 100 no art

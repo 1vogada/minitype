@@ -112,22 +112,32 @@ def rgb_of_256(n):
 
 def rgb_of_code(code, layer=38):
     """The RGB an escape code sets for text (layer 38) or background (48),
-    None if it sets none."""
+    None if it sets none. When it sets it more than once, the last one wins,
+    as on a terminal; a reset (0) clears it."""
+    found = None
     for m in re.finditer(r"\x1b\[([0-9;]*)m", code or ""):
-        nums = [int(n) for n in m.group(1).split(";") if n]
+        nums = [int(n) for n in m.group(1).split(";") if n] or [0]
         i = 0
         while i < len(nums):
             n = nums[i]
-            if n == layer and nums[i + 1:i + 2] == [2]:
-                return tuple(nums[i + 2:i + 5])
-            if n == layer and nums[i + 1:i + 2] == [5]:
-                return rgb_of_256(nums[i + 2])
-            if layer == 38 and (30 <= n <= 37 or 90 <= n <= 97):
-                return rgb_of_256(n - 30 if n < 90 else n - 82)
-            if layer == 48 and (40 <= n <= 47 or 100 <= n <= 107):
-                return rgb_of_256(n - 40 if n < 100 else n - 92)
+            if n in (38, 48) and nums[i + 1:i + 2] == [2]:
+                if n == layer:
+                    found = tuple(nums[i + 2:i + 5])
+                i += 5                        # skip the colour's own numbers
+                continue
+            if n in (38, 48) and nums[i + 1:i + 2] == [5]:
+                if n == layer and i + 2 < len(nums):
+                    found = rgb_of_256(nums[i + 2])
+                i += 3
+                continue
+            if n == 0:
+                found = None
+            elif layer == 38 and (30 <= n <= 37 or 90 <= n <= 97):
+                found = rgb_of_256(n - 30 if n < 90 else n - 82)
+            elif layer == 48 and (40 <= n <= 47 or 100 <= n <= 107):
+                found = rgb_of_256(n - 40 if n < 100 else n - 92)
             i += 1
-    return None
+    return found
 
 
 def luminance(c):

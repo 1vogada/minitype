@@ -69,7 +69,7 @@ s = Settings(); s.apply({"art_fade": "x", "fade_top": 140, "fade_round": -5})
 assert (s.art_fade, s.fade_top, s.fade_round) == ("edges", 50, 50), "out of range falls back"
 items = sm.arrange(sm.build_items(App()))
 rows = {it.label: it for it in items if it.section == "art fade"}
-assert list(rows) == ["fade", "fade top", "fade start top", "fade side", "fade start",
+assert list(rows) == ["fade (all pictures)", "fade", "fade top", "fade start top", "fade side", "fade start",
                       "fade angle", "fade round", "fade curve"], list(rows)
 assert not any(it.section == "art" and "fade" in it.label for it in items), "fade has its own tab"
 assert rows["fade start"].value() == "100%" and rows["fade start top"].value() == "100%"

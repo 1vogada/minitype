@@ -23,6 +23,8 @@ CORRECTED = ["marked", "normal", "red"]     # how a fixed mistake looks
 BORDER_STYLES = ["off", "ascii", "line", "rounded", "double", "heavy", "block",
                  "thick"]
 ART_FADES = ["edges", "corner", "off"]       # how the art dissolves into the screen
+TEXT_CONTRASTS = ["off", "nudge", "flip"]    # letters over the art: as they are, nudged until
+                    # they read, or flipped to the theme's darkest / lightest colour
 FADE_LEVELS = list(range(0, 101, 10))          # a fade's strength: 0 none .. 100 no art left
 FADE_TOPS = FADE_SIDES = FADE_ROUNDS = FADE_LEVELS
 FADE_STARTS = list(range(10, 101, 10))        # how far into the picture a fade reaches, %

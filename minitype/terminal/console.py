@@ -34,7 +34,7 @@ BORDERS = {
 }
 # the theme's frame and corner art, set by set_decor()
 _decor = {"border": None, "border_style": "", "art": None, "art_scope": "menus",
-          "behind": False, "panel": False, "shadow": "", "fade": None}
+          "behind": False, "panel": False, "shadow": "", "fade": None, "text_fx": None}
 _last_frame = []        # the last present()'s arguments, for repaint()
 _overlay = []           # lines of a box drawn over the middle of every frame (a dialog)
 
@@ -246,6 +246,50 @@ def _behind(cell):
     return ""
 
 
+def _lum(c):
+    def lin(v):
+        v /= 255
+        return v / 12.92 if v <= 0.03928 else ((v + 0.055) / 1.055) ** 2.4
+    return 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2])
+
+
+def _contrast(a, b):
+    la, lb = _lum(a), _lum(b)
+    return (max(la, lb) + 0.05) / (min(la, lb) + 0.05)
+
+
+READABLE = 4.5          # the contrast a nudged letter is brought up to (WCAG AA)
+
+
+@lru_cache(maxsize=4096)
+def _readable(codes, under, fx):
+    """A letter's codes as it's printed over an art cell whose background
+    is `under`: with the text contrast setting applied - nudge moves its
+    colour lighter or darker (the same hue) just until it reads against
+    the art, flip swaps it for the theme's darkest or lightest colour,
+    whichever reads better - and in bold if that's on."""
+    from .style import rgb_of_code            # style draws through this module
+    mode, bold, dark, light = fx
+    out = codes
+    bg = rgb_of_code(under, 48)
+    if mode != "off" and bg:
+        fg = rgb_of_code(codes) or (220, 220, 220)
+        if mode == "flip":
+            new = dark if _contrast(dark, bg) > _contrast(light, bg) else light
+        else:
+            new = fg
+            if _contrast(fg, bg) < READABLE:
+                to = (255, 255, 255) if _contrast((255, 255, 255), bg) >= _contrast((0, 0, 0), bg) else (0, 0, 0)
+                for k in range(1, 21):
+                    new = tuple(int(a + (b - a) * k / 20) for a, b in zip(fg, to))
+                    if _contrast(new, bg) >= READABLE:
+                        break
+        out += "\x1b[38;2;%d;%d;%dm" % new
+    if bold:
+        out += "\x1b[1m"
+    return out
+
+
 CARD_DIM = 0.35       # a help box over the art: the art's colour, this bright
 
 
@@ -279,9 +323,15 @@ def _layer(row, pic, card):
         codes, ch = t if solid or (a[1] == " " and not a[0]) else a
         if card[0] <= x < card[1] and "\x1b[48;" not in t[0] and "\x1b[7m" not in t[0]:
             codes = t[0] + _scrim(a)
+            fx = _decor.get("text_fx")
+            if fx and (fx[0] != "off" or fx[1]) and t[1] != " ":
+                codes = _readable(t[0], _scrim(a), fx) + _scrim(a)
         if solid and t[1] != " " and not card[0] <= x < card[1] and "\x1b[48;" not in t[0] \
                 and "\x1b[7m" not in t[0]:
             codes = t[0] + _behind(a)         # printed on the art, not punched out of it
+            fx = _decor.get("text_fx")
+            if fx and (fx[0] != "off" or fx[1]):
+                codes = _readable(t[0], _behind(a), fx) + _behind(a)
         if codes != cur:
             out.append(RESET + codes)
             cur = codes
@@ -388,16 +438,17 @@ def frame(rows, chars, style, inner):
 
 
 def set_decor(border=None, border_style="", art=None, art_scope="menus",
-              behind=False, panel=False, shadow="", fade=None):
+              behind=False, panel=False, shadow="", fade=None, text_fx=None):
     """The theme's frame and corner art for present(): border is a BORDERS
     key or None; art the picture's sizes, biggest first, each a list of
     Pictures (see art.py), or None; art_scope "menus" or "everywhere";
     behind draws the art behind the text at full size (see overlay_art);
     panel draws it full size with the text in a bordered panel of its own,
-    shadowed in `shadow` (a colour code)."""
+    shadowed in `shadow` (a colour code). text_fx is (contrast, bold,
+    darkest, lightest) for letters drawn over the art (see _readable)."""
     _decor.update(border=BORDERS.get(border), border_style=border_style,
                   art=art or None, art_scope=art_scope, behind=behind,
-                  panel=panel, shadow=shadow, fade=fade)
+                  panel=panel, shadow=shadow, fade=fade, text_fx=text_fx)
 
 
 def _panel(rows, text, width, top):

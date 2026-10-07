@@ -12,7 +12,7 @@ Then `docs/art-notes.md` for anything about the corner art.
   when asked ("push it"); when asked to do several things, push after each.
 - Run the app: `python -m minitype` (Python 3.10+, no dependencies).
 - Tests: `python tests/run_all.py` (or `python tests/run_all.py decor`).
-  Each `*_check.py` prints `ALL OK`; 27 checks with smoke4. They run against
+  Each `*_check.py` prints `ALL OK`; 28 checks with smoke4. They run against
   the real modules with the terminal mocked. `tests/menu_look.py` prints a
   menu frame as text (`python tests/menu_look.py 120 34 ember sidebar left`)
   and `tests/shows_check.py` reports which art the app actually draws at
@@ -72,6 +72,11 @@ Then `docs/art-notes.md` for anything about the corner art.
 - Fade settings are per picture: `Settings.fades` (picture -> its
   FADE_FIELDS); `App.picture_fade` swaps them in when the shown picture
   changes (called from `styles()`); gallery esc restores them.
+- Text over the art: settings text_contrast (off / nudge / flip) and
+  text_bold, applied per letter in `console._readable` (also in the help
+  box); fade_on switches the fade off for every picture.
+  `style.rgb_of_code` now skips a colour's own numbers and lets the last
+  colour win (it used to read `48;2;..;90` as bright black text).
 - Taller art: `Picture.taller(n)` puts n filler rows (the sky carried on
   up, `art._filler`) on top; `console._dressed` adds as many as there's
   room for (up to `art.TALLER` = half the height) after the picture is
