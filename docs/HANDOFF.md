@@ -81,6 +81,10 @@ Then `docs/art-notes.md` for anything about the corner art.
   the text; floating help goes over its edge) and returns the box's
   columns per row; overlay_art(..., dim=) darkens the art there
   (`_dimmed`, PANEL_DIM) and the letters draw over it like art behind text.
+- Settings tab "ui": copies of the UI_TAB rows (settings_menu) added
+  by arrange(); tests that index rows by label skip section "ui".
+  see_through (0-100%) sets how bright the art shows through the help
+  box, text panel and dialogs (`console._see_through`, `_over`).
 - Taller art: `Picture.taller(n)` puts n filler rows (the sky carried on
   up, `art._filler`) on top; `console._dressed` adds as many as there's
   room for (up to `art.TALLER` = half the height) after the picture is

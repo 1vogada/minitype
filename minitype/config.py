@@ -23,6 +23,7 @@ CORRECTED = ["marked", "normal", "red"]     # how a fixed mistake looks
 BORDER_STYLES = ["off", "ascii", "line", "rounded", "double", "heavy", "block",
                  "thick"]
 ART_FADES = ["edges", "corner", "off"]       # how the art dissolves into the screen
+SEE_THROUGH = list(range(0, 101, 10))   # how much art shows through boxes, %
 TEXT_CONTRASTS = ["off", "nudge", "flip"]    # letters over the art: as they are, nudged until
                     # they read, or flipped to the theme's darkest / lightest colour
 FADE_LEVELS = list(range(0, 101, 10))          # a fade's strength: 0 none .. 100 no art left
@@ -37,7 +38,7 @@ NUMBER_RANGES = {
     "weak_pct": (0, 100), "bad_words_pct": (0, 100), "book_page": (10, 2000),
     "fade_top": (0, 100), "fade_side": (0, 100), "fade_round": (0, 100),
     "fade_start": (1, 100), "fade_start_top": (1, 100), "fade_angle": (-80, 80),
-    "fade_curve": (0, 10), "pace": (0, 300), "effect_speed": (0.25, 4.0),
+    "fade_curve": (0, 10), "see_through": (0, 100), "pace": (0, 300), "effect_speed": (0.25, 4.0),
     "daily_goal": (0, 600),
 }
 ART_SCOPES = ["off", "menus", "everywhere"]  # where the theme's picture shows

@@ -41,7 +41,10 @@ assert (s.text_contrast, s.text_bold, s.fade_on) == ("flip", True, False)
 s.apply({"text_contrast": "loud"})
 assert s.text_contrast == "flip"
 items = sm.arrange(sm.build_items(App()))
-where = {it.label: it.section for it in items}
+where = {it.label: it.section for it in items if it.section != "ui"}
+in_ui = {it.label for it in items if it.section == "ui"}
+assert {"text contrast", "bold text", "see-through", "fade (all pictures)", "text panel",
+        "art behind text", "ui style", "border"} <= in_ui, in_ui
 assert where["text contrast"] == "art" and where["bold text"] == "art"
 assert where["fade (all pictures)"] == "art fade"
 
@@ -117,4 +120,18 @@ assert console._decor["fade"] is None
 assert a.settings.art_fade == "edges", "each picture's own setting kept"
 _, a = frame(fade_on=True, art_fade="edges")
 assert console._decor["fade"][0] == "edges"
+# ---------------------------------------------------------------- see-through
+assert Settings().see_through == 40
+_, a = frame(see_through=70)
+assert console._decor["see_through"] == 0.7
+art_cell = ("\x1b[38;2;200;100;50m", "X")
+assert console._scrim(art_cell, 0.5) == "\x1b[48;2;100;50;25m"
+# a pause box over the art: the art shows through it, as dark as the setting says
+box = ["+------+", "| hi   |", "+------+"]
+under = ["\x1b[48;2;200;200;200m" + " " * 40] * 9
+for st_, want in ((0.0, (0, 0, 0)), (0.5, (100, 100, 100))):
+    console._decor["see_through"] = st_
+    out = console._over(under, box)
+    assert "\x1b[48;2;%d;%d;%dm" % want in out[4], (st_, out[4])
+console._decor["see_through"] = 0.4
 print("ALL OK")

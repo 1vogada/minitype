@@ -34,7 +34,8 @@ BORDERS = {
 }
 # the theme's frame and corner art, set by set_decor()
 _decor = {"border": None, "border_style": "", "art": None, "art_scope": "menus",
-          "behind": False, "panel": False, "shadow": "", "fade": None, "text_fx": None}
+          "behind": False, "panel": False, "shadow": "", "fade": None, "text_fx": None,
+          "see_through": 0.4}
 _last_frame = []        # the last present()'s arguments, for repaint()
 _overlay = []           # lines of a box drawn over the middle of every frame (a dialog)
 
@@ -291,10 +292,13 @@ def _readable(codes, under, fx):
     return out
 
 
-CARD_DIM = 0.35       # a help box over the art: the art's colour, this bright
+def _see_through():
+    """How bright the art shows through a box over it (the see-through
+    setting), 0..1."""
+    return _decor.get("see_through", 0.4)
 
 
-def _scrim(cell, keep=CARD_DIM):
+def _scrim(cell, keep=None):
     """A background for a help box over this art cell: the art's own
     colour darkened (its background, else its ink), so the picture still
     shows faintly through the box instead of a black hole; "" over blank
@@ -304,15 +308,13 @@ def _scrim(cell, keep=CARD_DIM):
         re.findall(r"\x1b\[38;2;(\d+);(\d+);(\d+)m", codes)
     if not m:
         return ""
+    keep = _see_through() if keep is None else keep
     r, g, b = (int(int(v) * keep) for v in m[-1])
     return f"\x1b[48;2;{r};{g};{b}m"
 
 
-PANEL_DIM = 0.42      # the art inside a text panel, this bright
-
-
 @lru_cache(maxsize=8192)
-def _dimmed(codes, keep=PANEL_DIM):
+def _dimmed(codes, keep):
     """An art cell's codes with every truecolour in them darkened."""
     return re.sub(r"(38|48);2;(\d+);(\d+);(\d+)",
                   lambda m: "%s;2;%d;%d;%d" % (m.group(1), *(int(int(v) * keep) for v in m.groups()[1:])),
@@ -333,7 +335,7 @@ def _layer(row, pic, card, dim=None):
         t = text[x] if x < len(text) else ("", " ")
         a = pic[x] if x < len(pic) else ("", " ")
         if dim and dim[0] <= x < dim[1] and a[0]:
-            a = (_dimmed(a[0]), a[1])
+            a = (_dimmed(a[0], _see_through()), a[1])
         solid = (t[1] != " " or "\x1b[7m" in t[0] or "\x1b[48;" in t[0]
                  or card[0] <= x < card[1])
         codes, ch = t if solid or (a[1] == " " and not a[0]) else a
@@ -457,17 +459,20 @@ def frame(rows, chars, style, inner):
 
 
 def set_decor(border=None, border_style="", art=None, art_scope="menus",
-              behind=False, panel=False, shadow="", fade=None, text_fx=None):
+              behind=False, panel=False, shadow="", fade=None, text_fx=None,
+              see_through=0.4):
     """The theme's frame and corner art for present(): border is a BORDERS
     key or None; art the picture's sizes, biggest first, each a list of
     Pictures (see art.py), or None; art_scope "menus" or "everywhere";
     behind draws the art behind the text at full size (see overlay_art);
     panel draws it full size with the text in a bordered panel of its own,
     shadowed in `shadow` (a colour code). text_fx is (contrast, bold,
-    darkest, lightest) for letters drawn over the art (see _readable)."""
+    darkest, lightest) for letters drawn over the art (see _readable);
+    see_through how much of the art shows through boxes over it, 0..1."""
     _decor.update(border=BORDERS.get(border), border_style=border_style,
                   art=art or None, art_scope=art_scope, behind=behind,
-                  panel=panel, shadow=shadow, fade=fade, text_fx=text_fx)
+                  panel=panel, shadow=shadow, fade=fade, text_fx=text_fx,
+                  see_through=see_through)
 
 
 def _panel(rows, text, width, top):
@@ -528,16 +533,27 @@ def set_overlay(lines):
 
 
 def _over(rows, box):
-    """The rows with the box laid over their middle."""
+    """The rows with the box laid over their middle. Where it covers the
+    art, the art shows through the box darkened (the see-through setting),
+    instead of a black hole; the box's own highlights stay as they are."""
     rows = list(rows)
     bw = max(visible_len(b) for b in box)
     top = max(0, (len(rows) - len(box)) // 2)
     width = max((visible_len(r) for r in rows), default=0)
     left = max(0, (max(width, bw) - bw) // 2)
+    keep = _see_through()
     for k, line in enumerate(box):
         r = top + k
-        if r < len(rows):
-            rows[r] = _splice(rows[r], left, pad(line, bw))
+        if r >= len(rows):
+            continue
+        under = _cells(rows[r])
+        new = []
+        for j, (codes, ch) in enumerate(_cells(pad(line, bw))):
+            u = under[left + j] if left + j < len(under) else ("", " ")
+            if "\x1b[48;" not in codes and "\x1b[7m" not in codes:
+                codes = codes + _dimmed(_behind(u), keep)
+            new.append((codes, ch))
+        rows[r] = _splice(rows[r], left, "".join(RESET + c + ch for c, ch in new))
     return rows
 
 

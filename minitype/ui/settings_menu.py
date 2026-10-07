@@ -22,7 +22,7 @@ from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICU
                       ART_SCOPES, ART_STYLES, ART_COLOURS, THEME_BACKGROUNDS,
                       ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS,
                       FADE_STARTS, FADE_ANGLES, FADE_CURVES, NUMBER_RANGES,
-                      TEXT_CONTRASTS)
+                      TEXT_CONTRASTS, SEE_THROUGH)
 from ..terminal.art import ART_NAMES, THEME_ART
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import storage
@@ -352,6 +352,13 @@ def build_items(app):
                       "the theme's darkest or lightest colour, whichever reads "
                       "better there. The art itself is left as it is",
                  tags=("art", "text", "contrast", "readable", "readability", "legible", "behind")),
+        b.choice("see-through", "see_through", SEE_THROUGH,
+                 value=lambda: f"{s.see_through}%",
+                 help="how much of the art shows through boxes drawn over it: "
+                      "the help box, the text panel, the pause and warning "
+                      "boxes. 0% solid (no art), 100% the art at full "
+                      "brightness",
+                 tags=("art", "transparency", "transparent", "opacity", "popup", "box", "panel")),
         b.flag("bold text", "text_bold",
                "letters drawn over the art in bold, so they stand out more",
                tags=("art", "text", "bold", "readable", "readability", "behind")),
@@ -572,7 +579,8 @@ LAYOUT = [
     ("art", [("look", "theme art", "show art"), ("fun", "art style"),
              ("look", "picture"), ("look", "picture colours"),
              ("fun", "art colours", "art shading"), ("look", "text panel"),
-             ("look", "art behind text"), ("look", "text contrast"), ("look", "bold text")]),
+             ("look", "art behind text"), ("look", "text contrast"), ("look", "bold text"),
+             ("look", "see-through")]),
     ("art fade", [("look", "fade on", "fade (all pictures)"), ("look", "art fade", "fade"), ("look", "fade top"),
                   ("look", "fade start top"), ("look", "fade side"),
                   ("look", "fade start"), ("look", "fade angle"),
@@ -596,10 +604,38 @@ LAYOUT = [
 ]
 
 
+# Every switch for how the app looks, gathered in one "ui" tab (they stay in
+# their own tabs too): (section, label) after LAYOUT.
+UI_TAB = [("interface", "ui style"), ("interface", "sidebar tabs"), ("interface", "border"),
+          ("interface", "key hints"), ("theme", "theme background"), ("art", "show art"),
+          ("art", "art behind text"), ("art", "text panel"), ("art", "text contrast"),
+          ("art", "bold text"), ("art", "see-through"), ("art fade", "fade (all pictures)"),
+          ("typing screen", "show timer"), ("typing screen", "show progress"),
+          ("typing screen", "show live wpm"), ("typing screen", "show combo"),
+          ("typing screen", "on-screen keyboard"), ("typing screen", "lowkey")]
+
+
+def _with_ui_tab(items):
+    """The rows with copies of the UI_TAB ones as a "ui" tab, just before
+    the interface tab. A copy acts on the same setting as its original."""
+    import copy
+    by_key = {(it.section, it.label): it for it in items}
+    tab = []
+    for key in UI_TAB:
+        it = by_key.get(key)
+        if it is not None:
+            dup = copy.copy(it)
+            dup.tags, dup.section = tuple(it.tags) + ("ui",), "ui"
+            tab.append(dup)
+    at = next((i for i, it in enumerate(items) if it.section == "interface"), len(items))
+    return items[:at] + tab + items[at:]
+
+
 def arrange(items):
-    """The rows laid out by LAYOUT: their sections, order and names. The
-    old section stays a tag, so #look and the like still find them; a row
-    LAYOUT doesn't know goes at the end of its own section."""
+    """The rows laid out by LAYOUT: their sections, order and names, with
+    the ui tab (see UI_TAB) added. The old section stays a tag, so #look
+    and the like still find them; a row LAYOUT doesn't know goes at the
+    end of its own section."""
     by_key = {(it.section, it.label): it for it in items}
     out, placed = [], set()
     for section, rows in LAYOUT:
@@ -613,7 +649,7 @@ def arrange(items):
             if len(spec) > 2:
                 it.label = spec[2]
             out.append(it)
-    return out + [it for it in items if id(it) not in placed]
+    return _with_ui_tab(out + [it for it in items if id(it) not in placed])
 
 
 def parse_number(name, text):

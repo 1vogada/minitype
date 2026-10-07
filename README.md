@@ -239,6 +239,12 @@ Skipping pages:
   keeping its colour, just until it reads (4.5:1 contrast); *flip* turns it
   the theme's darkest or lightest colour, whichever reads better there;
   bold makes them heavier. The art itself is never changed
+- **see-through** (settings → art, 40%): how much of the art shows
+  through boxes drawn over it - the help box, the text panel, the pause
+  and warning boxes. 0% solid, 100% the art at full brightness
+- **ui tab** (settings → ui): every switch for how the app looks in one
+  place (layout, border, hints, art, text over the art, see-through, fade,
+  the typing screen's counters); they're in their own tabs too
 - **fade (all pictures)** (settings → art fade): turns the fade off
   everywhere at once; each picture keeps its own fade settings
 - **text panel** (settings → art, off by default, `p` in the gallery):

@@ -74,9 +74,9 @@ assert "search  ab " in f
 f, _ = run(typing("ab#") + [keys.BACKSPACE, keys.BACKSPACE])
 assert "difficulty" in f and "search" not in f, "no # left: backspace cleared everything"
 # [ and ] never go into the search; they switch sections, search kept
-f, app = run(typing("#stats") + ["]", keys.ENTER], style="tabs")
+f, app = run(typing("#stats") + ["]", "]", keys.ENTER], style="tabs")   # past the ui tab
 assert "search  #stats " in f and "[" not in f.split("\n")[3] and "]" not in f.split("\n")[3], f
-assert app.settings.res_chart is False, "] moved to results, enter toggled its first row"
+assert app.settings.res_chart is False, "] ] moved to results, enter toggled its first row"
 f, app = run(typing("#stats") + ["]", "[", keys.ENTER], style="tabs")
 assert app.settings.show_timer is False, "[ came back to header"
 f, app = run(["]", keys.ENTER], style="list")
@@ -111,8 +111,8 @@ for style, tabs in (("tabs", "off"), ("sidebar", "top"), ("sidebar", "left"), ("
     assert "typing screen" in f and "results" in f
     # sidebar-left starts on the section buttons: one more enter steps into the rows
     into_rows = [keys.ENTER] if tabs == "left" else []
-    f, app = run(typing("#stats") + [keys.TAB] + into_rows + [keys.ENTER],
+    f, app = run(typing("#stats") + [keys.TAB, keys.TAB] + into_rows + [keys.ENTER],
                  style=style, tabs=tabs)
-    # tab moved to the results section, enter toggled its first row
+    # tab, tab moved past the ui tab to the results section, enter toggled its first row
     assert app.settings.res_chart is False, (style, tabs)
 print("ALL OK")

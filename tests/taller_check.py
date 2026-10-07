@@ -67,4 +67,10 @@ rows = ["  some menu text here"] * 12 + [""] * 60
 out = console.overlay_art(rows, [pic], W + 60, 0, False)
 assert all(r.startswith("  some menu text here") for r in out[:12])
 assert sum(1 for r in out if len(r) > 30) >= pic.height + 1
+# the filler carries on each column's own top colour: no flat slab of one
+# colour where the subject reaches the top edge
+import re as _re
+bam = paint(revamp("bamboo")[0], style.Styles("bamboo").art_palette(True)).taller(6)
+top_cols = [_re.findall(r"38;2;([0-9;]+)m", c)[0] for c in bam._codes[0][-60:] if "38;2" in c]
+assert len(set(top_cols)) > len(top_cols) // 3, len(set(top_cols))
 print("ALL OK")

@@ -6,7 +6,7 @@ from minitype.ui import settings_menu as sm
 
 app = App()
 s = app.settings
-rows = {it.label: it for it in sm.build_items(app)}
+rows = {it.label: it for it in sm.build_items(app) if it.section != "ui"}   # the originals
 row = rows["theme background"]
 assert row.section == "theme" and row.value() == "theme" and row.preview
 row.action(); assert s.theme_background == "always"

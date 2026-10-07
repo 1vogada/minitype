@@ -85,7 +85,8 @@ class App:
             art_scope=s.art, behind=s.art_behind, panel=s.art_panel, shadow=st.dim,
             fade=(s.art_fade, s.fade_top, s.fade_side, s.fade_round, s.fade_start,
                   s.fade_start_top, s.fade_angle, s.fade_curve) if s.fade_on else None,
-            text_fx=(s.text_contrast, s.text_bold) + _extremes(palette, st.background))
+            text_fx=(s.text_contrast, s.text_bold) + _extremes(palette, st.background),
+            see_through=s.see_through / 100)
         return st
 
     def picture_fade(self, picture):

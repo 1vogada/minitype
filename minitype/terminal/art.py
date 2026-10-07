@@ -756,12 +756,11 @@ def _filler(pic, n):
     codes. Seeded by the picture, so they're the same every frame."""
     w = pic.width
     top, tc = pic.lines[0].ljust(w), list(pic._codes[0]) + [""] * w
-    keep0 = pic.keep[0] if pic.keep else w
-    sky = [_sky(top[c], tc[c]) if c < keep0 else None for c in range(w)]
+    # every column carries on its own top edge's colour - subject too (it
+    # evens out into the sky a few rows up), so nothing is left as one flat
+    # slab of a single colour; blank cells take their neighbours'
+    sky = [_sky(top[c], tc[c]) for c in range(w)]
     known = [c for c in range(w) if sky[c]]
-    if not known:                                 # the subject covers the top: any colour
-        sky = [_sky(top[c], tc[c]) for c in range(w)]
-        known = [c for c in range(w) if sky[c]]
     if not known:
         return [" " * w] * n, [[""] * w for _ in range(n)]
     for c in range(w):
