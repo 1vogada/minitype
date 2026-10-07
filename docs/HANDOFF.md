@@ -63,7 +63,7 @@ Then `docs/art-notes.md` for anything about the corner art.
   picture colours, v show art, p text panel, b art behind text, / search;
   enter keeps, esc restores.
 - Settings sections: rules, challenges, text, drills, theme, art,
-  effects, typing screen, interface, results, progress.
+  art fade, effects, typing screen, interface, results, progress.
 - Background bars fix (blank after a bg cell takes its own code).
 
 ## First thing in a new session
@@ -89,6 +89,7 @@ AGENTS.md at the repo root.
 2. Done: art fade (`Picture.faded`, `art._fade`): ordered dither + ▓▒░
    bleed at the edges of pictures with backgrounds. Settings art_fade
    (edges / corner / off), fade_top, fade_side, fade_round (strengths,
-  0-100%); `d` in the
+  0-100%), fade_start (how far in the fade reaches, 10-100% of the
+  picture; for the user to suit their window size) - own "art fade" tab; `d` in the
    gallery. Possible next: fade the art where it meets text beside it
    (rows next to the menu), and a bleed above the picture's top.

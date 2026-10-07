@@ -9,7 +9,8 @@ from .config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS,
                      EFFECT_SPEEDS, FLOW_DIRECTIONS, CORRECTED, TYPOS,
                      BORDER_STYLES, ART_SCOPES, ART_STYLES, ART_COLOURS,
                      THEME_BACKGROUNDS,
-                     ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS)
+                     ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS,
+                     FADE_STARTS)
 from .terminal.style import theme_names
 from .words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 
@@ -43,6 +44,7 @@ CHOICES = {
     "fade_top": FADE_TOPS,
     "fade_side": FADE_SIDES,
     "fade_round": FADE_ROUNDS,
+    "fade_start": FADE_STARTS,
     "art_style": ART_STYLES,
     "art_colours": ART_COLOURS,
     "theme_background": THEME_BACKGROUNDS,
@@ -119,6 +121,7 @@ class Settings:
     fade_top: int = 50           # edges, from the top: 0 no fade .. 100 no art
     fade_side: int = 20          # edges, from the left: 0 no fade .. 100 no art
     fade_round: int = 50         # corner, towards the bottom right: 0 no fade .. 100 no art
+    fade_start: int = 100        # how far in from its edge a fade reaches, % of the picture
     art_picture: str = "theme"   # the theme's own picture, or any picture's name (a remix)
     art_recolour: str = "theme"  # a remixed picture in the theme's colours, or its own theme's
     # a theme's effects, each of which can be switched off

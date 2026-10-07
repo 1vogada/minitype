@@ -201,7 +201,7 @@ Skipping pages:
   scenery (sea, hills, grid...) grows on to the left to fill it, from
   runs of its own columns joined where they line up, so it doesn't look
   like one strip repeated
-- **art fade** (settings → art, `d` in the gallery): the art dissolves into
+- **art fade** (settings → art fade, `d` in the gallery): the art dissolves into
   the screen instead of stopping on a straight line - dithered, its colour
   thinning through ▓ ▒ ░ on an exponential curve: light dithering for most
   of the way, thickening faster and faster, almost nothing left at the very
@@ -210,7 +210,10 @@ Skipping pages:
   100% fades all of it away, and everything in between fades more and
   more. *edges* (default) fades from the top (**fade top**, 50%) and from
   the left (**fade side**, 20%); *corner* fades round from the far corner
-  so only the bottom right is left (**fade round**, 50%); *off*
+  so only the bottom right is left (**fade round**, 50%); *off*.
+  **fade start** sets where the fade starts: how far into the picture it
+  reaches from its edge (100% the whole picture, 30% only the outer
+  third; the rest stays whole) - set it to suit your window size
 - **text panel** (settings → art, off by default, `p` in the gallery):
   the art full size over the whole screen and the text in a panel of its
   own on top, bordered like the screen with a shaded drop shadow; the key

@@ -23,7 +23,7 @@ inked = lambda p, r: sum(ch != " " for ch in p.lines[r])
 # the top rows thin out (some cells go, some turn to shades); the rest is untouched
 assert inked(e, 0) < inked(pic, 0)
 assert any(ch in "░▒▓" for ch in e.lines[1] + e.lines[2])
-assert e.lines[-1][20:] == pic.lines[-1][20:] and e._codes[-1][20:] == pic._codes[-1][20:]
+assert e.lines[-1][-30:] == pic.lines[-1][-30:] and e._codes[-1][-30:] == pic._codes[-1][-30:]
 # the left side thins out too
 assert sum(e.lines[r][0] != " " for r in range(e.height)) < sum(pic.lines[r][0] != " " for r in range(pic.height))
 # a shade takes the colour it replaced, as its ink, with no background
@@ -58,18 +58,23 @@ assert not d.back
 
 # ---------------------------------------------------------------- settings
 s = Settings()
-assert (s.art_fade, s.fade_top, s.fade_side, s.fade_round) == ("edges", 50, 20, 50)
+assert (s.art_fade, s.fade_top, s.fade_side, s.fade_round, s.fade_start) == ("edges", 50, 20, 50, 100)
+s.apply({"fade_start": 40}); assert s.fade_start == 40
+s.apply({"fade_start": 0}); assert s.fade_start == 40, "0 is not a start"
+s = Settings()
 assert ART_FADES[0] == "edges"
 s.apply({"art_fade": "corner", "fade_top": 50, "fade_side": 30, "fade_round": 50})
 assert (s.art_fade, s.fade_top, s.fade_side, s.fade_round) == ("corner", 50, 30, 50)
 s = Settings(); s.apply({"art_fade": "x", "fade_top": 7, "fade_round": 5})
 assert (s.art_fade, s.fade_top, s.fade_round) == ("edges", 50, 50), "old row counts fall back"
-rows = {it.label: it for it in sm.build_items(App())}
-for label in ("art fade", "fade top", "fade side", "fade round"):
-    assert rows[label].section == "art", label
+items = sm.arrange(sm.build_items(App()))
+rows = {it.label: it for it in items if it.section == "art fade"}
+assert list(rows) == ["fade", "fade start", "fade top", "fade side", "fade round"], list(rows)
+assert not any(it.section == "art" and "fade" in it.label for it in items), "fade has its own tab"
+assert rows["fade start"].value() == "100%"
 assert rows["fade top"].value() == "50%" and rows["fade round"].value() == "50%"
 a = App(); a.styles()
-assert console._decor["fade"] == ("edges", 50, 20, 50)
+assert console._decor["fade"] == ("edges", 50, 20, 50, 100)
 # d in the gallery steps it; esc puts it back, enter keeps
 g = App()
 seq = iter(["d", keys.ENTER])
@@ -102,4 +107,15 @@ for mode, args in (("edges", lambda v: (v, 0, 50)), ("edges", lambda v: (0, v, 5
     assert got[0] == ink(pic) and pic.faded(mode, *args(0)).lines == pic.lines, (mode, got)
     assert got[-1] == 0, (mode, got)
     assert all(a >= b for a, b in zip(got, got[1:])) and got[5] > got[9], (mode, got)
+# fade start: only that share of the picture fades, the rest stays whole,
+# and the fade stays a strength inside it
+for mode, edge in (("edges", lambda p: p.lines[:6]), ("corner", lambda p: [l[:30] for l in p.lines[:6]])):
+    third = pic.faded(mode, 70, 0, 70, 30)
+    near = lambda p: [l[p.width // 3:] for l in p.lines[p.height // 2:]]   # the half far from the fade
+    assert near(third) == near(pic), mode
+    assert edge(third) != edge(pic), mode
+    assert ink(pic.faded(mode, 100, 0, 100, 30)) < ink(third), mode
+    assert ink(third) > ink(pic.faded(mode, 70, 0, 70, 100)), "a shorter fade keeps more"
+    assert pic.faded(mode, 0, 0, 0, 30).lines == pic.lines
+assert pic.faded("edges", 50, 20, 50, 30) is not pic.faded("edges", 50, 20, 50, 60)
 print("ALL OK")

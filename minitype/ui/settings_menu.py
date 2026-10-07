@@ -16,7 +16,8 @@ from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICU
                       FUN_BOUNCE, FUN_SWITCH, FUN_CARET, EFFECT_SPEEDS,
                       FLOW_DIRECTIONS, CORRECTED, TYPOS, BORDER_STYLES,
                       ART_SCOPES, ART_STYLES, ART_COLOURS, THEME_BACKGROUNDS,
-                      ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS)
+                      ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS,
+                      FADE_STARTS)
 from ..terminal.art import ART_NAMES, THEME_ART
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import storage
@@ -261,9 +262,10 @@ def build_items(app):
         b.choice("fade top", "fade_top", FADE_TOPS,
                  value=lambda: f"{s.fade_top}%",
                  help="edges fade, down from the top: 0% leaves the art alone, "
-                      "100% leaves none of it; in between it eats further down "
-                      "on an exponential curve (light dithering where it "
-                      "starts, almost nothing left at the top)",
+                      "100% leaves none of it (as far as fade start reaches); "
+                      "in between it fades harder, on an exponential curve "
+                      "(light dithering where it starts, almost nothing left "
+                      "at the top)",
                  tags=("art", "fade", "dither", "vertical")),
         b.choice("fade side", "fade_side", FADE_SIDES,
                  value=lambda: f"{s.fade_side}%",
@@ -274,6 +276,14 @@ def build_items(app):
                  help="corner fade, closing in on the bottom right corner: 0% "
                       "none, 100% no art left",
                  tags=("art", "fade", "dither", "corner", "round")),
+        b.choice("fade start", "fade_start", FADE_STARTS,
+                 value=lambda: f"{s.fade_start}%",
+                 help="where the fade starts: how far into the picture it "
+                      "reaches from its edge (the top, the left, or the far "
+                      "corner). 100% the whole picture, 30% only the outer "
+                      "third; the rest stays whole. Set it to suit your "
+                      "window size",
+                 tags=("art", "fade", "dither", "start", "reach", "size")),
         b.flag("text panel", "art_panel",
                "the art full size over the whole screen, and the text in a "
                "panel of its own on top of it, bordered like the screen, "
@@ -497,10 +507,10 @@ LAYOUT = [
                ("look", "heat"), ("look", "bold / italic")]),
     ("art", [("look", "theme art", "show art"), ("fun", "art style"),
              ("look", "picture"), ("look", "picture colours"),
-             ("fun", "art colours", "art shading"), ("look", "art fade"),
-             ("look", "fade top"), ("look", "fade side"), ("look", "fade round"),
-             ("look", "text panel"),
+             ("fun", "art colours", "art shading"), ("look", "text panel"),
              ("look", "art behind text")]),
+    ("art fade", [("look", "art fade", "fade"), ("look", "fade start"),
+                  ("look", "fade top"), ("look", "fade side"), ("look", "fade round")]),
     ("effects", [("fun", "bounce"), ("fun", "shake"), ("fun", "pop"), ("fun", "fade"),
                  ("fun", "caret effect"), ("fun", "glitch"), ("fun", "effect speed"),
                  ("fun", "flow direction")]),

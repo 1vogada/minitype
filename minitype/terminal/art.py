@@ -594,25 +594,28 @@ class Picture:
         self._wider = {}
         self.back = bool(piece.back_parts)        # it has background colours
 
-    def faded(self, mode, top=50, side=20, radius=50):
+    def faded(self, mode, top=50, side=20, radius=50, start=100):
         """The picture dissolving into the screen instead of stopping on a
         straight line. Each fade is a strength, 0 to 100: 0 leaves the art
-        alone, 100 leaves none of it, and in between the fade eats in
-        further. "edges" fades down from the top (`top`) and in from the
-        left (`side`); "corner" fades in towards the bottom right corner
-        (`radius`). The fade is an exponential curve: light dithering where
-        it starts, almost nothing left where it comes from. Cells fade by an ordered dither: solid colour steps
+        alone, 100 leaves none of it, and in between it fades harder.
+        "edges" fades down from the top (`top`) and in from the left
+        (`side`); "corner" fades in towards the bottom right corner
+        (`radius`). `start` is where a fade starts: how far in from its
+        edge it reaches, as a % of the picture (100 the whole of it, 30 the
+        outer third; the rest is left alone). The fade is an exponential
+        curve: light dithering where it starts, almost nothing left at the
+        edge it comes from. Cells fade by an ordered dither: solid colour steps
         down through ▓ ▒ ░ in its own colour (it bleeds out), thinner
         marks drop out. Only for pictures with backgrounds (blocks,
         combined); the same settings give the same picture back."""
         if mode not in ("edges", "corner"):
             return self
-        key = (mode, top, side, radius)
+        key = (mode, top, side, radius, start)
         cache = self.__dict__.setdefault("_faded", {})
         if key not in cache:
             if len(cache) > 8:
                 cache.clear()
-            cache[key] = _fade(self, mode, top, side, radius)
+            cache[key] = _fade(self, mode, top, side, radius, start)
         return cache[key]
 
     def wider(self, width):
@@ -712,7 +715,7 @@ def _curve(t):
     return 1.0 - (math.exp(CURVE * (1 - t)) - 1) / (math.exp(CURVE) - 1)
 
 
-def _fade(pic, mode, top, side, radius):
+def _fade(pic, mode, top, side, radius, start=100):
     """A copy of the picture with its edges dithered away (see faded).
 
     How much of each cell is left (alpha) follows an exponential curve,
@@ -726,15 +729,19 @@ def _fade(pic, mode, top, side, radius):
     h, w = pic.height, pic.width
     far = (h ** 2 + (w / 2) ** 2) ** 0.5           # the corner's farthest reach (cells are tall)
 
+    reach = max(1, min(100, start)) / 100          # the share of the picture a fade covers
+
     def faded_by(t, strength):
-        """How much is left at t (0 where the fade comes from, 1 the far
-        side) for a fade this strong (0..100): 0 leaves everything, 100
-        nothing; in between the exponential curve slides across."""
-        if strength <= 0:
+        """How much is left at t (0 the edge the fade comes from, 1 the far
+        side) for a fade this strong (0..100). Past `reach` nothing fades;
+        inside it, 0 leaves everything, 100 nothing, and in between the
+        exponential curve is raised to a power that grows with the
+        strength (50: the curve itself), so it fades harder all over."""
+        if strength <= 0 or t >= reach:
             return 1.0
         if strength >= 100:
             return 0.0
-        return _curve(t + 1 - 2 * strength / 100)
+        return _curve(t / reach) ** (strength / (100 - strength))
 
     def alpha(r, c):
         if mode == "edges":
