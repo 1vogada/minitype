@@ -1,6 +1,7 @@
 """Ctrl-o: the settings from anywhere. In the middle of a test the test
 is paused (its clock stops) and, coming back, a box asks whether to
-resume it or leave it."""
+resume it or leave it. The same box pauses a test on esc, and shows
+short warnings (warn)."""
 
 import time
 
@@ -27,13 +28,35 @@ def open_settings(app):
         test.abandoned = True
 
 
-def resume_dialog(app, redraw):
+WARN_SECS = 1.5
+
+
+def warn(app, text, redraw=None, secs=WARN_SECS):
+    """A warning in the pause box over the screen for `secs` seconds; keys
+    pressed meanwhile are dropped. redraw draws the screen behind (the
+    last frame again by default)."""
+    redraw = redraw or console.repaint
+    try:
+        console.set_overlay(_message(app.styles(), text))
+        redraw()
+        end = time.time() + secs
+        while time.time() < end:
+            if keys.key_ready():
+                keys.read_key()
+            else:
+                time.sleep(0.02)
+    finally:
+        console.set_overlay(None)
+    redraw()
+
+
+def resume_dialog(app, redraw, title="Resume?"):
     """Yes / No over the screen behind: True to resume. Left / right (or
     tab) pick, enter confirms, y and n answer at once, esc resumes."""
     choice = 0
     try:
         while True:
-            console.set_overlay(_box(app.styles(), choice))
+            console.set_overlay(_box(app.styles(), choice, title))
             redraw()
             key = keys.read_key()
             if key in (keys.LEFT, keys.RIGHT, keys.TAB, keys.SHIFT_TAB):
@@ -50,11 +73,22 @@ def resume_dialog(app, redraw):
         console.set_overlay(None)
 
 
-def _box(st, choice):
+def _message(st, text):
+    """The pause box with a message in it instead of a question."""
+    inner = max(26, len(text) + 4)
+    line = st.title + "║" + RESET
+    pad = inner - len(text)
+    return [f"{st.title}╔{'═' * inner}╗{RESET}",
+            line + " " * inner + line,
+            line + " " * (pad // 2) + f"{st.title}{text}{RESET}" + " " * (pad - pad // 2) + line,
+            line + " " * inner + line,
+            f"{st.title}╚{'═' * inner}╝{RESET}"]
+
+
+def _box(st, choice, title="Resume?"):
     """The dialog: a double-lined box with the question and the two
     answers, the chosen one marked and highlighted."""
     inner = 26
-    title = "Resume?"
 
     def option(label, on):
         return (f"{st.title}>{INV} {label} {RESET}" if on

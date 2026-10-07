@@ -65,8 +65,8 @@ s = Settings()
 assert ART_FADES[0] == "edges"
 s.apply({"art_fade": "corner", "fade_top": 50, "fade_side": 30, "fade_round": 50})
 assert (s.art_fade, s.fade_top, s.fade_side, s.fade_round) == ("corner", 50, 30, 50)
-s = Settings(); s.apply({"art_fade": "x", "fade_top": 7, "fade_round": 5})
-assert (s.art_fade, s.fade_top, s.fade_round) == ("edges", 50, 50), "old row counts fall back"
+s = Settings(); s.apply({"art_fade": "x", "fade_top": 140, "fade_round": -5})
+assert (s.art_fade, s.fade_top, s.fade_round) == ("edges", 50, 50), "out of range falls back"
 items = sm.arrange(sm.build_items(App()))
 rows = {it.label: it for it in items if it.section == "art fade"}
 assert list(rows) == ["fade", "fade start", "fade top", "fade side", "fade round"], list(rows)

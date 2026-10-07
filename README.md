@@ -63,10 +63,18 @@ minitype
   whenever you're searching. Backspace clears a plain search in one go;
   once it has a `#`, backspace deletes one character. `[` `]` aren't typed
   into the search, they switch sections. Esc clears the search, then leaves.
-- **during a test**: esc menu, tab restart, ctrl-backspace deletes a word;
-  in zen mode enter finishes
+  On a number setting (min speed, fade top, book page, ...) typing a digit
+  enters a number for it instead: type any number in its range, enter
+  sets it, esc cancels; a number it can't take shows a warning in the
+  pause box for 1.5 seconds. Left / right still step through the usual
+  values.
+- **during a test**: esc pauses it (the clock stops; the box asks
+  "Paused - resume?": enter or esc resumes, No leaves); with nothing typed
+  yet, or with settings → typing screen → pause on esc off, esc goes
+  straight to the menu. Tab restarts, ctrl-backspace deletes a word; in
+  zen mode enter finishes
 - **settings** are in sections: rules, challenges, text, drills, theme,
-  art, effects, typing screen, interface, results, progress. Old section
+  art, art fade, effects, typing screen, interface, results, progress. Old section
   names still work as search tags (#look, #fun, #header, #words)
 - **anywhere**: ctrl-q wipes the screen and exits; ctrl-o opens the
   settings. In the middle of a test it's paused (the clock stops), and

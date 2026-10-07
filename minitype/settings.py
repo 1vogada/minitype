@@ -10,7 +10,7 @@ from .config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS,
                      BORDER_STYLES, ART_SCOPES, ART_STYLES, ART_COLOURS,
                      THEME_BACKGROUNDS,
                      ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS,
-                     FADE_STARTS)
+                     FADE_STARTS, NUMBER_RANGES)
 from .terminal.style import theme_names
 from .words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 
@@ -122,6 +122,7 @@ class Settings:
     fade_side: int = 20          # edges, from the left: 0 no fade .. 100 no art
     fade_round: int = 50         # corner, towards the bottom right: 0 no fade .. 100 no art
     fade_start: int = 100        # how far in from its edge a fade reaches, % of the picture
+    esc_pause: bool = True       # esc in a test pauses it (resume? yes / no) instead of leaving
     art_picture: str = "theme"   # the theme's own picture, or any picture's name (a remix)
     art_recolour: str = "theme"  # a remixed picture in the theme's colours, or its own theme's
     # a theme's effects, each of which can be switched off
@@ -228,7 +229,11 @@ class Settings:
             allowed = CHOICES.get(f.name)
             if callable(allowed):
                 allowed = allowed()
-            if allowed is not None and v not in allowed:
+            if f.name in NUMBER_RANGES:          # any number in its range
+                lo, hi = NUMBER_RANGES[f.name]
+                if not lo <= v <= hi:
+                    continue
+            elif allowed is not None and v not in allowed:
                 continue
             if f.name in ("time_amount", "word_amount") and not 0 < v <= 3600:
                 continue

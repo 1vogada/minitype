@@ -35,6 +35,7 @@ BORDERS = {
 # the theme's frame and corner art, set by set_decor()
 _decor = {"border": None, "border_style": "", "art": None, "art_scope": "menus",
           "behind": False, "panel": False, "shadow": "", "fade": None}
+_last_frame = []        # the last present()'s arguments, for repaint()
 _overlay = []           # lines of a box drawn over the middle of every frame (a dialog)
 
 
@@ -140,6 +141,7 @@ def present(lines, focus=None, pinned=(), scene="menu"):
     The theme's decorations go on here: the corner art (on menus, or on
     every `scene` if the art setting says so) and the border around it all."""
     global _last_size
+    _last_frame[:] = [lines, focus, pinned, scene]
     term = term_size()
     if term != _last_size:
         write("\x1b[2J")
@@ -393,6 +395,12 @@ def _panel(rows, text, width, top):
     if r < len(out):
         out[r] = _splice(out[r], 1, shade * min(bw, width - 1))   # and along the bottom
     return out
+
+
+def repaint():
+    """Draw the last frame again (after the overlay changed)."""
+    if _last_frame:
+        present(*_last_frame)
 
 
 def set_overlay(lines):

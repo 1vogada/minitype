@@ -12,7 +12,7 @@ Then `docs/art-notes.md` for anything about the corner art.
   when asked ("push it"); when asked to do several things, push after each.
 - Run the app: `python -m minitype` (Python 3.10+, no dependencies).
 - Tests: `python tests/run_all.py` (or `python tests/run_all.py decor`).
-  Each `*_check.py` prints `ALL OK`; 25 checks with smoke4. They run against
+  Each `*_check.py` prints `ALL OK`; 26 checks with smoke4. They run against
   the real modules with the terminal mocked. `tests/menu_look.py` prints a
   menu frame as text (`python tests/menu_look.py 120 34 ember sidebar left`)
   and `tests/shows_check.py` reports which art the app actually draws at
@@ -65,6 +65,10 @@ Then `docs/art-notes.md` for anything about the corner art.
 - Settings sections: rules, challenges, text, drills, theme, art,
   art fade, effects, typing screen, interface, results, progress.
 - Background bars fix (blank after a bg cell takes its own code).
+- Number settings take a typed number (config `NUMBER_RANGES`, any
+  value in range is saved; `settings_menu.number_keys`); a wrong one
+  shows `anywhere.warn` - the pause box for 1.5 s. Esc in a test pauses
+  it (`runner.pause`, setting `esc_pause`, typing screen → pause on esc).
 
 ## First thing in a new session
 Ask the user whether to add an **"outline only" option for the text

@@ -6,6 +6,10 @@ its section ("#colour", "#look"). The search bar shows whenever there's a
 search. Backspace clears a plain search in one go; once it has a # in it,
 backspace deletes a character at a time. [ and ] aren't typed into the
 search: they switch sections, like tab and shift-tab.
+
+On a number setting (min speed, fade top, ...), typing a digit starts
+entering a number for it instead: enter sets it, esc cancels. A number
+outside the setting's range shows a warning in the pause box.
 """
 
 from ..words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
@@ -17,15 +21,16 @@ from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICU
                       FLOW_DIRECTIONS, CORRECTED, TYPOS, BORDER_STYLES,
                       ART_SCOPES, ART_STYLES, ART_COLOURS, THEME_BACKGROUNDS,
                       ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS,
-                      FADE_STARTS)
+                      FADE_STARTS, NUMBER_RANGES)
 from ..terminal.art import ART_NAMES, THEME_ART
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import storage
 from ..terminal import console, keys
 from ..terminal.style import INV, RESET
-from ..util import cycle
+from ..util import cycle, step_number
 from .book_menu import edit_book_filter, filter_label
 from .key_editor import key_editor
+from .anywhere import warn
 from .menu import Item, Menu, title_lines
 from .preview import theme_sample
 from .screen import menu_loop
@@ -33,6 +38,7 @@ from .theme_creator import theme_creator
 
 HINTS = "type to search   #tag   tab / [ ] section   esc back"
 BACK = object()     # returned from the key handler to leave the menu
+ENTRY = {"name": None, "text": ""}   # a number being typed into a setting
 NOT_SEARCHABLE = ("[", "]")   # these switch sections instead
 
 
@@ -53,11 +59,27 @@ class Builder:
 
     def choice(self, label, name, seq, value=None, help="", tags=()):
         s = self.s
+        value = value or (lambda: str(getattr(s, name)))
+        if name not in NUMBER_RANGES:
+            def step(d):
+                return lambda: setattr(s, name, cycle(seq, getattr(s, name), step=d))
+            return Item("", label, step(1), value, back=step(-1), help=help,
+                        section=self.section, tags=tags)
 
+        # a number: steps through its list, or takes the number you type
         def step(d):
-            return lambda: setattr(s, name, cycle(seq, getattr(s, name), step=d))
-        return Item("", label, step(1), value or (lambda: str(getattr(s, name))),
-                    back=step(-1), help=help, section=self.section, tags=tags)
+            return lambda: setattr(s, name, step_number(seq, getattr(s, name), step=d))
+
+        def shown():
+            if ENTRY["name"] == name:
+                return f"{INV}{ENTRY['text']}{RESET}{INV} {RESET}"
+            return value()
+        lo, hi = NUMBER_RANGES[name]
+        help = (help + ". " if help else "") + f"Type a number to set it ({lo}-{hi})"
+        item = Item("", label, step(1), shown, back=step(-1), help=help,
+                    section=self.section, tags=tags + ("number",))
+        item.number = name
+        return item
 
     def item(self, label, action, value=None, back=None, help="", tags=()):
         return Item("", label, action, value, back=back, help=help,
@@ -108,6 +130,10 @@ def build_items(app):
                  help="letter: a wrong key doesn't move the cursor. "
                       "word: you can't leave a wrong word",
                  tags=("mistakes", "errors", "cursor", "letter", "word")),
+        b.flag("pause on esc", "esc_pause",
+               "esc in the middle of a test pauses it (its clock stops) and "
+               "asks whether to resume; off: esc leaves the test at once",
+               tags=("pause", "escape", "esc", "resume", "quit")),
         b.choice("backspace", "backspace", BACKSPACE_MODES,
                  help="normal: fix the word you're on, or step back into a wrong "
                       "one. off: no corrections at all (confidence mode). "
@@ -514,7 +540,7 @@ LAYOUT = [
     ("effects", [("fun", "bounce"), ("fun", "shake"), ("fun", "pop"), ("fun", "fade"),
                  ("fun", "caret effect"), ("fun", "glitch"), ("fun", "effect speed"),
                  ("fun", "flow direction")]),
-    ("typing screen", [("look", "caret"), ("look", "word gap"), ("look", "tape"),
+    ("typing screen", [("test", "pause on esc"), ("look", "caret"), ("look", "word gap"), ("look", "tape"),
                        ("look", "ghost"), ("look", "pace caret"),
                        ("header", "timer", "show timer"), ("header", "progress", "show progress"),
                        ("header", "live wpm", "show live wpm"), ("header", "combo", "show combo"),
@@ -548,6 +574,53 @@ def arrange(items):
                 it.label = spec[2]
             out.append(it)
     return out + [it for it in items if id(it) not in placed]
+
+
+def parse_number(name, text):
+    """The number typed for setting `name`, or None if it isn't one it can
+    take (out of its range, or a fraction for a whole-number setting)."""
+    lo, hi = NUMBER_RANGES[name]
+    try:
+        v = float(text) if isinstance(lo, float) else int(text)
+    except ValueError:
+        return None
+    return v if lo <= v <= hi else None
+
+
+def number_keys(app, menu, key):
+    """Typing a number into the selected number setting; returns (handled,
+    result) for menu_loop, like search_keys."""
+    item = menu.selected if menu.items else None
+    name = getattr(item, "number", None)
+    if ENTRY["name"] is None:
+        if name and not menu.query and keys.is_char(key) and key.isdigit():
+            ENTRY.update(name=name, text=key)
+            return True, None
+        return False, None
+    if ENTRY["name"] != name:                # the row changed under it
+        ENTRY.update(name=None, text="")
+        return False, None
+    text = ENTRY["text"]
+    if keys.is_char(key) and (key.isdigit() or key == "."):
+        ENTRY["text"] = (text + key)[:8]
+        return True, None
+    if key == keys.BACKSPACE:
+        ENTRY["text"] = text[:-1]
+        if not ENTRY["text"]:
+            ENTRY["name"] = None
+        return True, None
+    ENTRY.update(name=None, text="")
+    if key == keys.ENTER:
+        v = parse_number(name, text)
+        if v is None:
+            lo, hi = NUMBER_RANGES[name]
+            warn(app, f"{item.label}: {lo} to {hi}, not {text}")
+        else:
+            setattr(app.settings, name, v)
+        return True, None
+    if key == keys.ESC:
+        return True, None                     # cancelled
+    return False, None                        # anything else: cancel, then do it
 
 
 def search_keys(menu, key):
@@ -596,8 +669,13 @@ def draw(app, st, menu):
 
 def settings_menu(app):
     menu = Menu(build_items(app), app.cursors, "settings")
+    ENTRY.update(name=None, text="")
+
+    def extra(key):
+        handled, result = number_keys(app, menu, key)
+        return (handled, result) if handled else search_keys(menu, key)
     menu_loop(app, menu, lambda st, m: draw(app, st, m), HINTS,
-              extra=lambda key: search_keys(menu, key),
+              extra=extra,
               back_keys=(keys.CTRL_C,))
     app.save()
     return None

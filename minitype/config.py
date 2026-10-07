@@ -26,6 +26,15 @@ ART_FADES = ["edges", "corner", "off"]       # how the art dissolves into the sc
 FADE_LEVELS = list(range(0, 101, 10))          # a fade's strength: 0 none .. 100 no art left
 FADE_TOPS = FADE_SIDES = FADE_ROUNDS = FADE_LEVELS
 FADE_STARTS = list(range(10, 101, 10))        # how far into the picture a fade reaches, %
+# number settings take any number you type in this range (lowest, highest);
+# left / right still step through their lists
+NUMBER_RANGES = {
+    "min_wpm": (0, 300), "min_acc": (0, 100), "memory": (0, 60),
+    "weak_pct": (0, 100), "bad_words_pct": (0, 100), "book_page": (10, 2000),
+    "fade_top": (0, 100), "fade_side": (0, 100), "fade_round": (0, 100),
+    "fade_start": (1, 100), "pace": (0, 300), "effect_speed": (0.25, 4.0),
+    "daily_goal": (0, 600),
+}
 ART_SCOPES = ["off", "menus", "everywhere"]  # where the theme's picture shows
 ART_STYLES = ["revamp", "blocks", "detailed", "og", "combined"]   # hand-drawn line art,
                     # pixel art, shaded ASCII, the originals, or every technique at once

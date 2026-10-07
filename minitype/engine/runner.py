@@ -491,6 +491,17 @@ def run_test(app, spec):
         app.current_test = None
 
 
+def pause(app, test, paint):
+    """Esc in a test that's under way: the clock stops and the pause box
+    asks whether to resume. True to carry on, False to leave the test."""
+    from ..ui.anywhere import resume_dialog     # the ui imports the engine
+    paused = time.time()
+    if resume_dialog(app, paint, "Paused - resume?"):
+        test.resume_after(time.time() - paused)
+        return True
+    return False
+
+
 def _run(app, test, paint):
     last_draw = 0.0
     dirty = True
@@ -517,6 +528,10 @@ def _run(app, test, paint):
 
         key = keys.read_key(resize=False)
         dirty = True
+        if key == keys.ESC and app.settings.esc_pause and test.start is not None:
+            if pause(app, test, paint):
+                continue
+            return MENU
         nav = test.handle(key, time.time())
         if nav is not None:
             return nav
