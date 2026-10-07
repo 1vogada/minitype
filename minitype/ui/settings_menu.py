@@ -259,8 +259,12 @@ def build_items(app):
                       "in the gallery with d",
                  tags=("art", "fade", "dither", "dithering", "edge", "bleed", "round")),
         b.choice("fade top", "fade_top", FADE_TOPS,
-                 value=lambda: f"{s.fade_top} rows",
-                 help="edges fade: how many rows the art's top fades over",
+                 value=lambda: f"{s.fade_top}%",
+                 help="edges fade: how much of the art's height it climbs "
+                      "through, on an exponential curve - light dithering "
+                      "where it starts, thickening towards the top, almost "
+                      "nothing left at the very top. 100% runs the whole "
+                      "picture, 0% leaves the top alone",
                  tags=("art", "fade", "dither", "vertical")),
         b.choice("fade side", "fade_side", FADE_SIDES,
                  value=lambda: f"{s.fade_side} cols",

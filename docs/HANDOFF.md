@@ -73,7 +73,9 @@ the project is picked up with an AI until answered - see CLAUDE.md /
 AGENTS.md at the repo root.
 
 ## Known issues
-- The **art fade settings don't fully work** yet: they only apply to
+- The **art fade settings don't fully work** yet (the vertical fade is now
+  an exponential curve over the whole picture, subject kept whole - that
+  part is as intended): they only apply to
   pictures with background colours; the edge beside the menu text still
   steps; nothing bleeds above the picture's top; the amounts weren't
   checked in a real terminal.

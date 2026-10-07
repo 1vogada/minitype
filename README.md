@@ -203,9 +203,13 @@ Skipping pages:
   like one strip repeated
 - **art fade** (settings → art, `d` in the gallery): the art dissolves into
   the screen instead of stopping on a straight line - dithered, its colour
-  thinning through ▓ ▒ ░. *edges* (default) fades the top and left side
-  (**fade top** rows, **fade side** columns); *corner* keeps a round patch
-  from the bottom right corner (**fade round**, % of the picture); *off*
+  thinning through ▓ ▒ ░ on an exponential curve: light dithering for most
+  of the way, thickening faster and faster, almost nothing left at the very
+  top. The picture's subject (moon, fire, keyboard) stays whole; the
+  scenery fades. *edges* (default) climbs through **fade top** (% of the
+  picture's height, 100% = all of it) and over **fade side** columns on
+  the left; *corner* keeps a round patch from the bottom right corner
+  (**fade round**, % of the picture); *off*
 - **text panel** (settings → art, off by default, `p` in the gallery):
   the art full size over the whole screen and the text in a panel of its
   own on top, bordered like the screen with a shaded drop shadow; the key

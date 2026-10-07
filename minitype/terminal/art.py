@@ -19,6 +19,7 @@ its own lines; without "art" it uses its base theme's.
 
 import base64
 import json
+import math
 import random
 import re
 import zlib
@@ -593,12 +594,13 @@ class Picture:
         self._wider = {}
         self.back = bool(piece.back_parts)        # it has background colours
 
-    def faded(self, mode, top=5, side=12, radius=70):
-        """The picture dissolving into the screen at its edges instead of
-        stopping on a straight line: "edges" fades the top `top` rows and
-        the left `side` columns, "corner" keeps a round patch from the
-        bottom right corner (`radius` percent of the picture) and fades
-        out from there. Cells fade by an ordered dither: solid colour steps
+    def faded(self, mode, top=100, side=12, radius=70):
+        """The picture dissolving into the screen instead of stopping on a
+        straight line: "edges" fades up through `top` percent of its height
+        (and over its left `side` columns), "corner" keeps a round patch
+        from the bottom right corner (`radius` percent of the picture) and
+        fades out from there. The fade is an exponential curve: light
+        dithering where it starts, almost nothing left where it ends. Cells fade by an ordered dither: solid colour steps
         down through ▓ ▒ ░ in its own colour (it bleeds out), thinner
         marks drop out. Only for pictures with backgrounds (blocks,
         combined); the same settings give the same picture back."""
@@ -694,47 +696,74 @@ _BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
 _SHADES = "░▒▓"
 
 
-def _fade(pic, mode, top, side, radius):
-    """A copy of the picture with its edges dithered away (see faded)."""
-    h, w = pic.height, pic.width
+CURVE = 3.0                  # how sharply the fade climbs (an exponential)
+SUBJECT_KEEPS = 0.9          # the least of the subject (the focus) a fade leaves
 
-    def smooth(t):
-        t = min(1.0, max(0.0, t))
-        return t * t * (3 - 2 * t)
+
+def _curve(t):
+    """How much of the art is left, t from where the fade ends (0, the
+    picture's top) to where it starts (1): an exponential - light dithering
+    for most of the way, thickening faster and faster towards the end, so
+    almost nothing is left at the very top."""
+    t = min(1.0, max(0.0, t))
+    return 1.0 - (math.exp(CURVE * (1 - t)) - 1) / (math.exp(CURVE) - 1)
+
+
+def _fade(pic, mode, top, side, radius):
+    """A copy of the picture with its edges dithered away (see faded).
+
+    How much of each cell is left (alpha) follows an exponential curve,
+    and the cell is drawn at one of five levels - gone, ░, ▒, ▓, whole -
+    picked by an ordered (Bayer) dither, so the density follows the curve
+    smoothly: a solid colour thins through shades of itself (it bleeds
+    out), a thin mark (a line, a letter) just drops out more often. The
+    picture's subject (its focus: the moon, the fire, the keyboard) keeps at
+    least SUBJECT_KEEPS of itself; it's the scenery that fades."""
+    h, w = pic.height, pic.width
+    rise = max(1.0, h * top / 100)               # rows the vertical fade climbs through
 
     def alpha(r, c):
         if mode == "edges":
-            a = smooth((r + 0.5) / top) if top else 1.0
-            return a * (smooth((c + 0.5) / side) if side else 1.0)
+            a = _curve((r + 0.5) / rise) if top else 1.0
+            return a * (_curve((c + 0.5) / side) if side else 1.0)
         reach = max(h, w / 2) * radius / 100        # columns count half: cells are tall
         d = ((h - r) ** 2 + ((w - c) / 2) ** 2) ** 0.5
-        return 1.0 - smooth((d - reach * 0.55) / (reach * 0.45))
+        return _curve(1.0 - (d - reach * 0.35) / (reach * 0.65))
 
     lines, codes = [], []
     for r in range(h):
         row, rc = list(pic.lines[r]), list(pic._codes[r])
+        subject = pic.keep[r] if r < len(pic.keep) else w
         for c in range(w):
             a = alpha(r, c)
+            if c >= subject:
+                a = max(a, SUBJECT_KEEPS)        # the subject only lightly touched
             if a >= 0.999:
                 continue
-            v = a + (_BAYER[r % 4][c % 4] / 16 - 0.47) * 0.4
             ch, code = row[c], rc[c]
-            if v < 0.12 or ch == " " and "\x1b[48;" not in code:
+            if ch == " " and "\x1b[48;" not in code:
+                continue
+            threshold = (_BAYER[r % 4][c % 4] + 0.5) / 16
+            solid = ch == "█" or "\x1b[48;" in code
+            if not solid:
+                if a <= threshold:                   # a thin mark: there or not
+                    row[c], rc[c] = " ", ""
+                continue
+            level = min(4, int(a * 4 + threshold))   # 0 gone .. 4 whole
+            if level >= 4:
+                continue
+            if level == 0:
                 row[c], rc[c] = " ", ""
                 continue
-            solid = ch == "█" or "\x1b[48;" in code
-            if solid and v < 0.9:
-                # its colour, thinned: the background colour (or the full
-                # block's) as the ink of a shade
-                bg = re.findall(r"\x1b\[48;([0-9;]*)m", code)
-                fg = re.findall(r"\x1b\[38;([0-9;]*)m", code)
-                colour = bg[-1] if bg else (fg[-1] if fg else None)
-                if colour is None:
-                    continue
-                row[c] = _SHADES[0 if v < 0.4 else 1 if v < 0.65 else 2]
-                rc[c] = "\x1b[38;" + colour + "m"
-            elif not solid and v < 0.5:
-                row[c], rc[c] = " ", ""
+            # its colour, thinned: the background colour (or the full
+            # block's) as the ink of a shade
+            bg = re.findall(r"\x1b\[48;([0-9;]*)m", code)
+            fg = re.findall(r"\x1b\[38;([0-9;]*)m", code)
+            colour = bg[-1] if bg else (fg[-1] if fg else None)
+            if colour is None:
+                continue
+            row[c] = _SHADES[level - 1]
+            rc[c] = "\x1b[38;" + colour + "m"
         lines.append("".join(row))
         codes.append(rc)
     out = object.__new__(Picture)

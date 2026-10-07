@@ -116,7 +116,7 @@ class Settings:
     art_behind: bool = False     # art always full size, text drawn over it
     art_panel: bool = False      # art full size, the text in a bordered panel over it
     art_fade: str = "edges"      # how the art dissolves at its edges: edges / corner / off
-    fade_top: int = 5            # edges: rows it fades over at the top
+    fade_top: int = 100          # edges: % of the art's height it fades up through
     fade_side: int = 12          # edges: columns it fades over at the left
     fade_round: int = 70         # corner: how big the round patch is, % of the picture
     art_picture: str = "theme"   # the theme's own picture, or any picture's name (a remix)
