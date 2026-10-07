@@ -12,7 +12,8 @@ from a zip or a fresh clone), until the user has answered. Then do what
 they say, and delete this question from CLAUDE.md and AGENTS.md.
 
 **Known issue:** the art fade settings (Settings → art fade tab: fade, fade
-start, fade top, fade side, fade round; `d` in the gallery) don't fully work yet. Each
+top, fade start top, fade side, fade start, fade angle, fade round, fade
+curve; `d` in the gallery) don't fully work yet. Each
 amount is a strength (0% = no fade, 100% = no art as far as fade start
 reaches, in between = more and more faded, on an exponential curve with the subject kept whole until
 the very end) - that part is as intended. But the fade only applies to

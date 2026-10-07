@@ -21,7 +21,7 @@ from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICU
                       FLOW_DIRECTIONS, CORRECTED, TYPOS, BORDER_STYLES,
                       ART_SCOPES, ART_STYLES, ART_COLOURS, THEME_BACKGROUNDS,
                       ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS,
-                      FADE_STARTS, NUMBER_RANGES)
+                      FADE_STARTS, FADE_ANGLES, FADE_CURVES, NUMBER_RANGES)
 from ..terminal.art import ART_NAMES, THEME_ART
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import storage
@@ -302,14 +302,35 @@ def build_items(app):
                  help="corner fade, closing in on the bottom right corner: 0% "
                       "none, 100% no art left",
                  tags=("art", "fade", "dither", "corner", "round")),
+        b.choice("fade start top", "fade_start_top", FADE_STARTS,
+                 value=lambda: f"{s.fade_start_top}%",
+                 help="where the top fade starts: how far down the picture "
+                      "it reaches. 100% the whole height, 30% only the top "
+                      "third; below that the art stays whole. Set it to suit "
+                      "your window size",
+                 tags=("art", "fade", "dither", "start", "reach", "size", "top", "vertical")),
         b.choice("fade start", "fade_start", FADE_STARTS,
                  value=lambda: f"{s.fade_start}%",
-                 help="where the fade starts: how far into the picture it "
-                      "reaches from its edge (the top, the left, or the far "
-                      "corner). 100% the whole picture, 30% only the outer "
+                 help="where the side and corner fades start: how far into "
+                      "the picture they reach from the left, or from the far "
+                      "corner. 100% the whole picture, 30% only the outer "
                       "third; the rest stays whole. Set it to suit your "
                       "window size",
-                 tags=("art", "fade", "dither", "start", "reach", "size")),
+                 tags=("art", "fade", "dither", "start", "reach", "size", "side", "corner")),
+        b.choice("fade angle", "fade_angle", FADE_ANGLES,
+                 value=lambda: f"{s.fade_angle}°",
+                 help="tilts the side fade's edge: 0° straight up and down; "
+                      "positive leans its top in to the right (it fades "
+                      "further in at the top, less at the bottom), negative "
+                      "the other way",
+                 tags=("art", "fade", "dither", "side", "angle", "tilt", "slope")),
+        b.choice("fade curve", "fade_curve", FADE_CURVES,
+                 value=lambda: "straight" if s.fade_curve == 0 else str(s.fade_curve),
+                 help="how sharp the fade's exponential curve is: 0 a "
+                      "straight line (it thins evenly), 3 the default, 10 "
+                      "very sharp (light dithering almost all the way, then "
+                      "a quick drop to nothing at the edge)",
+                 tags=("art", "fade", "dither", "curve", "exponent", "sharpness")),
         b.flag("text panel", "art_panel",
                "the art full size over the whole screen, and the text in a "
                "panel of its own on top of it, bordered like the screen, "
@@ -535,8 +556,10 @@ LAYOUT = [
              ("look", "picture"), ("look", "picture colours"),
              ("fun", "art colours", "art shading"), ("look", "text panel"),
              ("look", "art behind text")]),
-    ("art fade", [("look", "art fade", "fade"), ("look", "fade start"),
-                  ("look", "fade top"), ("look", "fade side"), ("look", "fade round")]),
+    ("art fade", [("look", "art fade", "fade"), ("look", "fade top"),
+                  ("look", "fade start top"), ("look", "fade side"),
+                  ("look", "fade start"), ("look", "fade angle"),
+                  ("look", "fade round"), ("look", "fade curve")]),
     ("effects", [("fun", "bounce"), ("fun", "shake"), ("fun", "pop"), ("fun", "fade"),
                  ("fun", "caret effect"), ("fun", "glitch"), ("fun", "effect speed"),
                  ("fun", "flow direction")]),
@@ -593,7 +616,8 @@ def number_keys(app, menu, key):
     item = menu.selected if menu.items else None
     name = getattr(item, "number", None)
     if ENTRY["name"] is None:
-        if name and not menu.query and keys.is_char(key) and key.isdigit():
+        if name and not menu.query and keys.is_char(key) and (
+                key.isdigit() or (key == "-" and NUMBER_RANGES[name][0] < 0)):
             ENTRY.update(name=name, text=key)
             return True, None
         return False, None

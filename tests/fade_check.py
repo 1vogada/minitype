@@ -69,12 +69,14 @@ s = Settings(); s.apply({"art_fade": "x", "fade_top": 140, "fade_round": -5})
 assert (s.art_fade, s.fade_top, s.fade_round) == ("edges", 50, 50), "out of range falls back"
 items = sm.arrange(sm.build_items(App()))
 rows = {it.label: it for it in items if it.section == "art fade"}
-assert list(rows) == ["fade", "fade start", "fade top", "fade side", "fade round"], list(rows)
+assert list(rows) == ["fade", "fade top", "fade start top", "fade side", "fade start",
+                      "fade angle", "fade round", "fade curve"], list(rows)
 assert not any(it.section == "art" and "fade" in it.label for it in items), "fade has its own tab"
-assert rows["fade start"].value() == "100%"
+assert rows["fade start"].value() == "100%" and rows["fade start top"].value() == "100%"
+assert rows["fade angle"].value() == "0°" and rows["fade curve"].value() == "3"
 assert rows["fade top"].value() == "50%" and rows["fade round"].value() == "50%"
 a = App(); a.styles()
-assert console._decor["fade"] == ("edges", 50, 20, 50, 100)
+assert console._decor["fade"] == ("edges", 50, 20, 50, 100, 100, 0, 3)
 # d in the gallery steps it; esc puts it back, enter keeps
 g = App()
 seq = iter(["d", keys.ENTER])
@@ -110,12 +112,30 @@ for mode, args in (("edges", lambda v: (v, 0, 50)), ("edges", lambda v: (0, v, 5
 # fade start: only that share of the picture fades, the rest stays whole,
 # and the fade stays a strength inside it
 for mode, edge in (("edges", lambda p: p.lines[:6]), ("corner", lambda p: [l[:30] for l in p.lines[:6]])):
-    third = pic.faded(mode, 70, 0, 70, 30)
+    third = pic.faded(mode, 70, 0, 70, 30, 30)
     near = lambda p: [l[p.width // 3:] for l in p.lines[p.height // 2:]]   # the half far from the fade
     assert near(third) == near(pic), mode
     assert edge(third) != edge(pic), mode
-    assert ink(pic.faded(mode, 100, 0, 100, 30)) < ink(third), mode
+    assert ink(pic.faded(mode, 100, 0, 100, 30, 30)) < ink(third), mode
     assert ink(third) > ink(pic.faded(mode, 70, 0, 70, 100)), "a shorter fade keeps more"
-    assert pic.faded(mode, 0, 0, 0, 30).lines == pic.lines
+    assert pic.faded(mode, 0, 0, 0, 30, 30).lines == pic.lines
 assert pic.faded("edges", 50, 20, 50, 30) is not pic.faded("edges", 50, 20, 50, 60)
+# fade start top: the top fade's own reach; fade start no longer moves it
+top30 = pic.faded("edges", 70, 0, 50, 100, 30)
+assert top30.lines[pic.height // 2:] == pic.lines[pic.height // 2:] and top30.lines[0] != pic.lines[0]
+assert pic.faded("edges", 70, 0, 50, 30, 100).lines == pic.faded("edges", 70, 0, 50, 100, 100).lines
+assert ink(pic.faded("edges", 70, 0, 50, 100, 30)) > ink(pic.faded("edges", 70, 0, 50, 100, 100))
+# fade angle: the side fade's edge tilts - positive eats further in at the
+# top than at the bottom, negative the other way, 0 the same all the way down
+side_ink = lambda p, r: sum(ch not in " ░▒▓" for ch in p.lines[r][:p.width // 2])
+for ang, top_more in ((45, True), (-45, False)):
+    t = pic.faded("edges", 0, 80, 50, 40, 100, ang)
+    assert (side_ink(t, 0) < side_ink(t, pic.height - 1)) == top_more, ang
+straight = pic.faded("edges", 0, 80, 50, 40, 100, 0)
+assert straight.lines == pic.faded("edges", 0, 80, 50, 40).lines
+# fade curve: higher keeps it light for longer (more art), 0 is a straight line
+from minitype.terminal.art import _curve as cv
+assert cv(0.3, 0) == 0.3 and cv(0.3, 8) > cv(0.3, 3) > cv(0.3, 1)
+by_curve = [ink(pic.faded("edges", 50, 0, 50, 100, 100, 0, k)) for k in (0, 3, 10)]
+assert by_curve[0] < by_curve[1] < by_curve[2], by_curve
 print("ALL OK")

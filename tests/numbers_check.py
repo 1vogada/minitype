@@ -74,6 +74,14 @@ with mock.patch.object(sm, "warn", lambda a, text, *x, **k: warned.append(text))
         sm.number_keys(app, menu, k)
     sm.number_keys(app, menu, keys.ENTER)
     assert app.settings.effect_speed == 1.75
+    # a minus starts a number where it can be negative (fade angle), not elsewhere
+    menu.cursor = next(i for i, it in enumerate(items) if getattr(it, "number", None) == "fade_angle")
+    for k in "-30":
+        sm.number_keys(app, menu, k)
+    sm.number_keys(app, menu, keys.ENTER)
+    assert app.settings.fade_angle == -30
+    menu.cursor = next(i for i, it in enumerate(items) if getattr(it, "number", None) == "fade_top")
+    assert sm.number_keys(app, menu, "-") == (False, None)
 
 # the warning: the pause box over the screen for 1.5 seconds, keys dropped
 clock = [0.0]

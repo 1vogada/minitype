@@ -219,9 +219,13 @@ Skipping pages:
   more. *edges* (default) fades from the top (**fade top**, 50%) and from
   the left (**fade side**, 20%); *corner* fades round from the far corner
   so only the bottom right is left (**fade round**, 50%); *off*.
-  **fade start** sets where the fade starts: how far into the picture it
-  reaches from its edge (100% the whole picture, 30% only the outer
-  third; the rest stays whole) - set it to suit your window size
+  **fade start top** and **fade start** (side and corner) set where each
+  fade starts: how far into the picture it reaches from its edge (100% the
+  whole picture, 30% only the outer third; the rest stays whole) - set
+  them to suit your window size. **fade angle** tilts the side fade's edge
+  (-80° to 80°; positive fades further in at the top), and **fade
+  curve** sets how sharp the exponential is (0 a straight line, 3 the
+  default, 10 light almost all the way, then a quick drop)
 - **text panel** (settings → art, off by default, `p` in the gallery):
   the art full size over the whole screen and the text in a panel of its
   own on top, bordered like the screen with a shaded drop shadow; the key
