@@ -1,11 +1,10 @@
 """Right arrow on a main menu section that opens a screen of its own
-(settings, gallery, profile) opens it, like enter - in every layout."""
+(settings, gallery, profile) opens it, like enter; quit stays enter-only."""
 import os, tempfile
 os.environ["MINITYPE_DIR"] = tempfile.mkdtemp()
 from unittest import mock
 from minitype.terminal import console, keys
 from minitype.context import App
-from minitype.nav import QUIT
 from minitype.ui import main_menu as mm
 
 console.term_size = lambda: (120, 34)
@@ -42,7 +41,5 @@ assert seen == ["settings"], seen
 # right on a section with rows (gamemode) steps into the rows, opens nothing
 seen, _ = opened("sidebar", "left", [keys.RIGHT])
 assert seen == [], seen
-# quit: right quits, like enter
-_, res = opened("sidebar", "left", [keys.UP, keys.RIGHT])
-assert res == QUIT, res
+# (quit stays enter-only: columns_check covers it)
 print("ALL OK")

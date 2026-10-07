@@ -191,7 +191,7 @@ class Menu:
             return True, (item.back() if item.back is not None else None)
         elif key == keys.RIGHT and item.value is not None:
             return True, item.action()
-        elif key == keys.RIGHT and item.tab and not self.paged:
+        elif key == keys.RIGHT and item.tab and not self.paged and _opens_screen(item):
             return True, item.activate()         # a section that opens a screen
         elif key == keys.LEFT and item.back is not None:
             return True, item.back()
@@ -215,7 +215,8 @@ class Menu:
         On the section buttons, up/down pick a section and enter or right
         steps into its rows (esc steps back out, see back_out); a tab
         item's button (settings, gallery) runs it on enter or right instead,
-        like stepping into it. On the
+        like stepping into it - except quit, which only enter does, so a
+        stray right can't end the app. On the
         rows, left/right only change the value, and do nothing on rows
         that have none."""
         if self.on_sections:
@@ -224,7 +225,8 @@ class Menu:
                     self._switch_tab(-1 if key == keys.UP else 1)
                 return True, None
             if item.tab:                      # a button that does something
-                return True, (item.activate() if key in (keys.ENTER, keys.RIGHT) else None)
+                opens = key == keys.ENTER or (key == keys.RIGHT and _opens_screen(item))
+                return True, (item.activate() if opens else None)
             if key in (keys.ENTER, keys.SHIFT_ENTER, keys.RIGHT):
                 self.on_sections = False
                 return True, None
@@ -422,6 +424,12 @@ class Menu:
             else:
                 cells.append(f"{st.dim} {item.key} {item.label}{RESET}")
         return "  " + "  ".join(cells)
+
+
+def _opens_screen(item):
+    """Whether a tab item opens a screen (settings, gallery), so right may
+    run it like stepping into it; not quit, which only enter does."""
+    return item.label != "quit"
 
 
 class Hints:
