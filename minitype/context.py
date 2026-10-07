@@ -1,7 +1,7 @@
 from . import storage
 from .history import History
 from .learn.progress import LearnProgress
-from .settings import Settings
+from .settings import FADE_FIELDS, Settings
 from .stats import SessionStats
 from .terminal import console
 from .terminal.art import THEME_ART
@@ -29,6 +29,7 @@ class App:
         self.notice = ""    # one-off message for the next menu draw
         self.theme_draft = None   # the theme creator's work in progress
         self.current_test = None  # (test, redraw) while a test runs, for ctrl-o
+        self.fade_picture = None  # the picture the fade settings are showing
 
     def styles(self, custom=None, art=None):
         """The current theme's colours, with every effect and fun-modifier
@@ -58,6 +59,9 @@ class App:
             home = next((t for t, n in THEME_ART.items() if n == s.art_picture), None)
             if s.art_recolour == "own" and home:
                 palette = Styles(home).art_palette(shaded=shaded)
+        if art is None:
+            self.picture_fade(s.art_picture if s.art_picture != "theme"
+                              else THEME_ART.get(s.theme) or f"theme {s.theme}")
         console.set_decor(
             border=None if stealth or s.border == "off" else s.border,
             border_style=st.title,
@@ -67,6 +71,21 @@ class App:
             fade=(s.art_fade, s.fade_top, s.fade_side, s.fade_round, s.fade_start,
                   s.fade_start_top, s.fade_angle, s.fade_curve))
         return st
+
+    def picture_fade(self, picture):
+        """The fade settings are per picture: coming to another picture
+        brings its own back (the defaults for one never set), and whatever
+        is set now is kept as the shown picture's. The first picture seen
+        keeps the settings as they are (from before they were per picture)."""
+        s = self.settings
+        if picture != self.fade_picture:
+            saved = s.fades.get(picture)
+            if saved is not None or self.fade_picture is not None:
+                default = Settings()
+                for f in FADE_FIELDS:
+                    setattr(s, f, (saved or {}).get(f, getattr(default, f)))
+            self.fade_picture = picture
+        s.fades[picture] = {f: getattr(s, f) for f in FADE_FIELDS}
 
     def load_words(self, name):
         """Switch word list and remember the choice. The choice is kept even

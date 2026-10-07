@@ -73,6 +73,19 @@ CHOICES = {
 }
 
 
+# the fade settings, kept per picture (see App.styles): the fields above
+# hold the shown picture's, Settings.fades every picture's
+FADE_FIELDS = ("art_fade", "fade_top", "fade_side", "fade_round", "fade_start",
+               "fade_start_top", "fade_angle", "fade_curve")
+
+
+def _clean_fade(entry):
+    """A saved picture's fade settings with anything wrong left out."""
+    s = Settings()
+    s.apply({k: entry[k] for k in FADE_FIELDS if k in entry})
+    return {k: getattr(s, k) for k in FADE_FIELDS if k in entry and entry[k] == getattr(s, k)}
+
+
 @dataclass
 class Settings:
     # ---- the test
@@ -128,6 +141,7 @@ class Settings:
     fade_start_top: int = 100    # how far down the top fade reaches, % of the picture
     fade_angle: int = 0          # the side fade's edge tilted, degrees (+ leans in at the top)
     fade_curve: int = 3          # how sharp the fade's exponential is: 0 straight .. 10
+    fades: dict = field(default_factory=dict)   # picture -> its own fade settings (FADE_FIELDS)
     esc_pause: bool = True       # esc in a test pauses it (resume? yes / no) instead of leaving
     art_picture: str = "theme"   # the theme's own picture, or any picture's name (a remix)
     art_recolour: str = "theme"  # a remixed picture in the theme's colours, or its own theme's
@@ -246,4 +260,7 @@ class Settings:
             if f.name == "book_marks":
                 v = {k: n for k, n in v.items()
                      if isinstance(k, str) and type(n) is int and n >= 0}
+            if f.name == "fades":
+                v = {k: _clean_fade(e) for k, e in v.items()
+                     if isinstance(k, str) and isinstance(e, dict)}
             setattr(self, f.name, v)

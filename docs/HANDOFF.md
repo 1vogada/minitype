@@ -69,6 +69,9 @@ Then `docs/art-notes.md` for anything about the corner art.
   value in range is saved; `settings_menu.number_keys`); a wrong one
   shows `anywhere.warn` - the pause box for 1.5 s. Esc in a test pauses
   it (`runner.pause`, setting `esc_pause`, typing screen → pause on esc).
+- Fade settings are per picture: `Settings.fades` (picture -> its
+  FADE_FIELDS); `App.picture_fade` swaps them in when the shown picture
+  changes (called from `styles()`); gallery esc restores them.
 - Taller art: `Picture.taller(n)` puts n filler rows (the sky carried on
   up, `art._filler`) on top; `console._dressed` adds as many as there's
   room for (up to `art.TALLER` = half the height) after the picture is

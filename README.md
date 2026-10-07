@@ -220,7 +220,9 @@ Skipping pages:
   thinning through ▓ ▒ ░ on an exponential curve: light dithering for most
   of the way, thickening faster and faster, almost nothing left at the very
   top. The picture's subject (moon, fire, keyboard) stays whole; the
-  scenery fades. Each amount is a strength: 0% leaves the art alone,
+  scenery fades. The fade settings are kept per picture: each picture
+  remembers its own (one you haven't set starts at the defaults), and a
+  remix uses the picture's, not the theme's. Each amount is a strength: 0% leaves the art alone,
   100% fades all of it away, and everything in between fades more and
   more. *edges* (default) fades from the top (**fade top**, 50%) and from
   the left (**fade side**, 20%); *corner* fades round from the far corner

@@ -138,4 +138,37 @@ from minitype.terminal.art import _curve as cv
 assert cv(0.3, 0) == 0.3 and cv(0.3, 8) > cv(0.3, 3) > cv(0.3, 1)
 by_curve = [ink(pic.faded("edges", 50, 0, 50, 100, 100, 0, k)) for k in (0, 3, 10)]
 assert by_curve[0] < by_curve[1] < by_curve[2], by_curve
+# ---------------------------------------------------------------- per picture
+from minitype.terminal.art import THEME_ART
+pp = App()
+pp.settings.theme = "ocean"; pp.styles()
+pp.settings.fade_top, pp.settings.fade_angle = 80, 30          # set on ocean's picture
+pp.styles()
+pp.settings.theme = "forest"; pp.styles()
+assert (pp.settings.fade_top, pp.settings.fade_angle) == (50, 0), "another picture: its own (defaults)"
+pp.settings.fade_curve = 7; pp.styles()
+pp.settings.theme = "ocean"; pp.styles()
+assert (pp.settings.fade_top, pp.settings.fade_angle, pp.settings.fade_curve) == (80, 30, 3)
+assert console._decor["fade"][1] == 80
+pp.settings.theme = "forest"; pp.styles()
+assert pp.settings.fade_curve == 7 and pp.settings.fade_top == 50
+# a remix follows the picture, not the theme
+pp.settings.theme, pp.settings.art_picture = "candy", THEME_ART["ocean"]; pp.styles()
+assert pp.settings.fade_top == 80
+pp.settings.art_picture = "theme"
+# kept on disk, and wrong values left out when loaded
+saved = pp.settings.to_dict()["fades"]
+assert saved[THEME_ART["ocean"]]["fade_top"] == 80 and saved[THEME_ART["forest"]]["fade_curve"] == 7
+s2 = Settings(); s2.apply({"fades": {"x": {"fade_top": 999, "fade_side": 30, "junk": 1}, "y": 5}})
+assert s2.fades == {"x": {"fade_side": 30}}, s2.fades
+# the first picture keeps settings from before they were per picture
+old = App(); old.settings.fade_top = 90; old.styles()
+assert old.settings.fade_top == 90
+# esc in the gallery puts every picture's fades back
+g2 = App(); g2.settings.theme = "ocean"; g2.styles()
+before = {k: dict(v) for k, v in g2.settings.fades.items()}
+seq = iter([keys.DOWN, "d", keys.ESC])
+with mock.patch.object(keys, "read_key", lambda *x, **kw: next(seq)),         mock.patch.object(console, "present", lambda *x, **kw: None):
+    gallery(g2)
+assert g2.settings.fades == before and g2.settings.theme == "ocean"
 print("ALL OK")

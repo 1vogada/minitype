@@ -55,6 +55,7 @@ def gallery(app):
     names = style.theme_names()
     mine = s.theme
     kept = {row[0]: getattr(s, row[0]) for row in ROWS}
+    kept_fades = {k: dict(v) for k, v in s.fades.items()}   # d changes the picture's own
     name = mine if mine in names else names[0]
     query = None                     # None: browsing; a string: searching
     hints = Hints(app)
@@ -130,6 +131,7 @@ def gallery(app):
             s.theme = mine
             for field, value in kept.items():
                 setattr(s, field, value)
+            s.fades = kept_fades
             app.styles()
             return None
         else:
