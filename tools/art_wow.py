@@ -517,3 +517,7 @@ WOW = {"island": island, "moon": moon, "pines": pines, "fire": fire, "keyboard":
 # the rest of the themes' pictures live in art_wow2.py (it uses the pieces above)
 from art_wow2 import MORE  # noqa: E402
 WOW.update(MORE)
+from art_wow3 import MORE as MORE3  # noqa: E402
+WOW.update(MORE3)
+from art_wow4 import MORE as MORE4  # noqa: E402
+WOW.update(MORE4)

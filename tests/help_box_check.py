@@ -48,7 +48,8 @@ for i in range(len(base)):
     if i in (top - 1 + 1, top + 1):        # the rows with the floating text
         assert "y" * 40 in floating[i], floating[i]
         tail = floating[i].split("y" * 40)[1]
-        assert base[i].endswith(tail) or not tail.strip(" │"), (i, base[i], floating[i])
+        # the art goes on a cell after the floating text
+        assert base[i].endswith(tail.lstrip(" ")) or not tail.strip(" │"), (i, base[i], floating[i])
     elif i > top + 1:
         assert floating[i] == base[i], (i, base[i], floating[i])
 # floating text a menu draws past the art's end: the art just isn't drawn there
