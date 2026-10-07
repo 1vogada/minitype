@@ -573,6 +573,8 @@ def _parts_of(lines, colours):
 class Picture:
     """A piece painted in a theme's colours, ready for the screen."""
 
+    extra = 0                       # filler rows on top of it (see taller)
+
     def __init__(self, piece, palette, reset):
         self.lines, self.keep, self.span = piece.lines, piece.keep, piece.span
         self.width = max(map(len, piece.lines), default=0)
@@ -639,7 +641,7 @@ class Picture:
                 self._wider.clear()
             pic = object.__new__(Picture)
             pic.__dict__.update(self.__dict__)        # everything it knows (back, ...)
-            pic.__dict__["_faded"] = {}
+            pic.__dict__.update(_faded={}, _taller={})
             pic.span, pic.height, pic.width = True, self.height, width
             pic.lines = tuple("".join(line[c] for c in order) + line for line in self.lines)
             pic._codes = [[codes[c] for c in order] + codes for codes in self._codes]
@@ -647,6 +649,32 @@ class Picture:
             pic._reset, pic._wider = self._reset, {}
             self._wider[width] = pic
         return self._wider[width]
+
+    def taller(self, n):
+        """The picture with n rows of filler on top: its sky carried on up
+        (each column in the colour along its top edge) with the odd star or
+        speck from its top rows sprinkled in, so it doesn't stop on a
+        straight line and a fade has room to dissolve into. The filler is
+        scenery only (no subject), and `extra` says how many rows it is.
+        Only for pictures with backgrounds; anything else, or n <= 0,
+        gives the picture itself back."""
+        if n <= 0 or not self.back:
+            return self
+        cache = self.__dict__.setdefault("_taller", {})
+        if n not in cache:
+            if len(cache) > 8:
+                cache.clear()
+            lines, codes = _filler(self, n)
+            pic = object.__new__(Picture)
+            pic.__dict__.update(self.__dict__)
+            pic.__dict__.update(_faded={}, _taller={}, _wider={})
+            pic.lines = tuple(lines) + tuple(self.lines)
+            pic._codes = codes + list(self._codes)
+            pic.height = self.height + n
+            pic.keep = (self.width,) * n + tuple(self.keep)
+            pic.extra = self.extra + n
+            cache[n] = pic
+        return cache[n]
 
     def row(self, r, start=0):
         """Row r from column `start` on, styled; runs of one colour share
@@ -702,6 +730,112 @@ def _grow(pic, n):
             recent = (recent + [cur])[-3:]
         out.append(cur)
     return out[::-1]
+
+
+TALLER = 0.5                 # filler on top of a picture: up to this share of its height
+_COLOUR = re.compile(r"\x1b\[(38|48);([0-9;]*)m")
+_BLOCK_CHARS = set(" █▀▄▌▐▁▂▃▅▆▇▓▒░"
+              "▖▗▘▝▙▛▜▟▚▞▎▊▋▍▏▉")
+
+
+def _sky(ch, code):
+    """The colour at the very top of a cell (an escape colour spec like
+    "2;r;g;b"), or None: a full or top-half block's ink, the background
+    above a bottom block, or a cell's background."""
+    cols = dict(_COLOUR.findall(code))
+    fg, bg = cols.get("38"), cols.get("48")
+    if ch in "█▀▓":
+        return fg or bg
+    if ch in "▁▂▃▄▅▆▇":
+        return bg or fg
+    return bg
+
+
+def _filler(pic, n):
+    """n rows to go on top of the picture (see Picture.taller): lines and
+    codes. Seeded by the picture, so they're the same every frame."""
+    w = pic.width
+    top, tc = pic.lines[0].ljust(w), list(pic._codes[0]) + [""] * w
+    keep0 = pic.keep[0] if pic.keep else w
+    sky = [_sky(top[c], tc[c]) if c < keep0 else None for c in range(w)]
+    known = [c for c in range(w) if sky[c]]
+    if not known:                                 # the subject covers the top: any colour
+        sky = [_sky(top[c], tc[c]) for c in range(w)]
+        known = [c for c in range(w) if sky[c]]
+    if not known:
+        return [" " * w] * n, [[""] * w for _ in range(n)]
+    for c in range(w):
+        if not sky[c]:
+            sky[c] = sky[min(known, key=lambda k: abs(k - c))]
+    # the specks (stars, dots) of its top rows, as often as they come there
+    band = max(2, pic.height // 4)
+    specks, cells = [], 0
+    for r in range(min(band, pic.height)):
+        line, codes = pic.lines[r], pic._codes[r]
+        for c in range(min(len(line), pic.keep[r] if r < len(pic.keep) else w)):
+            cells += 1
+            if line[c] not in _BLOCK_CHARS and "\x1b[48;" in codes[c]:
+                fg = dict(_COLOUR.findall(codes[c])).get("38")
+                if fg:
+                    specks.append((line[c], fg))
+    density = len(specks) / cells if cells else 0
+    smooth = _blurred(sky, SKY_BLUR)
+    rng = random.Random(w * 131 + pic.height * 7 + n)
+    lines, codes = [], []
+    for i in range(n):
+        # just above the picture its top edge's own colours, so the seam
+        # doesn't show; further up they even out into one sky
+        far = min(1.0, (i + 1) / SKY_SETTLE)
+        colours = [_mix(a, b, far) for a, b in zip(sky, smooth)]
+        row, rc = [], []
+        for c in range(w):
+            if specks and rng.random() < density:
+                ch, fg = rng.choice(specks)
+                row.append(ch)
+                rc.append(f"\x1b[38;{fg}m\x1b[48;{colours[c]}m")
+            else:
+                row.append("█")
+                rc.append(f"\x1b[38;{colours[c]}m")
+        lines.append("".join(row))
+        codes.append(rc)
+    lines.reverse()                               # built from the seam up
+    codes.reverse()
+    return lines, codes
+
+
+SKY_BLUR = 8          # the filler's colours even out over this many columns each side
+SKY_SETTLE = 4        # ... over this many rows up from the picture
+
+
+def _rgb(spec):
+    """(r, g, b) of a truecolour spec "2;r;g;b", or None."""
+    parts = spec.split(";")
+    if len(parts) == 4 and parts[0] == "2":
+        return tuple(int(x) for x in parts[1:])
+    return None
+
+
+def _blurred(specs, k):
+    """The colour specs averaged over k columns each side (truecolour
+    ones; any others are left as they are)."""
+    rgbs = [_rgb(s) for s in specs]
+    out = []
+    for c, s in enumerate(specs):
+        near = [x for x in rgbs[max(0, c - k):c + k + 1] if x]
+        if rgbs[c] is None or not near:
+            out.append(s)
+            continue
+        out.append("2;" + ";".join(str(round(sum(v[j] for v in near) / len(near)))
+                                   for j in range(3)))
+    return out
+
+
+def _mix(a, b, t):
+    """Colour spec a moved t of the way to b (truecolour; else a or b)."""
+    ra, rb = _rgb(a), _rgb(b)
+    if not ra or not rb:
+        return b if t >= 0.5 else a
+    return "2;" + ";".join(str(round(x + (y - x) * t)) for x, y in zip(ra, rb))
 
 
 _BAYER = [[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]
@@ -808,7 +942,7 @@ def _fade(pic, mode, top, side, radius, start=100, start_top=100, angle=0, curve
     out = object.__new__(Picture)
     out.__dict__.update(pic.__dict__)
     out.lines, out._codes, out._wider = tuple(lines), codes, {}
-    out.__dict__["_faded"] = {}
+    out.__dict__.update(_faded={}, _taller={})
     return out
 
 

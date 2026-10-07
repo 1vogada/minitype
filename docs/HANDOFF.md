@@ -12,7 +12,7 @@ Then `docs/art-notes.md` for anything about the corner art.
   when asked ("push it"); when asked to do several things, push after each.
 - Run the app: `python -m minitype` (Python 3.10+, no dependencies).
 - Tests: `python tests/run_all.py` (or `python tests/run_all.py decor`).
-  Each `*_check.py` prints `ALL OK`; 26 checks with smoke4. They run against
+  Each `*_check.py` prints `ALL OK`; 27 checks with smoke4. They run against
   the real modules with the terminal mocked. `tests/menu_look.py` prints a
   menu frame as text (`python tests/menu_look.py 120 34 ember sidebar left`)
   and `tests/shows_check.py` reports which art the app actually draws at
@@ -69,6 +69,10 @@ Then `docs/art-notes.md` for anything about the corner art.
   value in range is saved; `settings_menu.number_keys`); a wrong one
   shows `anywhere.warn` - the pause box for 1.5 s. Esc in a test pauses
   it (`runner.pause`, setting `esc_pause`, typing screen → pause on esc).
+- Taller art: `Picture.taller(n)` puts n filler rows (the sky carried on
+  up, `art._filler`) on top; `console._dressed` adds as many as there's
+  room for (up to `art.TALLER` = half the height) after the picture is
+  placed by its own height, then fades it. `pic.extra` = filler rows.
 
 ## First thing in a new session
 Ask the user whether to add an **"outline only" option for the text

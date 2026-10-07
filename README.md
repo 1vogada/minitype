@@ -209,6 +209,12 @@ Skipping pages:
   scenery (sea, hills, grid...) grows on to the left to fill it, from
   runs of its own columns joined where they line up, so it doesn't look
   like one strip repeated
+- **taller art**: pictures with backgrounds carry their sky on up above
+  themselves (up to half their height again) where the screen has room:
+  the top edge's own colours just above the picture, evening out into
+  one sky higher up, with the odd star or speck. The picture is still
+  placed by its own height - the filler never decides whether it fits -
+  and the fade dissolves through the filler first
 - **art fade** (settings → art fade, `d` in the gallery): the art dissolves into
   the screen instead of stopping on a straight line - dithered, its colour
   thinning through ▓ ▒ ░ on an exponential curve: light dithering for most

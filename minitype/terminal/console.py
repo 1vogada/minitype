@@ -287,16 +287,14 @@ def overlay_art(rows, versions, width, pinned_n, behind=False):
     avail = width - 1
     # on a screen wider than a spanning picture, its scenery grows to fill it
     versions = [pic.wider(avail) for pic in versions]
-    fade = _decor.get("fade")
-    if fade and fade[0] != "off":
-        # pictures with backgrounds dissolve into the screen at their edges
-        versions = [pic.faded(*fade) if getattr(pic, "back", False) else pic for pic in versions]
     if behind:
         for pic in versions:
             w = min(pic.width, avail) if pic.span else pic.width
             top, col = bottom - pic.height + 1, avail - w
             if top < 1 or col < 0:
                 continue
+            pic = _dressed(pic, top - 1)
+            top -= pic.extra
             rows = list(rows)
             for k in range(pic.height):
                 r = rows[top + k]
@@ -319,9 +317,13 @@ def overlay_art(rows, versions, width, pinned_n, behind=False):
                 pic.keep[k] < pic.width and col + pic.keep[k] - skip < ends[k] + 2
                 for k in range(pic.height)):
             continue
+        box = min(starts) - col
+        pic = _dressed(pic, top - 1)
+        top -= pic.extra
+        spans = [_text_ends(rows[top + k]) for k in range(pic.height)]
+        ends = [solid for solid, _ in spans]
         # the background only runs the full width below the last text;
         # beside text it keeps to the picture's own box
-        box = min(starts) - col
         last_text = max((k for k in range(pic.height) if ends[k]), default=-1)
         rows = list(rows)
         for k in range(pic.height):
@@ -336,6 +338,18 @@ def overlay_art(rows, versions, width, pinned_n, behind=False):
                              + pic.row(k, skip + start))
         return rows
     return rows
+
+
+def _dressed(pic, room):
+    """The picture as it's drawn: with filler on top (up to art.TALLER of
+    its height, as far as the `room` above it goes - the filler never
+    decides whether it fits) and faded into the screen if that's on."""
+    from .art import TALLER
+    pic = pic.taller(min(room, int(pic.height * TALLER)))
+    fade = _decor.get("fade")
+    if fade and fade[0] != "off" and getattr(pic, "back", False):
+        pic = pic.faded(*fade)      # pictures with backgrounds dissolve at their edges
+    return pic
 
 
 def frame(rows, chars, style, inner):
