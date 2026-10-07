@@ -242,9 +242,10 @@ Skipping pages:
 - **fade (all pictures)** (settings → art fade): turns the fade off
   everywhere at once; each picture keeps its own fade settings
 - **text panel** (settings → art, off by default, `p` in the gallery):
-  the art full size over the whole screen and the text in a panel of its
-  own on top, bordered like the screen with a shaded drop shadow; the key
-  hints get a panel of their own along the bottom
+  the art full size over the whole screen and the text in a see-through
+  panel on top, bordered like the screen and only as wide as the text: the
+  art shows through it darkened, behind the letters. The help box floats
+  over its edge; the key hints get a panel of their own along the bottom
 - **art behind text** (settings → art, off by default): the art always
   shows at full size, behind everything. Text is drawn over it letter by
   letter and the art shows between the letters (each letter keeps the

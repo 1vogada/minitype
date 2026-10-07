@@ -165,10 +165,11 @@ def present(lines, focus=None, pinned=(), scene="menu"):
         # the art full size over the whole screen, the text in a panel of
         # its own on top of it, the key hints in another along the bottom
         body, hints = rows[:body_h], [r for r in rows[body_h:] if visible_len(r)]
-        art_rows = overlay_art([""] * len(rows), art, w - 1, 0, True)
-        rows = _panel(art_rows, body, w - 1, 0)
+        boxed, dim = _panel([""] * len(rows), body, w - 1, 0)
         if hints:
-            rows = _panel(rows, hints, w - 1, len(rows) - len(hints) - 2)
+            boxed, more = _panel(boxed, hints, w - 1, len(rows) - len(hints) - 2)
+            dim.update(more)
+        rows = overlay_art(boxed, art, w - 1, 0, True, dim)
     elif art:
         rows = overlay_art(rows, art, w - 1, len(pinned), d["behind"])
     if d["border"]:
@@ -307,17 +308,32 @@ def _scrim(cell, keep=CARD_DIM):
     return f"\x1b[48;2;{r};{g};{b}m"
 
 
-def _layer(row, pic, card):
+PANEL_DIM = 0.42      # the art inside a text panel, this bright
+
+
+@lru_cache(maxsize=8192)
+def _dimmed(codes, keep=PANEL_DIM):
+    """An art cell's codes with every truecolour in them darkened."""
+    return re.sub(r"(38|48);2;(\d+);(\d+);(\d+)",
+                  lambda m: "%s;2;%d;%d;%d" % (m.group(1), *(int(int(v) * keep) for v in m.groups()[1:])),
+                  codes)
+
+
+def _layer(row, pic, card, dim=None):
     """The row drawn over a row of the art (cells from _art_cells). The art
     shows through wherever the row has a plain blank; letters, and blanks
     with a highlight or background of their own, cover it. `card` is the
     (from, to) columns of floating text (a help box), which covers the art
-    whole, in a darkened shade of the art behind it (see _scrim)."""
+    whole, in a darkened shade of the art behind it (see _scrim). `dim`
+    is the (from, to) columns of a text panel: the art shows through it,
+    darkened (see _dimmed)."""
     text = _cells(row)
     out, cur = [], None
     for x in range(max(len(text), len(pic))):
         t = text[x] if x < len(text) else ("", " ")
         a = pic[x] if x < len(pic) else ("", " ")
+        if dim and dim[0] <= x < dim[1] and a[0]:
+            a = (_dimmed(a[0]), a[1])
         solid = (t[1] != " " or "\x1b[7m" in t[0] or "\x1b[48;" in t[0]
                  or card[0] <= x < card[1])
         codes, ch = t if solid or (a[1] == " " and not a[0]) else a
@@ -339,7 +355,7 @@ def _layer(row, pic, card):
     return "".join(out).rstrip() + RESET
 
 
-def overlay_art(rows, versions, width, pinned_n, behind=False):
+def overlay_art(rows, versions, width, pinned_n, behind=False, dim=None):
     """Put the art in the bottom-right corner, above any pinned lines with
     a row to spare. `versions` are the picture's sizes, biggest first (art
     Pictures); the first whose focus fits without touching any text, in
@@ -353,7 +369,9 @@ def overlay_art(rows, versions, width, pinned_n, behind=False):
     whatever text there is, behind it: the text goes over the art letter
     by letter, and only floating text gets a solid card. It fills the
     screen edge to edge: down to the last row (behind the key hints too),
-    the full width, and its sky carried on up to the top row."""
+    the full width, and its sky carried on up to the top row. `dim` maps
+    a row to the (from, to) columns where the art is dimmed (a text
+    panel over it)."""
     if behind:
         bottom, avail = len(rows) - 1, width
         for pic in [pic.wider(avail) for pic in versions]:
@@ -368,7 +386,8 @@ def overlay_art(rows, versions, width, pinned_n, behind=False):
                 r = rows[top + k]
                 i = r.find(FLOAT)
                 card = (visible_len(r[:i]), visible_len(r)) if i >= 0 else (0, 0)
-                rows[top + k] = _layer(r, _art_cells(pic, k, pic.width - w, col), card)
+                rows[top + k] = _layer(r, _art_cells(pic, k, pic.width - w, col), card,
+                                       (dim or {}).get(top + k))
             return rows
         return rows
     bottom = len(rows) - pinned_n - (2 if pinned_n else 1)
@@ -453,35 +472,47 @@ def set_decor(border=None, border_style="", art=None, art_scope="menus",
 
 def _panel(rows, text, width, top):
     """The text rows in a bordered box from row `top` at the left of the
-    rows (the art), in the frame's border style, with a shaded drop
-    shadow. Blank rows at the end of the text are left off."""
+    rows, in the frame's border style, as wide as the text itself (help
+    floating beside it doesn't count: it goes over the box's edge as a
+    card). Returns (rows, dim): dim maps each row of the box to the
+    columns it covers, where the art behind shows through darkened. Blank
+    rows at the end of the text are left off."""
     content = list(text)
     while content and not visible_len(content[-1].rstrip()):
         content.pop()
     if not content or top < 0:
-        return rows
+        return rows, {}
     chars = _decor["border"] or BORDERS["rounded"]
     tl, tr, bl, br, across, down = chars
     style = _decor["border_style"]
-    inner = min(width - 2 * len(down) - 1, max(visible_len(t) for t in content) + 1)
-    height = min(len(rows) - 2 - top, len(content))
     side = style + down + RESET
+
+    def solid(line):
+        i = line.find(FLOAT)
+        return line if i < 0 else line[:i]
+
+    def used(line):
+        cells = _cells(solid(line))
+        return max((k + 1 for k, (_, ch) in enumerate(cells) if ch != " "), default=0)
+    inner = min(width - 2 * len(down) - 1, max(used(t) for t in content) + 1)
+    height = min(len(rows) - 2 - top, len(content))
     box = [style + tl + across * inner + tr + RESET]
-    box += [side + pad(t, inner) + side for t in content[:height]]
-    box += [style + bl + across * inner + br + RESET]
-    out = list(rows)
+    for t in content[:height]:
+        line = side + pad(solid(t), inner) + side
+        i = t.find(FLOAT)
+        if i >= 0:                                 # help floating beside the text
+            at = len(down) + visible_len(t[:i])
+            line = clip(line, at) + " " * max(0, at - visible_len(line)) + t[i:]
+        box.append(line)
+    box.append(style + bl + across * inner + br + RESET)
+    out, dim = list(rows), {}
     bw = inner + 2 * len(down)
-    shade = (_decor["shadow"] or style) + "░" + RESET
     for k, line in enumerate(box):
         r = top + k
         if r < len(out):
-            out[r] = _splice(out[r], 0, line)
-        if 0 < k and r < len(out) and bw < width:
-            out[r] = _splice(out[r], bw, shade)            # shadow down the right side
-    r = top + len(box)
-    if r < len(out):
-        out[r] = _splice(out[r], 1, shade * min(bw, width - 1))   # and along the bottom
-    return out
+            out[r] = line
+            dim[r] = (0, bw)
+    return out, dim
 
 
 def repaint():

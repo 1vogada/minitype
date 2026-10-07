@@ -77,6 +77,10 @@ Then `docs/art-notes.md` for anything about the corner art.
   box); fade_on switches the fade off for every picture.
   `style.rgb_of_code` now skips a colour's own numbers and lets the last
   colour win (it used to read `48;2;..;90` as bright black text).
+- Text panel is see-through: `console._panel` boxes the text (as wide as
+  the text; floating help goes over its edge) and returns the box's
+  columns per row; overlay_art(..., dim=) darkens the art there
+  (`_dimmed`, PANEL_DIM) and the letters draw over it like art behind text.
 - Taller art: `Picture.taller(n)` puts n filler rows (the sky carried on
   up, `art._filler`) on top; `console._dressed` adds as many as there's
   room for (up to `art.TALLER` = half the height) after the picture is

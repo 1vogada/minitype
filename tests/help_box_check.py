@@ -158,10 +158,13 @@ rows2 = strip(raw).split("\n")
 assert rows2[1].startswith("║╔") and "╗" in rows2[1], rows2[1]           # the panel, in the frame's style
 panel_right = rows2[1].index("╗")
 assert rows2[3][1:].startswith("║  minitype")
-assert rows2[2][panel_right + 1] == "░", "a shadow down its right side"
-below = rows2[len(lines2) + 2]
-assert "░" in below[1:panel_right + 2], "and along its bottom"
+assert panel_right < 30, "as wide as the text, not the screen"
 assert any(ch in "".join(rows2[10:]) for ch in "▀▄█▌▐"), "the art fills the rest"
+# see-through: the art shows inside the panel, darkened, behind the letters
+inside = [line for line in raw.split("\n")[2:2 + len(lines2)]]
+assert any(re.search(r"48;2;\d+;\d+;\d+m", x) for x in inside), "art behind the text"
+assert console._dimmed("\x1b[38;2;100;200;50m\x1b[48;2;10;20;250m") == \
+    "\x1b[38;2;%d;%d;%dm\x1b[48;2;%d;%d;%dm" % tuple(int(v * console.PANEL_DIM) for v in (100, 200, 50, 10, 20, 250))
 # hints in a panel of their own along the bottom, wrapped to fit
 console.term_size = lambda: (W2, H2)
 from minitype.ui.menu import Hints

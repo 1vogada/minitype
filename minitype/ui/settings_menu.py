@@ -334,8 +334,9 @@ def build_items(app):
                  tags=("art", "fade", "dither", "curve", "exponent", "sharpness")),
         b.flag("text panel", "art_panel",
                "the art full size over the whole screen, and the text in a "
-               "panel of its own on top of it, bordered like the screen, "
-               "with a shadow. Also in the gallery with p",
+               "see-through panel on top of it, bordered like the screen and "
+               "only as wide as the text: the art shows through, darkened, "
+               "behind the letters. Also in the gallery with p",
                tags=("art", "panel", "box", "background", "layer", "border")),
         b.flag("art behind text", "art_behind",
                "the art always shows at full size, behind everything: text "
