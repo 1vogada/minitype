@@ -48,6 +48,7 @@ def menu_loop(app, menu, draw, hint_text, extra=None, on_back=None,
         st = app.styles()
         menu.style = app.settings.ui_style
         menu.sidebar_tabs = app.settings.sidebar_tabs
+        menu.help_pos = app.settings.help_position
         lines, focus = draw(st, menu)
         console.present(lines, focus,
                         hints.lines(st, f"{menu.nav_hint()}   "

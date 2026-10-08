@@ -92,6 +92,9 @@ Then `docs/art-notes.md` for anything about the corner art.
   in App.styles(); the typing screen's untyped letters use it. The art
   palette comes from the theme's own colours (`Styles._art`), so accent
   letters never change the art.
+- Help box position (setting help_position): inline, or a corner -
+  `Menu._help_corner` hands a double-lined box to `console.set_corner`;
+  present() draws it for that frame only (`_in_corner`, `_stamp`).
 - Taller art: `Picture.taller(n)` puts n filler rows (the sky carried on
   up, `art._filler`) on top; `console._dressed` adds as many as there's
   room for (up to `art.TALLER` = half the height) after the picture is

@@ -37,6 +37,8 @@ _decor = {"border": None, "border_style": "", "art": None, "art_scope": "menus",
           "behind": False, "panel": False, "shadow": "", "fade": None, "text_fx": None,
           "see_through": 0.4, "menu_lighten": 0.0}
 _last_frame = []        # the last present()'s arguments, for repaint()
+_corner = {"where": None, "lines": []}
+_corner_last = []   # a help box for a corner of the next frame
 _overlay = []           # lines of a box drawn over the middle of every frame (a dialog)
 
 
@@ -142,6 +144,14 @@ def present(lines, focus=None, pinned=(), scene="menu"):
     The theme's decorations go on here: the corner art (on menus, or on
     every `scene` if the art setting says so) and the border around it all."""
     global _last_size
+    corner = (_corner["where"], list(_corner["lines"]))
+    _corner.update(where=None, lines=[])           # it's for this frame only
+    if corner[1]:
+        _corner_last[:] = [corner]
+    elif _last_frame and _last_frame[0] is lines:
+        corner = _corner_last[0] if _corner_last else corner   # repaint(): the same box
+    else:
+        _corner_last[:] = []
     _last_frame[:] = [lines, focus, pinned, scene]
     lighten = _decor.get("menu_lighten") or 0
     if lighten and scene != "test":
@@ -168,6 +178,7 @@ def present(lines, focus=None, pinned=(), scene="menu"):
         view += [""] * (body_h - len(view))     # full height: pinned / art / frame
     view += pinned
     rows = [clip(line, w - 1) for line in view]
+    text_rows = rows                          # the text alone, before the art
     if art and d["panel"]:
         # the art full size over the whole screen, the text in a panel of
         # its own on top of it, the key hints in another along the bottom
@@ -179,6 +190,8 @@ def present(lines, focus=None, pinned=(), scene="menu"):
         rows = overlay_art(boxed, art, w - 1, 0, True, dim)
     elif art:
         rows = overlay_art(rows, art, w - 1, len(pinned), d["behind"])
+    if corner[1]:
+        rows = _in_corner(rows, text_rows, corner, w - 1, body_h)
     if d["border"]:
         rows = frame(rows, d["border"], d["border_style"], w - 1)
     if _overlay:
@@ -597,6 +610,29 @@ def repaint():
         present(*_last_frame)
 
 
+def set_corner(where, lines):
+    """A box (its lines, styled) for a corner of the next frame drawn:
+    where is "top left", "top right", "bottom left" or "bottom right"."""
+    _corner.update(where=where, lines=list(lines))
+
+
+def _in_corner(rows, text_rows, corner, width, body_h):
+    """The rows with the corner box laid over them: at the top (row 0) or
+    the bottom of the screen's body (above the key hints), at the right
+    edge, or at the left - just to the right of the text instead, if the
+    text would be under it. The art shows through it like any box."""
+    where, box = corner
+    bw, bh = max(visible_len(b) for b in box), len(box)
+    top = 0 if where.startswith("top") else max(0, body_h - bh)
+    if where.endswith("right"):
+        left = max(0, width - bw)
+    else:
+        span = range(top, min(len(text_rows), top + bh))
+        ends = [len(ANSI.sub("", text_rows[r].split(FLOAT)[0]).rstrip()) for r in span]
+        left = 0 if not any(ends) else min(max(ends) + 2, max(0, width - bw))
+    return _stamp(rows, box, top, left)
+
+
 def set_overlay(lines):
     """A box (its lines, styled) to draw over the middle of every frame
     until it's set to None: a dialog over the screen behind it."""
@@ -607,11 +643,18 @@ def _over(rows, box):
     """The rows with the box laid over their middle. Where it covers the
     art, the art shows through the box darkened (the see-through setting),
     instead of a black hole; the box's own highlights stay as they are."""
-    rows = list(rows)
     bw = max(visible_len(b) for b in box)
     top = max(0, (len(rows) - len(box)) // 2)
     width = max((visible_len(r) for r in rows), default=0)
     left = max(0, (max(width, bw) - bw) // 2)
+    return _stamp(rows, box, top, left)
+
+
+def _stamp(rows, box, top, left):
+    """The rows with the box written over them from (top, left), the art
+    showing through it at the see-through setting."""
+    rows = list(rows)
+    bw = max(visible_len(b) for b in box)
     keep = _see_through()
     for k, line in enumerate(box):
         r = top + k

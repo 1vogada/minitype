@@ -244,6 +244,10 @@ Skipping pages:
   border, the background or the art. **lighter untyped** does the same for
   the words you haven't typed yet on the typing screen. The art keeps its
   own colours with **accent letters** on too
+- **help box** (settings → interface, also in ui): where a setting's help
+  shows when the art is on - *inline* under the selected row (default),
+  or *top left / top right / bottom left / bottom right* in a
+  double-lined box; on the left it sits just right of the menu text
 - **see-through** (settings → art, 40%): how much of the art shows
   through boxes drawn over it - the help box, the text panel, the pause
   and warning boxes. 0% solid, 100% the art at full brightness

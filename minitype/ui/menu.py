@@ -87,6 +87,7 @@ class Menu:
         self.horizontal = horizontal
         self.style = style
         self.sidebar_tabs = "off"
+        self.help_pos = "inline"  # the help box: under the row, or in a corner
         self.query = ""          # only items matching it are shown
         self.on_sections = True   # two-column layout: focus on the section buttons,
                                   # where you start
@@ -303,12 +304,32 @@ class Menu:
             lines += item.preview()
         if not boxed or not lines:
             return [" " * indent + ln for ln in lines]
+        if self.help_pos != "inline":
+            return self._help_corner(st, text, item, width)
         inner = min(max(map(console.visible_len, lines)), room)
         edge = " " * (indent - 2) + console.FLOAT + st.dim
         return ([f"{edge}┌{'─' * (inner + 2)}┐{RESET}"]
                 + [f"{edge}│{RESET} {console.pad(ln, inner)} {st.dim}│{RESET}"
                    for ln in lines]
                 + [f"{edge}└{'─' * (inner + 2)}┘{RESET}"])
+
+    def _help_corner(self, st, text, item, width):
+        """The help in a corner of the screen (the help position setting),
+        in a double-lined box like the pause box; nothing goes under the
+        row. The console places it (see console.set_corner)."""
+        room = max(20, min(56, console.size()[0] // 2 - 6))
+        lines = [f"{st.dim}{ln}{RESET}" for ln in textwrap.wrap(text, room)] if text else []
+        if item.preview:
+            lines += item.preview()
+        if lines:
+            inner = min(max(map(console.visible_len, lines)), room)
+            frame = st.title
+            console.set_corner(self.help_pos,
+                               [f"{frame}╔{'═' * (inner + 2)}╗{RESET}"]
+                               + [f"{frame}║{RESET} {console.pad(ln, inner)} {frame}║{RESET}"
+                                  for ln in lines]
+                               + [f"{frame}╚{'═' * (inner + 2)}╝{RESET}"])
+        return []
 
     def _rows(self, st, indices, label_width, with_value=True, inline_help=True,
               width=None, headings=True, active=True):
