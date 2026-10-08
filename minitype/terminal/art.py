@@ -791,6 +791,7 @@ def _filler(pic, n):
     rate = (low_l - top_l) / low_l / k if low_l > top_l > 0 else 0.0
     reach = max(1, pic.height // 2)
     rng = random.Random(w * 131 + pic.height * 7 + n)
+    feather = max(2, min(10, pic.height // 3))
     lines, codes = [], []
     for i in range(n):
         # just above the picture its top edge's own colours, so the seam
@@ -800,8 +801,23 @@ def _filler(pic, n):
         broad = min(1.0, (i + 1) / (SKY_SETTLE * 2))
         keep = max(0.0, 1 - rate * min(i + 1, reach))
         colours = [_mix(a, _darker(_mix(b, c, broad), keep), far) for a, b, c in zip(sky, smooth, wide)]
+        # the seam feathered: the picture's own top edge carried up over it,
+        # dissolving cell by cell into the sky, so there is no straight line
+        # where the picture stops
+        fade = (i + 1) / (feather + 1) if i < feather else 1.0
+        src = min(i % 2, pic.height - 1)          # only its top edge: the texture it continues
         row, rc = [], []
         for c in range(w):
+            if fade < 1.0:
+                ch, code = pic.lines[src][c] if c < len(pic.lines[src]) else " ", \
+                    pic._codes[src][c] if c < len(pic._codes[src]) else ""
+                if rng.random() > fade ** 0.8 and code:
+                    row.append(ch)                   # the picture's own cell
+                    rc.append(code)
+                    continue
+                look = _cell_spec(ch, code)
+                if look:
+                    colours[c] = _mix(look, colours[c], fade)
             if specks and rng.random() < density:
                 ch, fg = rng.choice(specks)
                 row.append(ch)
@@ -841,6 +857,19 @@ def _blurred(specs, k):
         out.append("2;" + ";".join(str(round(sum(v[j] for v in near) / len(near)))
                                    for j in range(3)))
     return out
+
+
+def _cell_spec(ch, code):
+    """The colour a cell looks from a step back, as a spec "2;r;g;b": its
+    ink and background mixed by how much of the cell the character covers.
+    None if it has no truecolour."""
+    cols = {k: _rgb(v) for k, v in _COLOUR.findall(code)}
+    ink, back = cols.get("38"), cols.get("48")
+    if not ink and not back:
+        return None
+    cover = {"\u2588": 1.0, "\u2593": 0.75, "\u2592": 0.5, "\u2591": 0.25, " ": 0.0}.get(ch, 0.5)
+    ink, back = ink or back, back or ink
+    return "2;" + ";".join(str(round(b + (i - b) * cover)) for i, b in zip(ink, back))
 
 
 def _brightness(specs):

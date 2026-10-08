@@ -384,6 +384,10 @@ def _layer(row, pic, card, dim=None):
         bare = a                                   # the art as it is, for a box's tint
         if dim and dim[0] <= x < dim[1] and a[0]:
             a = (_dimmed(a[0], _see_through()), a[1])
+            if a[1] not in _INK and not "▁" <= a[1] <= "▏":
+                # a star, a speck, a letter of the art: just its background
+                # inside the panel, so it can't pass for menu text
+                a = (re.sub(r"\[38;[0-9;]*m", "", a[0]), " ")
         solid = (t[1] != " " or "\x1b[7m" in t[0] or "\x1b[48;" in t[0]
                  or card[0] <= x < card[1])
         codes, ch = t if solid or (a[1] == " " and not a[0]) else a
