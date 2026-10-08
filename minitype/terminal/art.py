@@ -779,22 +779,27 @@ def _filler(pic, n):
                     specks.append((line[c], fg))
     density = len(specks) / cells if cells else 0
     smooth = _blurred(sky, SKY_BLUR)
-    # the sky's own gradient: how its colour changes over the picture's top
-    # rows, carried on upward (a dusk keeps darkening, a dawn lightening)
-    # for up to half the picture's height, then held
+    wide = _blurred(smooth, SKY_BLUR * 4)           # evened out further, higher up
+    # the sky's own gradient: how much darker it gets per row towards the
+    # picture's top, taken over the whole width (one rate, so no column
+    # streaks or blotches), carried on upward for up to half the picture's
+    # height, then held; a sky that lightens upward is held as it is
     k = max(2, min(pic.height // 5, pic.height - 1))
     deep = list(pic.lines[k].ljust(w)), list(pic._codes[k]) + [""] * w
-    below = _blurred([_sky(deep[0][c], deep[1][c]) or smooth[c] for c in range(w)], SKY_BLUR)
+    below = [_sky(deep[0][c], deep[1][c]) or smooth[c] for c in range(w)]
+    top_l, low_l = _brightness(smooth), _brightness(below)
+    rate = (low_l - top_l) / low_l / k if low_l > top_l > 0 else 0.0
     reach = max(1, pic.height // 2)
     rng = random.Random(w * 131 + pic.height * 7 + n)
     lines, codes = [], []
     for i in range(n):
         # just above the picture its top edge's own colours, so the seam
-        # doesn't show; further up they even out into one sky, which keeps
-        # the gradient going
+        # doesn't show; further up they even out into one sky (more widely
+        # the higher it goes), darkening on at the picture's own rate
         far = min(1.0, (i + 1) / SKY_SETTLE)
-        trend = min(i + 1, reach) / k
-        colours = [_mix(a, _onward(b, d, trend), far) for a, b, d in zip(sky, smooth, below)]
+        broad = min(1.0, (i + 1) / (SKY_SETTLE * 2))
+        keep = max(0.0, 1 - rate * min(i + 1, reach))
+        colours = [_mix(a, _darker(_mix(b, c, broad), keep), far) for a, b, c in zip(sky, smooth, wide)]
         row, rc = [], []
         for c in range(w):
             if specks and rng.random() < density:
@@ -838,19 +843,19 @@ def _blurred(specs, k):
     return out
 
 
-def _onward(top, lower, t):
-    """`top` carried t steps further on the way its brightness went from
-    `lower` to `top`: darker if the sky darkens upward, else held - the
-    same hue either way, so the sky never drifts to another colour
-    (truecolour; anything else stays `top`)."""
-    a, b = _rgb(top), _rgb(lower)
-    if not a or not b:
-        return top
-    la, lb = sum(a) / 3, sum(b) / 3
-    if lb <= la or lb <= 0:
-        return top                                    # lightening upward: hold it
-    keep = max(0.0, 1 - (lb - la) / lb * t)          # the same step darker, t times
-    return "2;" + ";".join(str(round(x * keep)) for x in a)
+def _brightness(specs):
+    """The mean brightness of some colour specs (truecolour ones), 0..255."""
+    rgbs = [c for c in (_rgb(s) for s in specs) if c]
+    return sum(sum(c) for c in rgbs) / (3 * len(rgbs)) if rgbs else 0.0
+
+
+def _darker(spec, keep):
+    """A colour spec at `keep` of its brightness, the same hue
+    (truecolour; anything else as it is)."""
+    c = _rgb(spec)
+    if not c or keep >= 1:
+        return spec
+    return "2;" + ";".join(str(round(x * keep)) for x in c)
 
 
 def _mix(a, b, t):
