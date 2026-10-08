@@ -212,7 +212,8 @@ Skipping pages:
 - **taller art**: pictures with backgrounds carry their sky on up above
   themselves (up to half their height again) where the screen has room:
   the top edge's own colours just above the picture, evening out into
-  one sky higher up, with the odd star or speck. The picture is still
+  one sky higher up that carries on the picture's own gradient (a dusk
+  keeps darkening into night), with the odd star or speck. The picture is still
   placed by its own height - the filler never decides whether it fits -
   and the fade dissolves through the filler first
 - **art fade** (settings → art fade, `d` in the gallery): the art dissolves into

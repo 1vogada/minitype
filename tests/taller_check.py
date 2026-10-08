@@ -30,7 +30,16 @@ def rough(r):
     rgb = [tuple(map(int, re.search(r"38;2;(\d+);(\d+);(\d+)", c).groups()))
            for ch, c in zip(t.lines[r], t._codes[r]) if ch == "█"]
     return sum(sum(abs(x - y) for x, y in zip(a, b)) for a, b in zip(rgb, rgb[1:]))
-assert rough(0) < rough(5), (rough(0), rough(5))
+# going up the sky only darkens or holds (it carries on the picture's own
+# gradient), and it keeps its hues: no colour the picture doesn't lean to
+def sky_rgb(r):
+    return [tuple(map(int, re.search(r"38;2;(\d+);(\d+);(\d+)", c).groups()))
+            for ch, c in zip(t.lines[r], t._codes[r]) if ch == "\u2588"]
+bright = lambda r: sum(sum(c) for c in sky_rgb(r)) / max(1, len(sky_rgb(r)))
+assert bright(0) <= bright(5) + 1, (bright(0), bright(5))
+for (r0, g0, b0), (r5, g5, b5) in zip(sky_rgb(0), sky_rgb(5)):
+    # a darker copy of a colour keeps its channels in the same order
+    assert sorted(range(3), key=lambda k: (r0, g0, b0)[k]) == sorted(range(3), key=lambda k: (r5, g5, b5)[k])         or max(r0, g0, b0) - min(r0, g0, b0) < 12
 # taller then wider, wider then taller, faded: they all keep the filler
 w = pic.wider(pic.width + 40).taller(4)
 assert w.width == pic.width + 40 and w.extra == 4 and w.height == pic.height + 4
