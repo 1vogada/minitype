@@ -1021,11 +1021,12 @@ def sun(pal):
             return (pal.rgb("x4") if rim else pal.ground), 1.0, False, "reeds"
         if y < hz:
             c, foc, tag = air(x, y)
-            return c, 1.0, foc, tag
+            return mix(c, pal.rgb("e8"), horizon_glow(x, y)), 1.0, foc, tag
         depth = (y - hz) / (1 - hz)
         wob = 0.006 * math.sin(y * 260 + 2 * math.sin(x * 14))
         c, _, tag = air(x + wob, clamp(hz - (y - hz) * 1.3, 0.0, hz - 0.001))
         c = mix(c, pal.rgb("a1"), 0.2 + depth * 0.55)
+        c = mix(c, pal.rgb("e8"), horizon_glow(x, y))
         width = 0.06 + depth * 0.22
         glint = noise(x * 28, y * 160, 7) > 0.55 - 0.15 * (1 - depth)
         off = abs(x - sx + wob * 2) / width
@@ -1034,6 +1035,10 @@ def sun(pal):
         elif glint and noise(x * 9, y * 40, 2) > 0.62:
             c = mix(c, pal.rgb("e6"), 0.35 * near_sun(x))
         return c, 1.0, False, "lake"
+
+    def horizon_glow(x, y):
+        """Light pooled along the water line, brightest under the sun."""
+        return 0.75 * math.exp(-((y - hz) / 0.018) ** 2) * math.exp(-((x - sx) / 0.35) ** 2)
 
     def near_sun(x):
         return math.exp(-((x - sx) / 0.7) ** 2) + 0.2
@@ -1044,10 +1049,7 @@ def sun(pal):
             out.append((int((x - x_left) / cw), int(y / unit), "v", pal.rgb("x1"), False))
         return out
 
-    return scene("solarized", field, texts, lambda rows: [
-        ([(-6.0, hz + 0.002), (2.0, hz + 0.002)], lambda x, y: pal.rgb("e9" if abs(x - sx) < 0.4 else "e6"),
-         False, lambda x, y: reed(x, y))],
-        inks={"sky": "axew", "cloud": "axew", "sun": "tew", "ridge": "axew", "lake": "axetw"})
+    return scene("solarized", field, texts, inks={"sky": "axew", "cloud": "axew", "sun": "tew", "ridge": "axew", "lake": "axetw"})
 
 
 # ---------------------------------------------------------------- monokai
@@ -1142,10 +1144,12 @@ def code(pal):
                     tone = kind + str(max(1 + int(dense * 3), min(9, int(1 + level * 9))))
                     if kind == "t":
                         tone = "d" + str(max(2, min(9, int(3 + level * 6))))
+                if any(brace(x + (k + 0.5 + dx) * cw, y + dy * unit) for k in range(len(tok))
+                       for dx in (-1.5, -0.5, 0.5, 1.5) for dy in (-0.4, 0.4)):
+                    continue                                  # a clear cell around the braces
                 for k, ch in enumerate(tok):
                     xx = x + (k + 0.5) * cw
-                    if ch == " " or (r, c + k) in taken or c + k >= cols or any(
-                            brace(xx + dx * cw, y + dy * unit) for dx in (-0.5, 0, 0.5) for dy in (-0.4, 0.4)):
+                    if ch == " " or (r, c + k) in taken or c + k >= cols:
                         continue
                     taken.add((r, c + k))
                     out.append((c + k, r, ch, pal.rgb(tone), core(xx, y)))
@@ -1248,11 +1252,12 @@ def rose(pal):
         (cx + 0.13, cy - 0.08, 0.1, 0.13, 0.4, 0.3)]
     shade = pal.path("- x0 e1 e2 e3 e5 e6 e7 e8 e9")
     base = (cx, cy + 0.23)
+    leafy = pal.path("d1 g1 g2 g4 a6")         # no green in rose pine: its deepest teal greys up to foam
     spine = bezier(base, (cx + 0.07, 0.68), (cx - 0.02, 1.04), 24)
     stem = strokes([(spine, 0.013, 0.011)])
     calyx = (cx, cy + 0.15)
-    sepals = strokes([(bezier(calyx, (cx + dx * 0.7, calyx[1] + dy * 0.35), (cx + dx, calyx[1] + dy), 10),
-                       0.034, 0.004) for dx, dy in ((-0.2, 0.15), (-0.1, 0.18), (0.11, 0.18), (0.21, 0.14))])
+    sepals = strokes([(bezier(calyx, (cx + dx * 1.1, calyx[1] + dy * 0.45), (cx + dx * 0.8, calyx[1] + dy), 12),
+                       0.03, 0.012) for dx, dy in ((-0.17, 0.16), (0.0, 0.17), (0.18, 0.15))])
     thorns = [(spine[k][0] + 0.01 * side, spine[k][1], side) for k, side in ((7, 1), (12, -1), (19, 1))]
     leaves = [(cx + 0.045, 0.75, -0.35, 0.2, 0.06), (cx + 0.02, 0.87, math.pi + 0.45, 0.17, 0.05)]
 
@@ -1298,19 +1303,19 @@ def rose(pal):
                 t -= 0.45 if behind[0] < 5 else 0.3                    # a crevice above a petal in front
             return shade(clamp(t, 0.08)), 1.0, True, "rose"
         if ((x - cx) / 0.035) ** 2 + ((y - base[1] - 0.025) / 0.03) ** 2 < 1:
-            return pal.path("g4 g2 g1")(clamp((x - cx + 0.03) * 12)), 1.0, True, "stem"
+            return leafy(clamp(0.8 - (x - cx + 0.03) * 10)), 1.0, True, "stem"
         s = sepals(x, y)
         if s is not None:
-            return pal.path("g2 g4 g5")(s), 1.0, True, "stem"
+            return leafy(0.75 - 0.4 * s), 1.0, True, "stem"
         if stem(x, y) is not None or thorn(x, y):
             lit = stem(x - 0.008, y) is None and not thorn(x - 0.008, y)
-            return pal.rgb("g4" if lit else "g1"), 1.0, True, "stem"
+            return leafy(0.7 if lit else 0.25), 1.0, True, "stem"
         lf = leaf(x, y)
         if lf:
             s, w = lf
             vein = abs(w) < 0.1 or (s * 9 - abs(w) * 1.4) % 1 < 0.14
-            c = pal.path("d1 g1 g2 g4 g5")(clamp(0.35 + 0.35 * (w < 0) + 0.2 * (1 - s) - 0.15 * abs(w) ** 3))
-            return (mix(c, pal.rgb("d1"), 0.55) if vein else c), 1.0, True, "leaf"
+            c = leafy(clamp(0.3 + 0.4 * (w < 0) + 0.25 * (1 - s) - 0.15 * abs(w) ** 3))
+            return (leafy(0.05) if vein else c), 1.0, True, "leaf"
         glow = math.exp(-((x - cx) / 0.55) ** 2 - ((y - cy) / 0.5) ** 2)
         c = pal.path("- d0 x0 d2 x2")(glow * 0.75)
         for bx, by, br, col in ((0.75, 0.25, 0.08, "x3"), (0.55, 0.62, 0.11, "d3"), (1.78, 0.18, 0.07, "w3"),
@@ -1331,7 +1336,7 @@ def rose(pal):
                             rnd.choice([pal.rgb("w6"), pal.rgb("w8"), pal.rgb("e8")]), False))
         return out
 
-    return scene("rose pine", field, texts, inks={"rose": "ex", "dark": "dxw", "leaf": "dg", "stem": "dg"})
+    return scene("rose pine", field, texts, inks={"rose": "ex", "dark": "dxw", "leaf": "dga", "stem": "dga"})
 
 
 
