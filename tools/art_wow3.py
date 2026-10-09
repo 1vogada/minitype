@@ -947,90 +947,213 @@ def coffee(pal):
 # ---------------------------------------------------------------- solarized
 
 def sun(pal):
-    """The sun up close: a blazing disc with a granulated face, flares
-    looping off its edge and rays fanning out over a deep blue."""
-    sx, sy, sr = 1.3, 0.5, 0.33
-    face = pal.path("e1 e4 e6 w6 w9")
-    light = sphere_light(sx, sy, sr, -0.2, -0.3)
-    flares = strokes([(bezier((sx + sr * math.cos(a), sy - sr * math.sin(a)),
-                              (sx + (sr + 0.16) * math.cos(a + 0.15), sy - (sr + 0.16) * math.sin(a + 0.15) * 1),
-                              (sx + sr * math.cos(a + 0.3), sy - sr * math.sin(a + 0.3))), 0.012, 0.008)
-                      for a in (0.6, 1.9, 2.8, 4.0)])
+    """A huge sun rising over a lake: a blazing disc in a layered corona,
+    rays fanning across a sky going from deep blue through magenta to
+    orange, long clouds lit from below, ridges stepping back into the
+    glow, all of it mirrored in the water with a glittering path, and
+    reeds dark against the light in front."""
+    sx, sy, sr = 1.2, 0.38, 0.13
+    hz = 0.64
+    sky = pal.path("a1 a2 a3 x3 x5 e5 e7 e9")
+    disc = pal.path("t9 t9 w9 e9")
+    ridges = [  # far to near: (top, colours, lit)
+        (ridge([(0.7, 0.5, 0.15), (1.7, 0.45, 0.19), (-0.4, 0.6, 0.14), (1.3, 0.2, 0.09)], hz), "x1 x3 x4 e5", 0.35),
+        (ridge([(0.3, 0.4, 0.11), (1.95, 0.4, 0.13), (-0.9, 0.5, 0.1), (1.1, 0.3, 0.05)], hz), "a1 x1 x2 x3", 0.25),
+        (ridge([(-0.2, 0.45, 0.07), (0.75, 0.3, 0.05), (1.8, 0.3, 0.08)], hz), "- a1 x1 x2", 0.2)]
+    clouds = soft_clouds([(0.95, 0.24, 0.45, 0.02), (1.6, 0.2, 0.3, 0.016), (1.0, 0.5, 0.55, 0.014),
+                          (0.25, 0.33, 0.5, 0.022), (-0.5, 0.22, 0.6, 0.026), (1.75, 0.46, 0.25, 0.012),
+                          (0.0, 0.47, 0.45, 0.016), (1.45, 0.3, 0.2, 0.012)])
+    rnd = random.Random(12)
+    reeds = [(rnd.uniform(1.45, 2.0), rnd.uniform(0.66, 0.82), rnd.uniform(-0.05, 0.05)) for _ in range(22)]
+    reeds += [(rnd.uniform(-1.0, -0.6), rnd.uniform(0.75, 0.88), rnd.uniform(-0.05, 0.05)) for _ in range(8)]
+
+    def smooth_step(x, a, b):
+        k = clamp((x - a) / (b - a))
+        return k * k * (3 - 2 * k)
+
+    def reed(x, y):
+        if y < 0.62:
+            return False
+        for rx, top, lean in reeds:
+            if y > top:
+                t = (y - top) / (1.0 - top)
+                if abs(x - (rx + lean * (1 - t) ** 2)) < 0.004 + 0.006 * t:
+                    return True
+        bank = 1.02 - 0.14 * smooth_step(x, 1.4, 1.75) - 0.12 * smooth_step(x, -0.5, -0.85)
+        return y > bank + 0.008 * math.sin(x * 37)
+
+    def air(x, y):
+        """Sky, sun and ridges: everything above the water line."""
+        dx, dy = x - sx, y - sy
+        d = math.hypot(dx, dy)
+        near = math.exp(-((x - sx) / 0.45) ** 2)
+        for k in (2, 1, 0):
+            top, cols, lit = ridges[k]
+            h = ridges[k][0](x)
+            if y >= h:
+                c = pal.path(cols)(clamp(lit * near + 0.35 - (y - h) * 2))
+                c = mix(c, pal.rgb("x4"), clamp(1 - (hz - y) / 0.04) * (0.3 + 0.4 * near))
+                if y - h < 0.012:
+                    c = mix(c, pal.rgb("e9"), 0.7 * near * lit)
+                return c, False, "ridge"
+        if d <= sr:
+            return disc(clamp((d / sr) ** 2.5)), True, "sun"
+        ang = math.atan2(dy, dx)
+        fan = 0.5 + 0.5 * math.cos(ang * 10 + 0.8 * math.sin(ang * 3))
+        ray = fan ** 4 * math.exp(-(d - sr) / 0.6) * 0.5
+        glow = math.exp(-((d - sr) / 0.3) ** 2)
+        c = sky(clamp(y / hz * 0.7 + glow * 0.55 + 0.05))
+        c = mix(c, pal.rgb("e9"), ray)
+        halo = math.exp(-((d - sr - 0.012) / 0.03) ** 2)
+        c = mix(c, pal.rgb("w9"), halo * 0.85)
+        k = clouds(x, y)
+        if k:
+            cy = y + 0.01 * (1 - k)
+            under = clamp(0.25 + near * 0.6 + (cy - 0.2) * 0.8)
+            lit = pal.path("a2 x2 x4 e6 e8 e9")(under)
+            c = mix(c, lit, clamp(k * 2.2))
+            return c, False, "cloud"
+        return c, d < sr * 1.3, "sky"
 
     def field(x, y):
-        d = math.hypot(x - sx, y - sy)
-        if d <= sr:
-            g = fbm(x * 40, y * 40, 3)
-            return face(clamp(light(x, y) * 0.8 + g * 0.3 - 0.05)), 1.0, True, "sun"
-        if flares(x, y) is not None:
-            return pal.rgb("w6"), 1.0, True, "flare"
-        ang = math.atan2(y - sy, x - sx)
-        ray = clamp(math.cos(ang * 12) * 0.5 + 0.5) ** 3 * math.exp(-((d - sr) / 0.5))
-        corona = math.exp(-((d - sr) / 0.08) ** 2)
-        c = pal.path("- a1 a4")(clamp(0.3 + y * 0.5 - 0.2))
-        c = mix(c, pal.rgb("e6"), corona * 0.8)
-        c = mix(c, pal.rgb("w6"), ray * 0.45)
-        return c, 1.0, False, "space"
+        if reed(x, y):
+            rim = not reed(x - 0.008, y) and abs(x - sx) < 0.6 and y < 0.86
+            return (pal.rgb("x4") if rim else pal.ground), 1.0, False, "reeds"
+        if y < hz:
+            c, foc, tag = air(x, y)
+            return c, 1.0, foc, tag
+        depth = (y - hz) / (1 - hz)
+        wob = 0.006 * math.sin(y * 260 + 2 * math.sin(x * 14))
+        c, _, tag = air(x + wob, clamp(hz - (y - hz) * 1.3, 0.0, hz - 0.001))
+        c = mix(c, pal.rgb("a1"), 0.2 + depth * 0.55)
+        width = 0.06 + depth * 0.22
+        glint = noise(x * 28, y * 160, 7) > 0.55 - 0.15 * (1 - depth)
+        off = abs(x - sx + wob * 2) / width
+        if off < 1 and glint:
+            c = mix(c, pal.rgb("t9" if off < 0.4 and depth < 0.5 else "e9"), (1 - off ** 2) * (1 - depth * 0.45))
+        elif glint and noise(x * 9, y * 40, 2) > 0.62:
+            c = mix(c, pal.rgb("e6"), 0.35 * near_sun(x))
+        return c, 1.0, False, "lake"
+
+    def near_sun(x):
+        return math.exp(-((x - sx) / 0.7) ** 2) + 0.2
 
     def texts(rows, x_left, cw, unit):
-        return stars(field, rows, x_left, cw, unit, rows * 6, 1.0, [pal.rgb("t8"), pal.rgb("a8")], 41)
+        out = []
+        for x, y in ((0.72, 0.17), (0.79, 0.14), (0.85, 0.19), (0.3, 0.11), (1.65, 0.09)):
+            out.append((int((x - x_left) / cw), int(y / unit), "v", pal.rgb("x1"), False))
+        return out
 
-    return scene("solarized", field, texts, inks={"space": "aew", "sun": "ew"})
+    return scene("solarized", field, texts, lambda rows: [
+        ([(-6.0, hz + 0.002), (2.0, hz + 0.002)], lambda x, y: pal.rgb("e9" if abs(x - sx) < 0.4 else "e6"),
+         False, lambda x, y: reed(x, y))],
+        inks={"sky": "axew", "cloud": "axew", "sun": "tew", "ridge": "axew", "lake": "axetw"})
 
 
 # ---------------------------------------------------------------- monokai
 
+CODE_TOKENS = {  # monokai's syntax colours: keywords pink, names green, types cyan, strings yellow, numbers purple
+    "e": ["def", "if", "for", "let", "fn", "else", "return", "while", "const", "import", "class", "in", "yield"],
+    "g": ["main()", "map", "len", "fold", "push", "init()", "parse", "run()", "zip", "emit"],
+    "a": ["int", "str", "self", "None", "true", "void", "u8", "bool", "nil"],
+    "w": ['"ok"', "'a'", '"\\n"', '"wpm"', "'{}'", '"key"'],
+    "x": ["0x1F", "42", "3.14", "0b101", "1e9", "255", "0xFF", "7"],
+    "t": ["{}", "=>", ";", "==", "&&", "[]", "::", "+=", "()", "->", "!=", "||", "<<", "...", "%"],
+}
+
+
 def code(pal):
-    """An editor window floating in the dark: title bar with three dots,
-    line numbers and syntax-coloured code, a glow under it."""
-    x0, y0, x1, y1 = 0.62, 0.12, 1.88, 0.9
-    lines_of_code = [
-        [("def ", "e"), ("type_fast", "g"), ("(", "t"), ("words", "w"), ("):", "t")],
-        [("    ", "t"), ("for ", "e"), ("w ", "t"), ("in ", "e"), ("words", "w"), (":", "t")],
-        [("        ", "t"), ("if ", "e"), ("w", "t"), (" == ", "e"), ('"wow"', "w")],
-        [("            ", "t"), ("yield ", "e"), ("speed", "a"), ("(w)", "t")],
-        [("    ", "t"), ("return ", "e"), ("None", "x")],
-        [("", "t")],
-        [("# ", "d"), ("faster every day", "d")],
-        [("streak ", "t"), ("= ", "e"), ("42", "x")],
-    ]
+    """Falling code: lanes of real-looking tokens streaming down in
+    monokai's syntax colours (pink keywords, green names, cyan types,
+    yellow strings, purple numbers), white-hot heads with long fading
+    tails, far lanes dim and sparse, and a pair of huge glowing braces
+    where the stream runs thickest."""
+    cx = 1.32
+    braces = []
+    for side in (-1, 1):
+        bx = cx + side * 0.27
+        tip = bx + side * 0.07
+        braces.append(strokes([
+            (bezier((bx - side * 0.07, 0.1), (bx, 0.1), (bx, 0.2)), 0.012, 0.022),
+            ([(bx, 0.2), (bx, 0.4)], 0.022, 0.022),
+            (bezier((bx, 0.4), (bx, 0.48), (tip, 0.49)), 0.022, 0.016),
+            (bezier((tip, 0.51), (bx, 0.52), (bx, 0.6)), 0.016, 0.022),
+            ([(bx, 0.6), (bx, 0.8)], 0.022, 0.022),
+            (bezier((bx, 0.8), (bx, 0.9), (bx - side * 0.07, 0.9)), 0.022, 0.012)]))
+    ink = pal.path("e8 e6 e5 x5 x4")
+
+    def cursor(x, y):
+        return abs(x - cx) < 0.022 and 0.43 < y < 0.57
+
+    def brace(x, y):
+        if cursor(x, y):
+            return True
+        for b in braces:
+            if b(x, y) is not None:
+                return True
+        return False
+
+    def core(x, y):
+        return abs(x - cx) < 0.36 and 0.08 < y < 0.92
 
     def field(x, y):
-        if x0 <= x <= x1 and y0 <= y <= y1:
-            if y < y0 + 0.07:
-                return pal.path("d1 d4")(0.3), 1.0, True, "window"
-            if x < x0 + 0.11:
-                return pal.path("- d1")(0.6), 1.0, True, "window"
-            return pal.path("- d1")(0.25), 1.0, True, "window"
-        glow = math.exp(-((x - 1.25) / 0.8) ** 2 - ((y - 0.95) / 0.12) ** 2)
-        grid = (abs(math.sin(x * 25)) < 0.05 or abs(math.sin(y * 25)) < 0.05) and y > 0.6
-        c = pal.path("d1 x1 a1")(glow * 0.9)
-        if grid:
-            c = mix(c, pal.rgb("x4"), 0.35 * (y - 0.6) * 2.5)
-        return c, 1.0, False, "room"
+        if cursor(x, y):
+            return pal.rgb("t9"), 1.0, True, "brace"
+        if brace(x, y):
+            lit = not brace(x - 0.012, y) or not brace(x, y - 0.012)
+            c = mix(ink(y), pal.rgb("t9"), 0.55) if lit else ink(y)
+            return c, 1.0, True, "brace"
+        glow = math.exp(-((x - cx) / 0.45) ** 2 - ((y - 0.5) / 0.55) ** 2)
+        halo = max(math.exp(-((x - cx - s) / 0.07) ** 2) for s in (-0.27, 0.0, 0.27)) * clamp(1 - abs(y - 0.5) * 2.2)
+        c = pal.path("- x0 x1 x2 e2 e3")(clamp(glow * 0.7 + halo * 0.4))
+        return c, 1.0, core(x, y), "void"
 
     def texts(rows, x_left, cw, unit):
+        rnd = random.Random(7)
         out = []
-        col0 = lambda x: int((x - x_left) / cw)
-        r0 = int((y0 + 0.03) / unit)
-        for k, (cx_, col) in enumerate(((x0 + 0.03, "e6"), (x0 + 0.06, "w6"), (x0 + 0.09, "g6"))):
-            out.append((col0(cx_), r0, "o", pal.rgb(col), True))
-        first = int((y0 + 0.1) / unit)
-        for i, segs in enumerate(lines_of_code):
-            r = first + i * max(1, rows // 22)
-            if (r + 1) * unit > y1:
-                break
-            out.append((col0(x0 + 0.02), r, str(i + 1), pal.rgb("d6"), True))
-            c = col0(x0 + 0.13)
-            for text, colour in segs:
-                for chh in text:
-                    if chh != " ":
-                        out.append((c, r, chh, pal.rgb(colour + ("6" if colour != "d" else "6")), True))
-                    c += 1
-        out.append((c + 1, first + (len(lines_of_code) - 1) * max(1, rows // 22), "_", pal.rgb("t9"), True))
+        taken = set()
+        kinds = "eeegggaawwxxttt"
+        c = 0
+        cols = int((1.9 - x_left) / cw)
+        while c < cols:
+            x = x_left + c * cw
+            dense = math.exp(-((x - cx) / 0.6) ** 2)
+            depth = rnd.random() * (1 - 0.6 * dense)       # 0 near and bright .. 1 far and dim
+            gap = rnd.randint(1, 2)
+            if rnd.random() < 0.12 + 0.2 * (1 - dense):
+                c += gap + 2
+                continue
+            head = rnd.uniform(0.25 + 0.3 * dense, 1.2)
+            length = rnd.uniform(0.4, 1.0) * (1 - depth * 0.4) + 0.4 * dense
+            longest = 6 if rnd.random() < 0.25 else 3
+            width = 1
+            for r in range(rows):
+                y = (r + 0.5) * unit
+                t = (head - y) / length                       # 0 at the head, 1 at the end of the tail
+                if not 0 <= t <= 1 or rnd.random() < 0.03 + 0.2 * depth:
+                    continue
+                kind = rnd.choice(kinds)
+                tok = rnd.choice([w for w in CODE_TOKENS[kind] if len(w) <= longest] or ["{}"])
+                if t < 0.025:
+                    tone = "t9" if depth < 0.5 else "t6"
+                    kind = "t"
+                else:
+                    level = (1 - t) ** (1.4 - 0.6 * dense) * (1 - depth * 0.75)
+                    tone = kind + str(max(1 + int(dense * 3), min(9, int(1 + level * 9))))
+                    if kind == "t":
+                        tone = "d" + str(max(2, min(9, int(3 + level * 6))))
+                for k, ch in enumerate(tok):
+                    xx = x + (k + 0.5) * cw
+                    if ch == " " or (r, c + k) in taken or c + k >= cols or any(
+                            brace(xx + dx * cw, y + dy * unit) for dx in (-0.5, 0, 0.5) for dy in (-0.4, 0.4)):
+                        continue
+                    taken.add((r, c + k))
+                    out.append((c + k, r, ch, pal.rgb(tone), core(xx, y)))
+                width = max(width, len(tok))
+            c += width + gap
         return out
 
-    return scene("monokai", field, texts, inks={"window": "d", "room": "dxa"})
+    return scene("monokai", field, texts, inks={"brace": "ext"})
 
 
 # ---------------------------------------------------------------- catppuccin
@@ -1087,48 +1210,129 @@ def cat(pal):
 
 # ---------------------------------------------------------------- rose pine
 
-def rose(pal):
-    """A single rose: spiralling petals deepening to the heart, a stem
-    with thorns and two leaves, gold dust in a soft dark glow."""
-    cx, cy, r = 1.3, 0.36, 0.2
-    stem = strokes([(bezier((cx, cy + 0.15), (cx + 0.05, 0.65), (cx - 0.02, 0.98)), 0.012, 0.01)])
-    leaves = [(cx + 0.02, 0.62, 1), (cx - 0.01, 0.78, -1)]
+def petal_at(petals, x, y):
+    """The first petal (front to back) holding (x, y): (index, u, v, q) in
+    its own frame (q 0 at its middle, 1 at its wavy edge), or None."""
+    for i, (px, py, rx, ry, rot, wave) in enumerate(petals):
+        dx, dy = x - px, y - py
+        c, s = math.cos(rot), math.sin(rot)
+        u, v = (dx * c + dy * s) / rx, (-dx * s + dy * c) / ry
+        a = math.atan2(v, u)
+        edge = 1 + 0.07 * math.sin(a * 3 + wave) + 0.05 * math.sin(a * 7 + wave * 2)
+        if v < 0:
+            edge += 0.06 * math.exp(-((a + math.pi / 2) / 0.35) ** 2)     # a curled tip on top
+        q = math.hypot(u, v) / edge
+        if q <= 1:
+            return i, u, v, q
+    return None
 
-    def petal(x, y):
-        u, v = (x - cx) / r, (y - cy) / (r * 0.8)
-        d, a = math.hypot(u, v), math.atan2(v, u)
-        edge = 0.85 + 0.15 * math.cos(a * 5)
-        if d > edge or (v > 0.55 and abs(u) < 0.55 - (v - 0.55)):
-            return None
-        spiral = (a / (2 * math.pi) + d * 2.2) % 1
-        return d, spiral, u, v
+
+def rose(pal):
+    """A single red-pink rose, realistic: a cup of overlapping petals,
+    each shaded from a deep base to a lit, rolled-back lip, dark crevices
+    between them and a tight spiral bud at the heart; green sepals, a
+    thorny stem and two veined leaves; soft bokeh and gold dust behind."""
+    cx, cy = 1.3, 0.36
+    petals = [  # front to back: (x, y, rx, ry, tilt, wave)
+        (cx + 0.01, cy + 0.13, 0.12, 0.11, 0.0, 0.4),        # the front petal
+        (cx - 0.09, cy + 0.09, 0.11, 0.12, -0.35, 1.3),
+        (cx + 0.1, cy + 0.08, 0.11, 0.12, 0.35, 2.1),
+        (cx - 0.17, cy + 0.03, 0.09, 0.12, -0.6, 0.9),       # outer petals flaring out
+        (cx + 0.18, cy + 0.02, 0.09, 0.12, 0.6, 2.7),
+        (cx - 0.015, cy - 0.09, 0.05, 0.05, -0.3, 0.2),      # the bud at the heart
+        (cx + 0.03, cy - 0.1, 0.055, 0.05, 0.4, 1.7),
+        (cx - 0.06, cy - 0.06, 0.08, 0.1, -0.2, 3.1),        # inner cup walls
+        (cx + 0.07, cy - 0.07, 0.08, 0.1, 0.25, 0.6),
+        (cx, cy - 0.13, 0.11, 0.08, 0.0, 1.1),               # the back petals
+        (cx - 0.13, cy - 0.07, 0.1, 0.13, -0.4, 2.4),
+        (cx + 0.13, cy - 0.08, 0.1, 0.13, 0.4, 0.3)]
+    shade = pal.path("- x0 e1 e2 e3 e5 e6 e7 e8 e9")
+    base = (cx, cy + 0.23)
+    spine = bezier(base, (cx + 0.07, 0.68), (cx - 0.02, 1.04), 24)
+    stem = strokes([(spine, 0.013, 0.011)])
+    calyx = (cx, cy + 0.15)
+    sepals = strokes([(bezier(calyx, (cx + dx * 0.7, calyx[1] + dy * 0.35), (cx + dx, calyx[1] + dy), 10),
+                       0.034, 0.004) for dx, dy in ((-0.2, 0.15), (-0.1, 0.18), (0.11, 0.18), (0.21, 0.14))])
+    thorns = [(spine[k][0] + 0.01 * side, spine[k][1], side) for k, side in ((7, 1), (12, -1), (19, 1))]
+    leaves = [(cx + 0.045, 0.75, -0.35, 0.2, 0.06), (cx + 0.02, 0.87, math.pi + 0.45, 0.17, 0.05)]
+
+    def leaf(x, y):
+        for lx, ly, ang, ln, wd in leaves:
+            dx, dy = x - lx, y - ly
+            s = (dx * math.cos(ang) + dy * math.sin(ang)) / ln
+            w = (-dx * math.sin(ang) + dy * math.cos(ang))
+            if 0 < s < 1:
+                half = wd * math.sin(math.pi * s ** 0.8) ** 0.9 * (1 + 0.1 * math.sin(s * 45))
+                if abs(w) < half:
+                    return s, w / half
+        return None
+
+    def thorn(x, y):
+        for tx, ty, side in thorns:
+            u, v = (x - tx) * side, ty - y
+            if 0 < u < 0.045 and abs(v - u * 0.6) < 0.016 * (1 - u / 0.045):
+                return True
+        return False
 
     def field(x, y):
-        p = petal(x, y)
-        if p:
-            d, spiral, u, v = p
-            light = clamp(0.55 + (1 - d) * 0.15 - u * 0.2 - v * 0.25 - (0.35 if spiral < 0.12 else 0) - (0.3 if d < 0.2 else 0))
-            return pal.path("x1 e1 e4 e6 e8")(light), 1.0, True, "rose"
-        if stem(x, y) is not None:
-            return pal.rgb("g4"), 1.0, True, "stem"
-        for lx, ly, side in leaves:
-            u, v = (x - lx) * side, y - ly
-            if 0 < u < 0.15 and abs(v + u * 0.4) < 0.045 * math.sin(math.pi * u / 0.15):
-                return pal.path("d1 g4 g6")(clamp(0.6 - abs(v + u * 0.4) * 10)), 1.0, True, "leaf"
-        glow = math.exp(-((x - cx) / 0.6) ** 2 - ((y - cy) / 0.45) ** 2)
-        return pal.path("- d1 x1 e1")(glow * 0.7), 1.0, False, "dark"
+        hit = petal_at(petals, x, y)
+        if hit:
+            i, u, v, q = hit
+            front, inner = i < 5, 5 <= i < 9
+            t = 0.42 + 0.07 * math.sin(i * 2.3) - 0.25 * u * (0.5 if front else -0.3) - 0.2 * v
+            t += 0.25 * (q - 0.6) if v < 0 else -0.25 * q * (v if front else 1)
+            lip = 0.8 if 3 <= i < 5 or i >= 9 else 0.86
+            if v < 0 and q > lip:
+                t = 0.78 + 0.22 * (q - lip) / (1 - lip)                    # the rolled, lit lip
+            elif v < 0 and q > lip - 0.08:
+                t -= 0.3                                               # shadow under the lip
+            if front and v > 0:
+                t -= 0.4 * v ** 1.5                                     # the underside, in shadow
+            if inner:
+                t -= 0.15
+            if i == 5 or i == 6:
+                spiral = (math.atan2(v, u) / (2 * math.pi) + q * 1.6) % 1
+                t = 0.5 + 0.3 * q - (0.4 if spiral < 0.18 else 0)
+            behind = petal_at(petals[:i], x, y + 0.028)
+            if behind and i >= 3:
+                t -= 0.45 if behind[0] < 5 else 0.3                    # a crevice above a petal in front
+            return shade(clamp(t, 0.08)), 1.0, True, "rose"
+        if ((x - cx) / 0.035) ** 2 + ((y - base[1] - 0.025) / 0.03) ** 2 < 1:
+            return pal.path("g4 g2 g1")(clamp((x - cx + 0.03) * 12)), 1.0, True, "stem"
+        s = sepals(x, y)
+        if s is not None:
+            return pal.path("g2 g4 g5")(s), 1.0, True, "stem"
+        if stem(x, y) is not None or thorn(x, y):
+            lit = stem(x - 0.008, y) is None and not thorn(x - 0.008, y)
+            return pal.rgb("g4" if lit else "g1"), 1.0, True, "stem"
+        lf = leaf(x, y)
+        if lf:
+            s, w = lf
+            vein = abs(w) < 0.1 or (s * 9 - abs(w) * 1.4) % 1 < 0.14
+            c = pal.path("d1 g1 g2 g4 g5")(clamp(0.35 + 0.35 * (w < 0) + 0.2 * (1 - s) - 0.15 * abs(w) ** 3))
+            return (mix(c, pal.rgb("d1"), 0.55) if vein else c), 1.0, True, "leaf"
+        glow = math.exp(-((x - cx) / 0.55) ** 2 - ((y - cy) / 0.5) ** 2)
+        c = pal.path("- d0 x0 d2 x2")(glow * 0.75)
+        for bx, by, br, col in ((0.75, 0.25, 0.08, "x3"), (0.55, 0.62, 0.11, "d3"), (1.78, 0.18, 0.07, "w3"),
+                                (1.75, 0.75, 0.09, "x2"), (0.2, 0.4, 0.1, "d2"), (-0.4, 0.2, 0.08, "x2"),
+                                (0.95, 0.85, 0.06, "w2"), (-0.7, 0.7, 0.12, "d2")):
+            k = math.hypot(x - bx, y - by) / br
+            if k < 1:
+                c = mix(c, pal.rgb(col), 0.55 * (1 - k ** 6))
+        return c, 1.0, False, "dark"
 
     def texts(rows, x_left, cw, unit):
         rnd = random.Random(15)
         out = []
-        for _ in range(rows * 2):
+        for _ in range(rows * 3):
             x, y = rnd.uniform(-3, 1.9), rnd.uniform(0.0, 1.0)
             if field(x, y)[3] == "dark":
                 out.append((int((x - x_left) / cw), int(y / unit), rnd.choice(".·'"),
-                            rnd.choice([pal.rgb("w6"), pal.rgb("w8")]), False))
+                            rnd.choice([pal.rgb("w6"), pal.rgb("w8"), pal.rgb("e8")]), False))
         return out
 
-    return scene("rose pine", field, texts, inks={"rose": "ex", "dark": "dxe"})
+    return scene("rose pine", field, texts, inks={"rose": "ex", "dark": "dxw", "leaf": "dg", "stem": "dg"})
+
 
 
 MORE = {"jungle": jungle, "blossom": blossom, "lavender": lavender, "snowpeaks": snowpeaks,
