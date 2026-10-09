@@ -440,10 +440,40 @@ def aurora(pal):
 
 def grid(pal):
     """Outrun: a striped neon sun over wireframe mountains, a glowing grid
-    racing to the horizon, a lone car's tail lights on the road."""
+    racing to the horizon, a lone car seen from behind - its boot lid
+    catching the light and two red tail lights - on the road."""
     hz = 0.6
     sx, sy, sr = 1.25, 0.38, 0.24
     mounts = ridge([(0.4, 0.4, 0.14), (1.7, 0.35, 0.16), (-0.6, 0.5, 0.12), (-2.0, 0.6, 0.16)], hz)
+    # the car is sized as a share of the picture so it reads at every size
+    half = 0.105
+
+    def car(x, y):
+        """(band, light) for the car seen from behind, or None.
+
+        Bands: 0 cabin, 1 body, 2 wheel, 4 flank line, 5 boot lid."""
+        dx, dy = x - sx, y - 0.862
+        if not (-half - 0.02 < dx < half + 0.02 and -0.055 < dy < 0.075):
+            return None
+        u, v = dx / half, dy / 0.06
+        wheel = 1.15 < v < 2.4 and abs(u) > 0.6
+        if wheel:
+            return 2, False
+        w = 0.86 if v < -0.8 else 0.9
+        if abs(u) > w:
+            return None
+        # the tail lights: two bars, with a gap between them
+        if -0.55 < v < 0.35 and 0.36 < abs(u) < 0.74:
+            return 1, True
+        if v >= 1.2:
+            return 5, False                                  # the boot lid catches the light
+        if v < -0.75:
+            return 0, False                                  # the cabin
+        if -0.75 <= v < -0.35 and abs(u) < 0.58:
+            return 0, False                                  # the rear window stays dark
+        if abs(u) > 0.8:
+            return 4, False                                  # a line down the flank
+        return 1, False
 
     def field(x, y):
         if y < hz:
@@ -468,10 +498,21 @@ def grid(pal):
             c = pal.path("a8 a6 e6")(t)
         if road and abs(x - sx) < 0.004 + t * 0.01 and math.sin(1 / (t + 0.05) * 12) > 0:
             c = pal.rgb("w6")
-        car = abs(x - sx - 0.04) < 0.09 and 0.8 < y < 0.86
-        if car:
-            light = 0.83 < y < 0.845 and abs(abs(x - sx - 0.04) - 0.065) < 0.02
-            return (pal.rgb("e8") if light else pal.ground), 1.0, True, "car"
+        if y > 0.76:
+            got = car(x, y)
+            if got:
+                band, light = got
+                if light:
+                    return pal.rgb("e6"), 1.0, True, "car"
+                if band == 0:                               # the cabin
+                    return pal.ground, 1.0, True, "car"
+                if band == 2:                               # the wheels
+                    return pal.rgb("d1"), 1.0, True, "car"
+                if band == 5:                               # the boot lid
+                    return pal.path("x1 d1")(0.75), 1.0, True, "car"
+                if band == 4:                               # the flank line
+                    return pal.path("d1 x1")(clamp((y - 0.862) * 12 + 0.4)), 1.0, True, "car"
+                return pal.path("d1 x1")(clamp(0.25 + (0.862 - y) * 6)), 1.0, True, "car"
         return c, 1.0, False, "grid"
 
     def texts(rows, x_left, cw, unit):

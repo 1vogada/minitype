@@ -7,10 +7,10 @@ built from a scene in `tools/art_wow.py` (the first six),
 are the owner's notes on them, to work through in this order.
 
 ## Done in the 2026-10-09 pass
-Seven items below are done - **amber**, **party**, **pine**, **autumn**,
-**coral reef**, **gruvbox** and **bubbly** (marked `[x]`). The notes are
-left as they were, so what was asked for is still readable. Rebuilt with
-`python tools/make_revamp.py`; 7 of the 40 pictures changed.
+Eight items below are done - **amber**, **party**, **pine**, **autumn**,
+**coral reef**, **gruvbox**, **bubbly** and **synthwave** (marked `[x]`).
+The notes are left as they were, so what was asked for is still readable.
+Rebuilt with `python tools/make_revamp.py`; 8 of the 40 pictures changed.
 
 ## How to work on a picture
 1. Edit its scene function (search the WOW / MORE dicts for the picture
@@ -58,7 +58,7 @@ left as they were, so what was asked for is still readable. Rebuilt with
 - [x] **gruvbox** (`coffee`): remove the window, keep just the mug.
 - **rainbow** (`rainbow`): too dead - livelier.
 - [x] **bubbly** (`bubbles`): remove the green.
-- **synthwave** (`grid`): the car needs more fidelity.
+- [x] **synthwave** (`grid`): the car needs more fidelity.
 
 ## Leave as they are (the owner likes them)
 sunset, desert (cactus), meadow (flowers), tundra (snowpeaks), bamboo,

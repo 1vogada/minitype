@@ -143,3 +143,10 @@ The art work left is listed, with the owner's own notes, in
    had (g6 gave the amber stone an olive cast) - pick stops that stay on
    the wanted hue. Remaining art items are still listed with the owner's
    notes in `docs/ART-TODO.md`.
+4. Same day, on top of 3: the synthwave car (`grid`) - the owner's "needs
+   more fidelity". It was two faint dots on the road; it is now a car seen
+   from behind, sized as a share of the picture so it reads at 28, 22 and
+   16 rows alike: a boot lid catching the light, a dark rear window, wheel
+   hints, and two red tail lights. Only the car changed - every other cell
+   of the picture is byte-identical. The sizes are unchanged, so the tests
+   that pin the big pictures to 28/22/16 rows still hold.
