@@ -218,32 +218,103 @@ def bolt(pal):
 
 # ---------------------------------------------------------------- rainbow
 
+def _puffs(spec):
+    """Cumulus clouds: spec [(cx, base, [(dx, dy, r), ...])]; at(x, y) ->
+    None outside, else (how high up the cloud 0..1, light 0..1)."""
+    def at(x, y):
+        for cx, base, balls in spec:
+            if y > base:
+                continue
+            best = None
+            for dx, dy, r in balls:
+                bx, by = cx + dx, base - dy
+                d = math.hypot(x - bx, y - by)
+                if d <= r:
+                    # lit from the upper right: the side of each ball facing it
+                    lit = clamp(0.55 + ((x - bx) * 0.6 - (y - by) * 0.9) / r * 0.6)
+                    best = max(best or 0.0, lit)
+            if best is not None:
+                return clamp((base - y) / 0.12), best
+        return None
+    return at
+
+
 def rainbow(pal):
-    """A rainbow arcing over green hills after rain, clouds parting, the
-    sun bursting through."""
-    cx, cy = 1.25, 0.95
-    bands = ["e6", "w6", "w8", "g6", "a6", "a4"]
-    hills = [ridge([(0.3, 0.9, 0.1), (1.4, 0.8, 0.12), (-1.2, 1.0, 0.1)], 0.85),
-             ridge([(0.9, 0.7, 0.08), (-0.4, 0.9, 0.07), (1.8, 0.4, 0.06)], 0.92)]
-    clouds = soft_clouds([(0.4, 0.2, 0.5, 0.07), (1.7, 0.15, 0.35, 0.06), (-1.0, 0.25, 0.6, 0.07),
-                          (-2.3, 0.18, 0.5, 0.06)])
+    """A bold rainbow after the rain: a blue sky washed clean, the sun
+    breaking through, sunlit cumulus, every band of the spectrum arcing
+    over rolling green hills full of flowers, sparkles in the air."""
+    cx, cy, outer, band = 1.22, 0.92, 0.74, 0.034
+    bands = ["e6", "x6", "w6", "g6", "d3", "a5"]
+    sun = (1.78, 0.1, 0.07)
+    clouds = _puffs([
+        (-0.55, 0.3, [(0, 0.04, 0.07), (0.09, 0.06, 0.08), (0.19, 0.03, 0.06), (-0.1, 0.02, 0.05), (0.28, 0.01, 0.04)]),
+        (0.35, 0.2, [(0, 0.03, 0.05), (0.07, 0.05, 0.06), (0.15, 0.025, 0.045), (-0.07, 0.015, 0.035)]),
+        (1.55, 0.2, [(0, 0.03, 0.045), (0.07, 0.05, 0.06), (0.15, 0.03, 0.05), (-0.06, 0.015, 0.03)]),
+        (0.62, 0.45, [(0, 0.02, 0.03), (0.05, 0.03, 0.04), (0.1, 0.015, 0.03)]),
+        (-1.7, 0.22, [(0, 0.03, 0.06), (0.08, 0.05, 0.07), (0.17, 0.02, 0.05)]),
+    ])
+
+    def far(x):
+        return 0.7 + 0.03 * math.sin(x * 3.1 + 1.0) + 0.015 * math.sin(x * 7.3)
+
+    def near(x):
+        return 0.8 + 0.045 * math.sin(x * 2.4 + 0.3) + 0.02 * math.sin(x * 5.9 + 2.0)
+
+    def front(x):
+        return 0.9 + 0.04 * math.sin(x * 3.3 + 2.2) + 0.012 * math.sin(x * 9.0)
+
+    def grass(x, y, top, ramp, seed):
+        k = y - top
+        c = pal.path(ramp)(clamp(k * 7 + (noise(x * 70, y * 40, seed) - 0.5) * 0.35))
+        slope = top - [far, near, front][seed](x + 0.01)
+        return mix(c, pal.rgb("w7"), clamp(slope * 30) * 0.35 * clamp(1 - k * 10))  # sunny side
 
     def field(x, y):
-        if y >= hills[1](x):
-            return pal.path("g6 g4 g1")(clamp((y - hills[1](x)) * 6)), 1.0, False, "hills"
-        if y >= hills[0](x):
-            return pal.path("g4 g1 d1")(clamp((y - hills[0](x)) * 5)), 1.0, False, "hills"
-        r = math.hypot(x - cx, (y - cy) * 1.0)
-        k = (0.62 - r) / 0.025
+        for top, ramp, seed in ((front, "g8 g6 g5 g3", 2), (near, "g7 g5 g4 g2", 1), (far, "g6 g5 g4 g3", 0)):
+            if y >= top(x):
+                c = grass(x, y, top(x), ramp, seed)
+                return (mix(c, pal.rgb("d8"), 0.3) if seed == 0 else c), 1.0, False, "hills"   # haze on the far hills
+        r = math.hypot(x - cx, y - cy)
+        k = (outer - r) / band
         if 0 <= k < len(bands):
-            return pal.rgb(bands[int(k)]), 1.0, True, "rainbow"
-        c = pal.path("d1 d4 t4 t6")(clamp(y * 1.1))
+            c = pal.rgb(bands[int(k)])
+            fade = clamp((near(x) - y) / 0.15)                  # thinning out into the haze at its feet
+            sky = pal.path("d4 d5 d6 d8 d9")(clamp(y / 0.75))
+            return mix(sky, c, 0.35 + 0.65 * fade), 1.0, True, "rainbow"
+        c = pal.path("d4 d5 d6 d8 d9")(clamp(y / 0.75))
+        if r < outer - band * len(bands):
+            c = mix(c, pal.rgb("d9"), 0.3)                        # brighter inside the bow
+        d = math.hypot(x - sun[0], y - sun[1])
+        c = mix(c, pal.rgb("t9"), clamp(math.exp(-((d - sun[2]) / 0.12) ** 2) * 0.7 + (d < sun[2])))
+        if sun[2] < d < 0.45:
+            ang = math.atan2(y - sun[1], x - sun[0])
+            c = mix(c, pal.rgb("w9"), (math.sin(ang * 12) > 0.6) * 0.25 * (1 - d / 0.45))   # sun rays
         cl = clouds(x, y)
         if cl:
-            c = mix(c, pal.rgb("t8"), clamp(cl * 1.3))
+            h, lit = cl
+            shade = pal.path("d6 d8 t8 t9 t9")(clamp(lit * 0.7 + h * 0.45))
+            return shade, 1.0, False, "cloud"
         return c, 1.0, False, "sky"
 
-    return scene("rainbow", field, None, None, inks={"sky": "dt", "hills": "gd"})
+    def texts(rows, x_left, cw, unit):
+        rnd = random.Random(11)
+        out = []
+        flowers = [pal.rgb(k) for k in ("e7", "w8", "a7", "t9", "x7", "a8")]
+        for _ in range(rows * 24):
+            x, y = rnd.uniform(-3.1, 1.9), rnd.uniform(0.72, 1.0)
+            tag = field(x, y)[3]
+            if tag == "hills" and y > near(x) + 0.02:
+                out.append((_col(x, x_left, cw), int(y / unit), rnd.choice("*'.o*"), rnd.choice(flowers), False))
+        for _ in range(rows * 2):
+            x, y = rnd.uniform(-3.1, 1.9), rnd.uniform(0.05, 0.6)
+            if field(x, y)[3] == "sky":
+                out.append((_col(x, x_left, cw), int(y / unit), rnd.choice("+·*"),
+                            rnd.choice([pal.rgb("t9"), pal.rgb("w9")]), False))
+        for x, y in ((0.0, 0.38), (0.07, 0.35), (0.12, 0.4)):
+            out.append((_col(x, x_left, cw), int(y / unit), "v", pal.rgb("d2"), False))
+        return out
+
+    return scene("rainbow", field, texts, inks={"sky": "dtw", "cloud": "td", "hills": "gwd"})
 
 
 # ---------------------------------------------------------------- party
@@ -392,48 +463,166 @@ def bubbles(pal):
 
 # ---------------------------------------------------------------- aurora
 
-def aurora(pal):
-    """Northern lights rippling in curtains over a frozen lake, a cabin
-    with a lit window among snowy pines, the curtains mirrored in ice."""
-    shore = 0.78
-    trees = [pine(x, shore + 0.01, h, w, 6) for x, h, w in ((1.55, 0.3, 0.09), (1.7, 0.4, 0.11), (1.83, 0.26, 0.08),
-                                                         (1.18, 0.22, 0.07), (-0.6, 0.2, 0.06), (-1.9, 0.24, 0.07))]
+def _snowy_pine(cx, base, height, width, tiers=6):
+    """A pine with snow along the bottom of each tier: where(x, y) -> None
+    outside, else "snow", "rim" (its right edge, lit from the sky) or
+    "needles"."""
+    def where(x, y):
+        t = (base - y) / height
+        if t < 0 or t > 1:
+            return None
+        dx = x - cx
+        if t < 0.07:
+            return "needles" if abs(dx) < width * 0.09 else None
+        k = (t - 0.07) / 0.93
+        tier = (k * tiers) % 1.0
+        half = width * (1 - k) * (0.5 + 0.5 * (1 - tier) ** 1.4) + width * 0.02
+        if abs(dx) > half:
+            return None
+        if tier < 0.2 + 0.1 * math.sin(x * 300) and abs(dx) > half * 0.25:
+            return "snow"
+        if dx > half - width * 0.12:
+            return "rim"
+        return "needles"
+    return where
 
-    def curtain(x, y):
-        best = 0.0
-        for base, amp, ph, k in ((0.45, 0.12, 0.0, 2.3), (0.35, 0.1, 1.7, 1.6), (0.55, 0.08, 3.1, 3.0)):
-            line = base + amp * math.sin(x * k + ph) + 0.03 * math.sin(x * 9 + ph)
-            if y < line:
-                fall = math.exp(-(line - y) / 0.18)
-                rays = 0.6 + 0.4 * math.sin(x * 70 + ph * 5) ** 2
-                best = max(best, fall * rays)
-        return best
+
+def _curtain(base, waves, height, strength, seed):
+    """One aurora ribbon: its lower edge base + sum of sine waves; at(x, y)
+    -> (glow 0..1, how far up into the ribbon 0..1) or None."""
+    def edge(x):
+        return base + sum(a * math.sin(x * k + p) for a, k, p in waves)
+
+    def at(x, y):
+        b = edge(x)
+        d = b - y
+        if d < -0.02 or d > height * 2.5:
+            return None
+        if d < 0:
+            return -d / 0.02, -1.0                         # the pink fringe under the edge
+        slope = abs(edge(x + 0.004) - edge(x - 0.004)) / 0.008
+        fold = 0.65 + min(0.6, slope * 0.9)               # folds catch more light
+        rays = 0.45 + 0.55 * noise(x * 55, y * 2 + x * 3, seed) ** 1.3
+        glow = math.exp(-d / height) * fold * rays * strength * 1.5
+        if d < 0.012:
+            glow = max(glow, strength * (1 - d / 0.03))   # the bright lower edge
+        h = d / (height * 2.5)
+        glow = max(glow, 0.45 * strength * rays * math.exp(-((h - 0.6) / 0.22) ** 2))   # a rose haze on top
+        return clamp(glow), h
+    return at
+
+
+def aurora(pal):
+    """Northern lights over a frozen lake: folded curtains, bright and
+    green along their lower edges, fading up through teal to rose; a snowy
+    log cabin with lit windows among snow-laden pines, everything mirrored
+    in the still water."""
+    shore = 0.76
+    curtains = [
+        _curtain(0.22, ((0.06, 2.1, 0.4), (0.03, 5.3, 2.0)), 0.1, 0.6, 5),
+        _curtain(0.38, ((0.1, 1.6, 2.2), (0.035, 4.1, 0.3), (0.012, 11, 1.0)), 0.16, 1.0, 9),
+        _curtain(0.52, ((0.07, 2.7, 4.0), (0.03, 6.2, 1.1)), 0.1, 0.8, 13),
+    ]
+    up = pal.path("t8 a9 a7 a6 a4 x4 e5 e4")
+    hills = ridge([(-0.6, 0.5, 0.08), (0.2, 0.45, 0.11), (0.85, 0.3, 0.06), (1.5, 0.5, 0.1), (2.1, 0.4, 0.12)],
+                  shore)
+    trees = [_snowy_pine(x, b, h, w) for x, b, h, w in
+             ((1.13, 0.775, 0.24, 0.07), (1.58, 0.78, 0.34, 0.09), (1.73, 0.79, 0.42, 0.11),
+              (1.86, 0.785, 0.3, 0.08), (1.04, 0.77, 0.15, 0.05))]
+    far = [pine(x, shore, h, w, 5) for x, h, w in ((-0.3, 0.06, 0.025), (-0.24, 0.08, 0.03), (0.42, 0.05, 0.02),
+                                                    (0.47, 0.07, 0.025), (0.53, 0.05, 0.02))]
+    cab = (1.24, 1.47, shore - 0.075, shore + 0.005)      # x0, x1, wall top, base
+
+    def bank(x):
+        """The snowy bank the cabin stands on (right of the lake)."""
+        return shore + 0.03 - 0.045 * clamp((x - 0.98) / 0.14) + 0.004 * math.sin(x * 37)
 
     def sky(x, y):
-        c = pal.path("- d1 d4")(clamp(y * 0.8))
-        a = curtain(x, y)
-        c = mix(c, pal.path("a4 a6 a8 g6 e4")(clamp(1 - a + 0.0)), clamp(a * 1.4))
+        c = pal.path("- - - d0 d1")(clamp(y / shore))
+        for at in curtains:
+            hit = at(x, y)
+            if hit is None:
+                continue
+            glow, h = hit
+            if h < 0:
+                c = mix(c, pal.rgb("e4"), 0.3 * (1 - glow))
+            else:
+                c = mix(c, up(clamp(h * 1.3)), glow)
         return c
 
+    def cabin(x, y):
+        x0, x1, top, base = cab
+        mid = (x0 + x1) / 2
+        roof = top - 0.07 * (1 - abs(x - mid) / ((x1 - x0) / 2 + 0.03))
+        if 1.41 < x < 1.44 and top - 0.09 < y < top - 0.02:
+            return pal.rgb("x2") if y > top - 0.083 else pal.rgb("t6")      # the chimney, snow on top
+        if x0 - 0.03 < x < x1 + 0.03 and roof - 0.012 < y < top + 0.004:
+            return pal.path("t9 t7 t5")(clamp((y - roof + 0.012) / 0.035))  # snow on the roof
+        if x0 < x < x1 and top <= y <= base:
+            for wx in (1.29, 1.39):
+                if wx < x < wx + 0.04 and top + 0.02 < y < top + 0.05:
+                    if abs(x - wx - 0.02) < 0.003 or abs(y - top - 0.035) < 0.003:
+                        return pal.rgb("x1")
+                    return pal.path("w9 w7")(clamp((y - top - 0.02) / 0.03))
+            if 1.345 < x < 1.375 and y > top + 0.025:
+                return pal.rgb("x1")                                        # the door
+            log = int((y - top) / 0.0125) % 2
+            return pal.path("x5 x3 x2")(clamp((x - x0) / (x1 - x0)) * 0.6 + log * 0.3)
+        return None
+
     def field(x, y):
-        if any(t(x, y) for t in trees):
-            snow = noise(x * 90, y * 60) > 0.6
-            return (pal.rgb("t6") if snow else pal.ground), 1.0, x > 1.1, "tree"
-        if 1.32 < x < 1.48 and shore - 0.08 < y < shore + 0.01:
-            roof = y < shore - 0.055
-            window = 1.37 < x < 1.41 and shore - 0.04 < y < shore - 0.015
-            return (pal.rgb("t8") if roof else pal.rgb("w8") if window else pal.path("- x1")(0.6)), 1.0, True, "cabin"
-        if y >= shore:
-            my = shore - (y - shore) * 1.6
-            c = sky(x, clamp(my, 0.0, shore))
-            ice = pal.path("t4 d4 d1")(clamp((y - shore) * 3))
-            return mix(c, ice, 0.55), 1.0, False, "lake"
-        return sky(x, y), 1.0, False, "sky"
+        c = cabin(x, y)
+        if c is not None:
+            return c, 1.0, True, "cabin"
+        for tr in trees:
+            part = tr(x, y)
+            if part:
+                c = {"snow": pal.rgb("t7"), "rim": pal.rgb("a3"), "needles": pal.path("- d0")(0.35)}[part]
+                return c, 1.0, True, "tree"
+        if x > 0.98 and y >= bank(x):
+            depth = y - bank(x)
+            if y < shore + 0.025 + 0.1 * clamp((x - 1.0) / 0.25) ** 0.7:
+                light = sum(math.exp(-((x - wx - 0.02) / 0.05) ** 2) for wx in (1.29, 1.39)) * math.exp(-((y - shore) / 0.03) ** 2)
+                c = pal.path("t6 t4 d4 d2")(clamp(depth / 0.09))
+                c = mix(c, pal.rgb("w7"), clamp(light * 0.6))
+                return c, 1.0, False, "snow"
+        if any(t(x, y) for t in far):
+            return pal.path("- d0")(0.5), 1.0, False, "sky"
+        if y < shore:
+            top = hills(x)
+            if y >= top:
+                k = (y - top) / 0.05
+                c = pal.path("t4 d3 d0 -")(clamp(k * 0.8 + noise(x * 50, y * 50, 3) * 0.5))
+                return mix(c, pal.rgb("a4"), 0.35 * clamp(1 - k)), 1.0, False, "hill"
+            return sky(x, y), 1.0, False, "sky"
+        # the lake: the sky mirrored, broken by slow ripples
+        t = (y - shore) / (1 - shore)
+        wob = 0.008 * math.sin(y * 230 + math.sin(x * 9) * 2)
+        my = shore - (y - shore) * 1.25
+        if my >= hills(x + wob):
+            c = pal.path("d0 -")(clamp((shore - my) / 0.06))
+        else:
+            c = sky(x + wob, max(0.0, my))
+        c = mix(c, pal.ground, 0.15 + t * 0.3)
+        if math.sin(y * 420 + math.sin(x * 6) * 3) > 0.9:
+            c = mix(c, pal.rgb("d3"), 0.35)
+        for wx in (1.31, 1.41):                                # the windows' light on the water
+            if abs(x - wx) < 0.012 + t * 0.01 and math.sin(y * 300) > -0.2:
+                c = mix(c, pal.rgb("w6"), 0.7 * (1 - t))
+        return c, 1.0, False, "lake"
+
+    def lines(rows):
+        return [([(1.425 + 0.012 * math.sin(k * 0.8) + k * 0.006, cab[2] - 0.1 - k * 0.025) for k in range(8)],
+                 pal.rgb("d6"), False, None)]
 
     def texts(rows, x_left, cw, unit):
-        return stars(field, rows, x_left, cw, unit, rows * 7, 0.7, [pal.rgb("t9"), pal.rgb("t6")], 17)
+        out = stars(field, rows, x_left, cw, unit, rows * 9, 0.6, [pal.rgb("t9"), pal.rgb("t6"), pal.rgb("d8")], 17)
+        return out + stars(field, rows, x_left, cw, unit, rows // 3, 0.4, [pal.rgb("t9"), pal.rgb("w8")], 23,
+                           chars="+*")
 
-    return scene("aurora", field, texts, inks={"sky": "dage", "lake": "dtag"})
+    return scene("aurora", field, texts, lines,
+                 inks={"sky": "dagxe", "hill": "dta", "lake": "dagxew", "snow": "tdw", "cabin": "xwtd",
+                       "tree": "dta"})
 
 
 # ---------------------------------------------------------------- synthwave
@@ -524,37 +713,63 @@ def grid(pal):
 # ---------------------------------------------------------------- deep sea
 
 def jellyfish(pal):
-    """Deep sea: a glowing jellyfish drifting up, its bell lit from inside,
-    long trailing tentacles, motes of plankton and light from far above."""
+    """Deep sea: a glowing jellyfish drifting up, its bell blushing from
+    coral through violet to a cyan rim, lit from inside, a glowing frill,
+    frilled pink arms and long tentacles in every colour; smaller jellies
+    in their own hues, motes of plankton and light from far above."""
     jx, jy, jr = 1.3, 0.32, 0.16
     bell_light = sphere_light(jx, jy, jr, -0.2, -0.5)
-    tentacles = [bezier((jx + dx, jy + 0.06), (jx + dx * 1.5 + 0.08 * math.sin(k), 0.6), (jx + dx * 0.6 - 0.05 * k, 0.98), 30)
-                 for k, dx in enumerate((-0.12, -0.07, -0.02, 0.03, 0.08, 0.12))]
-    small = [(-0.4, 0.4, 0.05), (0.5, 0.65, 0.04), (-1.8, 0.3, 0.05), (-2.6, 0.6, 0.035)]
+    hues = ("e8", "a8", "w8", "x8", "g8", "e7", "a9")
+    tentacles = [bezier((jx + dx, jy + 0.07), (jx + dx * 1.4 + 0.06 * math.sin(k * 1.7), 0.62),
+                        (jx + dx * 1.1 - 0.12 + 0.03 * math.sin(k * 2.3), 0.99), 30)
+                 for k, dx in enumerate((-0.13, -0.09, -0.05, -0.01, 0.03, 0.07, 0.11))]
+    arms = strokes([(bezier((jx + dx, jy + 0.05), (jx + dx * 2 + 0.05, jy + 0.22), (jx + dx - 0.04, jy + 0.38), 14),
+                     0.016, 0.004) for dx in (-0.035, 0.0, 0.035)])
+    small = [(-0.4, 0.4, 0.05, "e"), (0.5, 0.65, 0.04, "w"), (0.15, 0.2, 0.03, "a"), (-1.8, 0.3, 0.05, "g"),
+             (-2.6, 0.6, 0.035, "e")]
 
     def bell(x, y, cx, cy, r):
         u, v = (x - cx) / r, (y - cy) / (r * 0.75)
         return v <= 0.35 and u * u + v * v <= 1 and not (v > 0.2 and math.sin(u * 14) > 0.6)
 
+    def main_bell(x, y):
+        u, v = (x - jx) / jr, (y - jy) / (jr * 0.75)
+        c = pal.path("e5 e6 e7 x8 a7 a6")(clamp((v + 1) / 1.25 + u * 0.12))
+        r, ang = math.hypot(u, (v + 0.35) * 1.3), math.atan2(v + 0.35, u)
+        if 0.15 < r < 0.5 and math.cos(ang * 4 + 0.8) > 0.1:
+            c = pal.path("w9 w7")(r * 2)                            # the glowing gonads, four lobes
+        elif math.sin(ang * 16) > 0.85 and r > 0.5 and v < 0.1:
+            c = mix(c, pal.rgb("x8"), 0.6)                         # radial canals
+        if v > 0.12:
+            c = mix(c, pal.path("a9 t9")(clamp((v - 0.12) / 0.2)), 0.85)  # the frill
+        light = bell_light(x, y)
+        return mix(c, pal.rgb("t9"), clamp(light - 0.9) * 6)
+
     def field(x, y):
         if bell(x, y, jx, jy, jr):
-            t = bell_light(x, y) * 0.6 + 0.4 * math.exp(-((y - jy - 0.02) / 0.06) ** 2)
-            veins = math.sin(math.atan2(y - jy - 0.1, x - jx) * 14) > 0.85
-            return pal.path("d4 g4 a6 t8 t9")(clamp(t + (0.15 if veins else 0))), 1.0, True, "jelly"
-        for cx, cy, r in small:
+            return main_bell(x, y), 1.0, True, "jelly"
+        k = arms(x, y)
+        if k is not None:
+            frill = math.sin(y * 260 + x * 40) > 0.3
+            return pal.path("e8 e6 x6 x4")(clamp(k + (0.15 if frill else 0))), 1.0, True, "jelly"
+        for cx, cy, r, hue in small:
             if bell(x, y, cx, cy, r):
-                return pal.path("g4 a6")(0.6), 1.0, False, "jelly2"
+                v = (y - cy) / (r * 0.75)
+                return pal.path(f"t9 {hue}9 {hue}7 {hue}6")(clamp((v + 0.9) / 1.3)), 1.0, False, "jelly2"
         glow = math.exp(-((x - jx) / 0.4) ** 2 - ((y - jy) / 0.35) ** 2)
         shaft = clamp(math.sin((x + y * 0.3) * 5) * 0.5 + 0.5) ** 10 * clamp(0.8 - y)
         c = pal.path("a4 d4 d1 -")(clamp(y * 1.2 + 0.1))
-        c = mix(c, pal.rgb("g6"), glow * 0.35)
+        c = mix(c, pal.rgb("x4"), glow * 0.35)
+        c = mix(c, pal.rgb("e4"), math.exp(-((x - jx) / 0.24) ** 2 - ((y - jy + 0.03) / 0.18) ** 2) * 0.4)
+        for cx, cy, r, hue in small:                                # each small jelly's own halo
+            c = mix(c, pal.rgb(hue + "4"), math.exp(-((x - cx) / (r * 2)) ** 2 - ((y - cy) / (r * 1.6)) ** 2) * 0.4)
         return mix(c, pal.rgb("t6"), shaft * 0.3), 1.0, False, "water"
 
     def lines(rows):
-        out = [(pts, pal.rgb("a8"), True, None) for pts in tentacles]
-        for cx, cy, r in small:
+        out = [(pts, pal.rgb(hues[k]), True, None) for k, pts in enumerate(tentacles)]
+        for cx, cy, r, hue in small:
             out += [(bezier((cx + d, cy + 0.02), (cx + d * 1.6, cy + 0.12), (cx + d, cy + 0.25), 12),
-                     pal.rgb("g6"), False, None) for d in (-0.02, 0.0, 0.02)]
+                     pal.rgb(hue + "8"), False, None) for d in (-0.02, 0.0, 0.02)]
         return out
 
     def texts(rows, x_left, cw, unit):
@@ -564,46 +779,183 @@ def jellyfish(pal):
             x, y = rnd.uniform(-3.1, 1.9), rnd.uniform(0, 1)
             if field(x, y)[3] == "water":
                 out.append((_col(x, x_left, cw), int(y / unit), rnd.choice(".·'°"),
-                            rnd.choice([pal.rgb("a8"), pal.rgb("g8"), pal.rgb("t8")]), False))
+                            rnd.choice([pal.rgb("a8"), pal.rgb("g8"), pal.rgb("t8"), pal.rgb("e8"), pal.rgb("w8")]),
+                            False))
         return out
 
-    return scene("deep sea", field, texts, lines, inks={"water": "adgt", "jelly": "dgat"})
+    return scene("deep sea", field, texts, lines,
+                 inks={"water": "adgtxew", "jelly": "dgatewx", "jelly2": "dgatewx"})
 
 
 # ---------------------------------------------------------------- phosphor
 
+def _cell_probe():
+    """The cell height a field is being sampled at. The renderer samples a
+    field cell by cell from the top, 8 samples down a cell, so a render's
+    first sample sits at y = unit / 16; a jump back up by more than half the
+    picture means the next size has started. Lets a field line shapes up
+    with the cells (crisp scanlines, quadrant keycaps)."""
+    state = {"last": None, "unit": 1 / 28}
+
+    def seen(y):
+        if state["last"] is None or y < state["last"] - 0.5:
+            state["unit"] = max(1 / 40, min(1 / 10, y * 16))
+        state["last"] = y
+        return state["unit"]
+    return seen
+
+
+_PIX = {"M": "101111101101101", "I": "111010010010111", "N": "110101101101101", "T": "111010010010010",
+        "Y": "101101010010010", "P": "110101110100100", "E": "111100110100111"}
+
+
 def terminal(pal):
-    """A green phosphor terminal: a big curved CRT glowing in the dark,
-    a shell session on it with a block cursor, scanlines and bloom."""
-    sx0, sy0, sx1, sy1 = 0.78, 0.1, 1.82, 0.78
+    """A green phosphor terminal: a chunky retro CRT on a dark desk, its
+    curved glass glowing, a pixel banner and a shell session with a block
+    cursor on crisp scanlines, a keyboard in front."""
+    cx0, cy0, cx1, cy1 = 0.84, 0.07, 1.86, 0.76          # the case
+    sx0, sy0, sx1, sy1 = 0.95, 0.13, 1.75, 0.6           # the glass
+    desk = 0.8
+    probe = _cell_probe()
+    session = [("$ ", "minitype --zen"), ("", "  ready.  92 wpm  99%"), ("$ ", "ls ~/words"),
+               ("", "  en.txt  de.txt  fr.txt"), ("$ ", "█")]
+
+    def layout(unit):
+        """Banner (x, y, pixel) and the session's first row, for this size."""
+        top = math.ceil(sy0 / unit) + 1
+        px = unit / 2
+        if (sx1 - sx0) / px < 33 or (sy1 - sy0) / unit < 9:
+            return None, top
+        bx = 1.9 - (round((1.9 - (sx0 + sx1) / 2) / px) + 16) * px
+        return (bx, top * unit, px), top + 4
+
+    def rounded(x, y, x0, y0, x1, y1, r):
+        qx, qy = max(x0 + r - x, 0, x - x1 + r), max(y0 + r - y, 0, y - y1 + r)
+        return x0 <= x <= x1 and y0 <= y <= y1 and qx * qx + qy * qy <= r * r
+
+    def glass(x, y):
+        u, v = (x - (sx0 + sx1) / 2) / ((sx1 - sx0) / 2), (y - (sy0 + sy1) / 2) / ((sy1 - sy0) / 2)
+        return abs(u) ** 6 + abs(v) ** 6, u, v
+
+    def screen(x, y, unit, u, v):
+        f = (y / unit) % 1.0
+        c = pal.path("- d0 d1 d2 d3")(clamp(0.85 - (u * u + v * v) * 0.6))
+        banner, top = layout(unit)
+        if banner:
+            bx, by, px = banner
+            i, j = int((x - bx) / px), int((y - by) / (px))
+            if 0 <= j < 5 and 0 <= i < 31 and i % 4 != 3:
+                ch = "MINITYPE"[i // 4]
+                if _PIX[ch][j * 3 + i % 4] == "1":
+                    return pal.path("t9 t8 t6 t5")(j / 4)
+            if 0 <= j < 6 and -1 <= i < 32:
+                c = mix(c, pal.rgb("d2"), 0.6)            # the banner's glow
+        r = int(y / unit) - top
+        if 0 <= r < len(session):
+            n = len("".join(session[r]))
+            col0 = sx0 + 0.05
+            if col0 - unit * 0.5 < x < col0 + n * unit / 2 + unit * 0.5:
+                c = mix(c, pal.rgb("d2"), 0.5)            # phosphor bloom behind the text
+        light = math.exp(-(((u + 0.55) / 0.35) ** 2) - ((v + 0.6) / 0.25) ** 2)
+        c = mix(c, pal.rgb("d6"), light * 0.45)           # a reflection on the curved glass
+        if f > 0.74:
+            c = mix(c, pal.ground, 0.65)                   # the scanline gap
+        return c
 
     def field(x, y):
-        u, v = (x - (sx0 + sx1) / 2) / ((sx1 - sx0) / 2), (y - (sy0 + sy1) / 2) / ((sy1 - sy0) / 2)
-        if abs(u) ** 5 + abs(v) ** 5 <= 1:
-            scan = math.sin(y * 380) > 0.4
-            return pal.path("- d1 d4 a4")(clamp(0.62 - (u * u + v * v) * 0.3 - (0.1 if scan else 0))), 1.0, True, "screen"
-        if abs(u) ** 5 + abs(v) ** 5 <= 1.35 ** 5:
-            return pal.path("- d1")(0.35), 1.0, True, "bezel"
-        if y > 0.86:
-            return pal.path("d1 -")(clamp((y - 0.86) * 8)), 1.0, False, "desk"
-        bloom = math.exp(-((x - 1.3) / 0.8) ** 2 - ((y - 0.45) / 0.5) ** 2)
-        return pal.path("- d1")(bloom * 0.6), 1.0, False, "room"
+        unit = probe(y)
+        g, u, v = glass(x, y)
+        if g <= 1:
+            return screen(x, y, unit, u, v), 1.0, True, "screen"
+        if g <= 1.16 ** 6:
+            # the recess round the glass: dark, lit along its bottom lip
+            k = (g ** (1 / 6) - 1) / 0.16
+            lip = v > 0.6
+            return pal.path("- d1 d3 d5" if lip else "- d1 d2 d3")(k), 1.0, True, "case"
+        if rounded(x, y, cx0, cy0, cx1, cy1, 0.05):
+            edge = min(x - cx0, cx1 - x, y - cy0, cy1 - y)
+            c = pal.path("d6 d5 d4 d3")(clamp(0.6 * (y - cy0) / (cy1 - cy0) + 0.4 * (x - cx0) / (cx1 - cx0)))
+            if edge < 0.012:
+                lit = (y - cy0 < 0.012) or (x - cx0 < 0.012 and cy1 - y > 0.012)
+                c = pal.rgb("d8") if lit else pal.rgb("d1")
+            elif y > 0.66:
+                if 1.66 < x < 1.68 and 0.68 < y < 0.70:
+                    return pal.rgb("g7"), 1.0, True, "case"       # power light
+                if 1.72 < x < 1.8 and 0.675 < y < 0.705:
+                    return pal.path("d2 d3")(clamp((x - 1.72) / 0.08)), 1.0, True, "case"
+                if 0.98 < x < 1.32 and 0.7 < y < 0.715 and (x * 120) % 1 < 0.6:
+                    c = pal.rgb("d3")                     # vent slots
+            return c, 1.0, True, "case"
+        if 1.17 < x < 1.53 and cy1 <= y < desk + 0.01:
+            w = (y - cy1) / (desk - cy1)
+            if abs(x - 1.35) < 0.1 + w * 0.08:
+                return pal.path("d4 d2 d1")(w), 1.0, True, "case"   # the neck and foot
+        # the keyboard
+        if desk + 0.02 < y < 0.955 and 0.9 - (y - desk) * 0.4 < x < 1.82 + (y - desk) * 0.4:
+            px = unit / 4
+            qy = (y - (desk + 0.02)) / (unit / 2)
+            qrow, qx = int(qy), int((1.9 - x) / px)
+            if qrow % 2 == 1 or qrow >= 8 or y < desk + 0.02 + unit * 0.25:
+                return pal.path("d3 d2")(clamp(qy / 8)), 1.0, True, "keys"
+            kr = qrow // 2
+            if kr == 3:
+                key = 22 < qx < 74 and (qx < 30 or qx > 32) and (qx < 64 or qx > 66)
+            else:
+                key = (qx + kr) % 4 != 0 and 6 < qx < 90 - kr
+            return (pal.path("d9 d8 d7")(kr / 3) if key else pal.rgb("d3")), 1.0, True, "keys"
+        if 0.64 < x < 0.76 and 0.7 < y < desk:
+            if 0.66 < x < 0.74:                            # a mug, lit from the screen
+                k = (x - 0.66) / 0.08
+                rim = y < 0.708
+                return (pal.rgb("d6") if rim else pal.path("d1 d2 d4 d6 d3")(k)), 1.0, False, "desk"
+            if x < 0.66 and 0.715 < y < 0.775 and abs(math.hypot((x - 0.66) / 0.018, (y - 0.745) / 0.03) - 0.8) < 0.3:
+                return pal.rgb("d2"), 1.0, False, "desk"
+        for k, (fx, fw) in enumerate(((0.3, 0.2), (0.32, 0.19), (0.29, 0.2))):
+            fy = desk - 0.022 * (k + 1)
+            if fy < y <= fy + 0.022 and fx < x < fx + fw:     # a stack of floppies
+                if y < fy + 0.005:
+                    return pal.rgb("d4"), 1.0, False, "desk"
+                if fx + 0.05 < x < fx + 0.11 and k == 2:
+                    return pal.rgb("w4"), 1.0, False, "desk"
+                return pal.path("d3 d2")(k / 2), 1.0, False, "desk"
+        if y >= desk:
+            t = (y - desk) / (1 - desk)
+            c = pal.path("d2 d1 d0 -")(clamp(t * 1.2 + 0.1))
+            spill = math.exp(-((x - 1.35) / 0.55) ** 2) * (1 - t) * 0.6
+            c = mix(c, pal.rgb("d3"), spill)
+            if y < desk + 0.006:
+                c = pal.rgb("d4")
+            return c, 1.0, False, "desk"
+        bloom = math.exp(-((x - 1.35) / 0.75) ** 2 - ((y - 0.38) / 0.45) ** 2)
+        return pal.path("- d0 d1")(bloom * 0.9), 1.0, False, "room"
 
     def texts(rows, x_left, cw, unit):
         out = []
-        txt = ["$ ssh home", "welcome back.", "$ minitype --zen", "  ready.", "$ █"]
-        r0 = int((sy0 + 0.08) / unit)
-        step = max(1, int(0.075 / unit))
-        for i, line in enumerate(txt):
-            r = r0 + i * step
-            if (r + 1) * unit > sy1 - 0.03:
+        _, top = layout(unit)
+        last = int(sy1 / unit) - 1
+        c0 = _col(sx0 + 0.05, x_left, cw)
+        cmax = _col(sx1 - 0.03, x_left, cw)
+        for i, (prompt, rest) in enumerate(session):
+            r = top + i
+            if r > last:
                 break
-            for k, ch in enumerate(line):
-                if ch != " ":
-                    out.append((_col(sx0 + 0.1, x_left, cw) + k, r, ch, pal.rgb("t9" if ch == "$" else "t8"), True))
+            if r == last and prompt == "":
+                break
+            for k, ch in enumerate(prompt + rest):
+                if ch == " " or c0 + k > cmax:
+                    continue
+                colour = ("w8" if k < len(prompt) else "t9" if prompt else "t7")
+                out.append((c0 + k, r, ch, pal.rgb(colour), True))
+        out.append((_col(1.12, x_left, cw), int(0.69 / unit), "m", pal.rgb("d8"), True))
+        out.append((_col(1.12, x_left, cw) + 1, int(0.69 / unit), "t", pal.rgb("d8"), True))
         return out
 
-    return scene("phosphor", field, texts, inks={"screen": "dt", "bezel": "d", "room": "d"})
+    def lines(rows):
+        return [([(0.69 + d + 0.012 * math.sin(k * 0.9 + d * 40), 0.69 - k * 0.022) for k in range(9)],
+                 pal.rgb("d5"), False, None) for d in (-0.005, 0.02)]
+
+    return scene("phosphor", field, texts, lines, inks={"screen": "dtw", "case": "dg", "keys": "d", "room": "d",
+                                                        "desk": "dw"})
 
 
 # ---------------------------------------------------------------- vaporwave
