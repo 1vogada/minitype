@@ -141,36 +141,47 @@ def sunset(pal):
 # ---------------------------------------------------------------- moss
 
 def _fern(cx, base, size, seed):
-    """A fern clump rooted at (cx, base): fronds fanning out and drooping,
-    each with leaflets. inside(x, y) -> 0..1 along the frond (root to
-    tip), or None."""
+    """A fern clump rooted at (cx, base): a few big fronds that rise and
+    arch outward, each a midrib with leaflets, and a few grass blades.
+    inside(x, y) -> 0..1 along the frond (root to tip), or None."""
     rnd = random.Random(seed)
     fronds = []
-    for k in range(5):
-        a = math.pi * (0.1 + 0.8 * (k + rnd.uniform(-0.25, 0.25)) / 4)   # 0 right .. pi left
-        fronds.append((a, size * rnd.uniform(0.75, 1.1)))
-    blades = [(cx + rnd.uniform(-0.6, 0.6) * size, size * rnd.uniform(0.6, 1.3), rnd.uniform(-0.5, 0.5))
-              for _ in range(5)]
+    for lean in (-1.0, 0.15 * rnd.choice((-1, 1)), 1.0):
+        ln = size * rnd.uniform(0.85, 1.1)
+        tip = (cx + lean * ln * 0.9, base - ln * (0.75 - 0.4 * abs(lean)))
+        ctrl = (cx + lean * ln * 0.35, base - ln * (1.15 - 0.2 * abs(lean)))
+        n = 14
+        pts = [((1 - t) ** 2 * cx + 2 * (1 - t) * t * ctrl[0] + t * t * tip[0],
+                (1 - t) ** 2 * base + 2 * (1 - t) * t * ctrl[1] + t * t * tip[1])
+               for t in (k / n for k in range(n + 1))]
+        fronds.append(pts)
+    blades = [(cx + rnd.uniform(-0.4, 0.4) * size, size * rnd.uniform(0.5, 0.9), rnd.uniform(-0.6, 0.6))
+              for _ in range(3)]
 
     def inside(x, y):
-        dx, dy = (x - cx) * 1.0, (base - y) * 1.0
-        r = math.hypot(dx, dy * 1.4)
-        if r > size * 1.4 or dy < -0.004:
+        if abs(x - cx) > size * 1.05 or y > base + 0.004 or y < base - size * 1.1:
             return None
-        for bx, bh, lean in blades:               # grass blades among the fronds
+        for bx, bh, lean in blades:                 # grass blades among the fronds
+            dy = base - y
             t = dy / bh
-            if 0 <= t <= 1 and abs(x - bx - lean * dy * t) < 0.0045 * (1 - t) + 0.001:
-                return t
-        ang = math.atan2(max(dy, 0.0) * 1.4, dx)
-        for a, ln in fronds:
-            t = r / ln
-            if t > 1:
-                continue
-            side = 1 if a < math.pi / 2 else -1
-            aa = a - side * (abs(math.cos(a)) * 0.9) * t * t   # droops outward
-            width = 0.003 + 0.011 * math.sin(math.pi * min(1.0, t * 1.1)) * (0.3 + 0.7 * abs(math.sin(t * 14)))
-            if abs(ang - aa) * r < width:
-                return t
+            if 0 <= t <= 1 and abs(x - bx - lean * dy * t) < 0.005 * (1 - t) + 0.0015:
+                return t * 0.8
+        for pts in fronds:
+            n = len(pts) - 1
+            for k in range(n):
+                (ax, ay), (bx, by) = pts[k], pts[k + 1]
+                dx, dy = bx - ax, by - ay
+                u = clamp(((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy))
+                d = math.hypot(x - ax - dx * u, y - ay - dy * u)
+                t = (k + u) / n
+                if d > 0.03:
+                    continue
+                if d < 0.0035:
+                    return t                            # the midrib
+                # leaflets: broad in the middle, tapering to the tip, with gaps
+                leaf = 0.024 * math.sin(math.pi * min(1.0, 0.2 + t)) * (1 - t * 0.5) * (0.6 + 0.4 * ((t * 8) % 1.0))
+                if d < leaf:
+                    return t + (0.3 if y < ay + dy * u else 0.0)   # upper side catches light
         return None
     return inside
 
@@ -211,15 +222,15 @@ def stones(pal):
     trunks = sorted((rnd.uniform(-3.4, 1.9), rnd.uniform(0.02, 0.05), rnd.uniform(0.0, 1.0)) for _ in range(26))
     vines = {k: _vine(tx, w, k) for k, (tx, w, _) in enumerate(trunks) if k % 2 == 0}
     ferns = []
-    for k, (tx, w, _) in enumerate(trunks):
-        for side in (-1, 1):
-            fx = tx + side * (w + rnd.uniform(0.02, 0.06))
-            ferns.append((fx, _fern(fx, ground_y + 0.01, rnd.uniform(0.08, 0.14), k * 2 + side)))
-    for fx in (0.97, 1.08, 1.55, 1.62):            # and round the cairn
-        ferns.append((fx, _fern(fx, ground_y + 0.01, 0.08, int(fx * 100))))
+    for k, (tx, w, _) in enumerate(trunks):        # a big fern at every trunk's foot
+        side = 1 if k % 3 else -1
+        fx = tx + side * (w + rnd.uniform(0.01, 0.04))
+        ferns.append((fx, _fern(fx, ground_y + 0.012, rnd.uniform(0.16, 0.22), k)))
+    for fx in (1.02, 1.6):                          # and round the cairn
+        ferns.append((fx, _fern(fx, ground_y + 0.012, 0.13, int(fx * 100))))
     stone = pal.path("- t0 t1 t3 t5 t6")
     moss = pal.path("a0 a1 g2 g4 g6 g7")
-    bark = pal.path("- x0 d0 d2 d4 t1")
+    bark = pal.path("- a0 d0 d2 d4 t1")
     every = stack + rocks
 
     def in_stone(x, y):
@@ -230,16 +241,35 @@ def stones(pal):
                 return k, cx, cy, rx * wob, ry * wob
         return None
 
+    rifts = {0: [(-0.35, -0.75), (-0.25, -0.2), (-0.38, 0.25), (-0.3, 0.85)],
+             2: [(0.3, -0.8), (0.22, -0.1), (0.36, 0.4), (0.28, 0.9)],
+             len(stack): [(-0.1, -0.7), (0.05, 0.0), (-0.05, 0.8)]}
+
+    def cracks(k, u, v):
+        """A jagged crack down a few of the stones (u, v the stone's own
+        -1..1 coordinates): 'crack', 'lip' or None."""
+        pts = rifts.get(k)
+        if not pts:
+            return None
+        for (au, av), (bu, bv) in zip(pts, pts[1:]):
+            if av <= v <= bv:
+                cu = au + (bu - au) * (v - av) / (bv - av)
+                if abs(u - cu) < 0.06:
+                    return "crack"
+                if 0.06 <= cu - u < 0.13:
+                    return "lip"
+        return None
+
     def beam_at(x, y):
         return clamp(math.sin((x * 0.6 + y * 0.35) * 9) * 0.5 + 0.5) ** 6 * (1 - y)
 
     def brush(x, y):
         """Ferns and grass at the trunks' feet: colour, or None."""
         for fx, fern in ferns:
-            if abs(x - fx) < 0.15:
+            if abs(x - fx) < 0.24:
                 t = fern(x, y)
                 if t is not None:
-                    return pal.path("- a0 g2 g4 g6 g7")(clamp(0.15 + t * 0.7 + beam_at(x, y) * 0.3 + (noise(x * 200, y * 300) - 0.5) * 0.2))
+                    return pal.path("- a0 a1 g2 g4 g6")(clamp(0.2 + t * 0.55 + beam_at(x, y) * 0.3))
         return None
 
     def field(x, y):
@@ -258,13 +288,13 @@ def stones(pal):
             if cap or drip:                          # moss cushions on top, creeping down
                 c = moss(clamp(light * 0.75 + (fuzz - 0.5) * 0.9))
             else:
-                crack = abs(fbm(x * 18 + k * 3, y * 9, k + 40) - 0.5)
-                if crack < 0.025:
-                    c = mix(c, pal.ground, 0.8)        # cracks
-                elif crack < 0.04 and light > 0.4:
-                    c = mix(c, pal.rgb("t7"), 0.3)     # their lit lip
                 if noise(x * 160, y * 260, k + 50) > 0.84:
                     c = mix(c, pal.rgb("w6"), 0.55)   # lichen
+            crack = cracks(k, (x - cx) / rx, (y - cy) / ry)
+            if crack == "crack":
+                c = mix(c, pal.ground, 0.85)
+            elif crack == "lip":
+                c = mix(c, pal.rgb("t7"), 0.45)        # the crack's lit lip
             return c, 1.0, True, "stone"
         b = brush(x, y)
         if b is not None:
@@ -312,7 +342,7 @@ def stones(pal):
                             pal.rgb("w8"), False))
         return out
 
-    return scene("moss", field, texts, inks={"stone": "dxtgaw", "wood": "dgat w", "trees": "dxta",
+    return scene("moss", field, texts, inks={"stone": "dxtgaw", "wood": "dgat w", "trees": "dta",
                                              "vine": "ga", "ferns": "ga"})
 
 

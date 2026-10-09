@@ -754,13 +754,13 @@ def bat(pal):
 # ---------------------------------------------------------------- nord
 
 def _massif(peaks, jag=0.012, seed=0, power=1.5):
-    """A mountain line with concave flanks that flare out into a foot:
-    peaks (x, half width, height) above the shore. height(x) gives
-    (height, x of the peak it belongs to, that peak's height)."""
+    """A mountain line: peaks (x, half width, height[, power]) above the
+    shore; a power over 1 gives concave flanks that flare out into a foot.
+    height(x) gives (height, x of the peak it belongs to, its height)."""
     def height(x):
         best = (0.0, peaks[0][0], peaks[0][2])
-        for cx, w, ht in peaks:
-            h = ht * max(0.0, 1 - abs(x - cx) / w) ** power
+        for cx, w, ht, *pw in peaks:
+            h = ht * max(0.0, 1 - abs(x - cx) / w) ** (pw[0] if pw else power)
             if h > best[0]:
                 best = (h, cx, ht)
         h = best[0]
@@ -771,18 +771,21 @@ def _massif(peaks, jag=0.012, seed=0, power=1.5):
 
 
 def mountains(pal):
-    """Arctic dusk: a great snowy peak lit pink on one side, ribs and
-    couloirs radiating from its summit, scree fans and a pine treeline at
-    its foot dissolving in mist, ranges stepping back into cold haze, and
-    a still fjord mirroring it all, with a cabin's light on the shore."""
+    """Arctic dusk: a great snowy massif, one broad face lit pink and the
+    other in blue shadow, ribs and couloirs running down from the summit,
+    scree fans and a pine treeline at its foot dissolving in mist, ranges
+    stepping back into cold haze, and a still fjord mirroring it all,
+    with a cabin's lit window on the shore."""
     shore = 0.765
     sky = pal.path("d0 d1 d4 a1 a4 a6")
-    main = _massif([(1.36, 0.7, 0.59), (1.15, 0.3, 0.41), (1.58, 0.32, 0.44), (1.86, 0.3, 0.37),
-                    (0.98, 0.35, 0.27), (0.72, 0.3, 0.13)], jag=0.045, seed=3, power=1.6)
+    sx, sy = 1.33, shore - 0.6                  # the summit
+    main = _massif([(sx, 0.62, 0.6, 1.1),                    # the peak
+                    (1.68, 0.42, 0.4, 1.15), (1.02, 0.4, 0.34, 1.15),   # its shoulders
+                    (sx, 1.1, 0.2, 2.2), (0.7, 0.3, 0.12)], jag=0.04, seed=3)   # the foot
     hills = _massif([(0.56, 0.24, 0.065), (0.92, 0.2, 0.085), (0.2, 0.3, 0.05), (1.6, 0.16, 0.075),
                      (1.95, 0.3, 0.11), (-0.3, 0.3, 0.06), (-0.9, 0.35, 0.05), (-1.6, 0.4, 0.06),
                      (-2.4, 0.4, 0.05)], jag=0.0, seed=8, power=0.7)
-    far = ridge([(0.2, 0.6, 0.2), (1.0, 0.5, 0.25), (-1.0, 0.7, 0.22), (-2.3, 0.6, 0.2)], 0.57)
+    far = ridge([(0.2, 0.6, 0.2), (0.95, 0.45, 0.22), (-1.0, 0.7, 0.22), (-2.3, 0.6, 0.2)], 0.57)
     near = ridge([(0.6, 0.5, 0.15), (-0.4, 0.6, 0.18), (-1.7, 0.6, 0.16), (-2.7, 0.5, 0.15)], 0.66)
     rnd = random.Random(7)
     trees = {}
@@ -791,16 +794,19 @@ def mountains(pal):
         th = rnd.uniform(0.03, 0.07)
         lift = rnd.random() ** 1.5 * 0.1
         trees.setdefault(int(tx * 30), []).append((tx, lift, th))
-    snow_lit = pal.path("a4 a6 t6 t9")
+    snow_lit = pal.path("a4 a6 t5 t7 t9")
     snow_dark = pal.path("d1 a1 a4 a6")
     rock = pal.path("- d0 d1 d4 d6")
-    cabin_x = 1.12
+    water = pal.path("a1 d1 d0 -")
+    cabin_x = 0.98
 
     def tree_at(x, y, ground_y):
         """A pine standing on ground_y near x: its light 0..1, or None."""
         k = int(x * 30)
         for kk in (k - 1, k, k + 1):
             for tx, lift, th in trees.get(kk, ()):
+                if abs(x - cabin_x) < 0.07 and lift < 0.03:
+                    continue                    # a clearing for the cabin
                 base = ground_y - lift * 0.5 + 0.004
                 t = (base - y) / th
                 if 0 <= t <= 1:
@@ -813,7 +819,7 @@ def mountains(pal):
     def land(x, y):
         """Colour, focus and tag above the shore."""
         hh, _, _ = hills(x)
-        mh, cx, ch = main(x)
+        mh, _, _ = main(x)
         mist = math.exp(-((y - 0.7 - 0.015 * math.sin(x * 5)) / 0.04) ** 2) * (0.25 + 0.5 * fbm(x * 4, y * 9, 5))
         ground = shore - hh
         t = tree_at(x, y, ground)             # pines in front of everything low down
@@ -826,29 +832,31 @@ def mountains(pal):
             return mix(c, pal.rgb("a6"), mist), False, "trees"
         top = shore - mh
         if y >= top and mh > 0:
-            ytop = shore - ch                  # the summit this slope belongs to
             d = y - top
-            el = clamp((shore - y) / 0.56)     # 1 at the summit
-            fan = (x - cx) / (y - ytop + 0.04) # rays down from the summit
-            rib = fbm(fan * 2.6 + 7, y * 2.0, 11)
-            lit = x < cx + (y - ytop) * 0.22 + (rib - 0.5) * 0.08
-            shade = (rib - 0.5) * 0.5 - d * 1.2
-            gully = fbm(fan * 6 + 3, y * 5, 2) + (fbm(x * 50, y * 30, 6) - 0.5) * 0.25
+            el = clamp((shore - y) / 0.6)      # 1 at the summit
+            fan = (x - sx) / (y - sy + 0.05)   # rays down from the summit
+            rib = fbm(fan * 3.0 + 7, y * 2.5, 11)
+            spine = sx + (y - sy) * 0.3 + (rib - 0.5) * 0.06
+            lit = x < spine
+            # one broad lit face, brightest by the spine, ribs streaking it
+            face = clamp(1 - abs(x - spine) / 0.5)
+            shade = (rib - 0.5) * 0.7 + (face - 0.5) * 0.35 - d * 0.6
+            gully = fbm(fan * 7 + 3, y * 5, 2) + (fbm(x * 50, y * 30, 6) - 0.5) * 0.25
             cone = clamp(1 - abs(gully - 0.45) * 4)
             talus = clamp((0.3 + cone * 0.22 - el) * 7 + (fbm(x * 20, y * 8, 12) - 0.5) * 1.5)
             if talus > 0.5:                    # scree fans spreading out below the cliffs
                 grit = noise(x * 160, y * 300, 9)
-                c = rock(clamp((0.6 if lit else 0.36) + (grit - 0.5) * 0.8 + cone * 0.25 + shade * 0.4))
+                c = rock(clamp((0.6 if lit else 0.36) + (grit - 0.5) * 0.8 + cone * 0.25 + shade * 0.3))
                 c = mix(c, pal.rgb("a4"), clamp((y - 0.6) * 5) * 0.45)   # haze at the foot
-            elif gully > 0.24 + el * el * 0.5 + clamp(0.03 - d) * 12 * el * el - clamp(0.4 - el) * 3:
-                c = rock(clamp((0.55 if lit else 0.16) + shade * 1.3 + (fbm(x * 80, y * 140, 4) - 0.5) * 0.5))
+            elif gully > 0.3 + el * 0.45 + clamp(0.02 - d) * 12 * el * el - clamp(0.42 - el) * 3:
+                c = rock(clamp((0.55 if lit else 0.14) + shade * 1.1 + (fbm(x * 80, y * 140, 4) - 0.5) * 0.5))
                 c = mix(c, pal.rgb("a1"), clamp((y - 0.45) * 3) * 0.6)  # bluer, hazier lower down
             elif lit:
-                c = snow_lit(clamp(0.8 + shade + (fbm(fan * 12, y * 6, 14) - 0.5) * 0.9))
-                c = mix(c, pal.rgb("e9"), clamp(el * 1.6 - 0.75) * 0.6)   # alpenglow
+                c = snow_lit(clamp(0.56 + shade * 1.3 + (fbm(fan * 12, y * 6, 14) - 0.5) * 0.7))
+                c = mix(c, pal.rgb("e9"), clamp(el * 1.7 - 0.95) * 0.6)   # alpenglow
             else:
-                c = snow_dark(clamp(0.8 + shade + (fbm(fan * 12, y * 6, 14) - 0.5) * 0.6))
-            return mix(c, pal.rgb("a6"), mist), abs(x - 1.36) < 0.62 and y < 0.68, "peak"
+                c = snow_dark(clamp(0.72 + shade * 0.8 + (fbm(fan * 12, y * 6, 14) - 0.5) * 0.5))
+            return mix(c, pal.rgb("a6"), mist), abs(x - sx) < 0.62 and y < 0.68, "peak"
         for k, (layer, col) in enumerate(((near, "a1 d4 d1 d0"), (far, "a6 a4 a1 d4"))):
             ly = layer(x)
             if y >= ly:
@@ -863,30 +871,49 @@ def mountains(pal):
             if y < shore + 0.006:              # the waterline: pebbles and a glint
                 return pal.path("- d0 d4 t5")(noise(x * 90, 1, 3) * 0.9), 1.0, False, "fjord"
             dy = y - shore
-            wob = 0.004 * math.sin(y * 300 + noise(x * 4, y * 20) * 4) * dy * 3
-            c, _, _ = land(x + wob, clamp(shore - dy * 1.9, 0.0, shore - 0.001))
-            c = mix(c, pal.rgb("a1"), 0.3)
-            c = mix(c, pal.ground, clamp(0.2 + dy * 1.4))
-            if abs(x - cabin_x - 0.01) < 0.012 * (1 + dy * 4) and noise(x * 40, y * 120) > 0.4:
-                c = mix(c, pal.rgb("w6"), clamp(0.7 - dy * 7))
+            my = shore - dy * 1.9
+            # a soft mirror: two samples a little apart, blended
+            c1, _, _ = land(x, clamp(my, 0.0, shore - 0.001))
+            c2, _, _ = land(x + 0.01, clamp(my - 0.025, 0.0, shore - 0.001))
+            c = mix(c1, c2, 0.5)
+            calm = clamp((x - 0.7) * 2.5)       # under the peak the mirror is sharper
+            c = mix(c, water(clamp(dy * 3)), 0.35 + 0.3 * (1 - calm))
+            c = mix(c, pal.ground, clamp(0.1 + dy * 1.4))
+            if abs(x - cabin_x - 0.012) < 0.014 * (1 + dy * 3) and noise(x * 40, y * 120) > 0.35:
+                c = mix(c, pal.rgb("w6"), clamp(0.75 - dy * 5))
             ripple = math.sin(y * 420 + math.sin(x * 9) * 2) * 0.5 + 0.5
-            if ripple > 0.94 and noise(x * 5, y * 40, 6) > 0.62:
-                c = mix(c, pal.rgb("a6"), 0.35)
+            if calm > 0.5 and ripple > 0.95 and noise(x * 5, y * 40, 6) > 0.6:
+                c = mix(c, pal.rgb("a6"), 0.3)
             return c, 1.0, False, "fjord"
-        if abs(x - cabin_x) < 0.042 and shore - 0.075 < y:
-            roof = shore - 0.04 - (0.042 - abs(x - cabin_x)) * 0.8
-            if y >= roof:
-                win = abs(x - cabin_x - 0.01) < 0.011 and shore - 0.03 < y < shore - 0.008
-                return (pal.rgb("w7") if win else pal.rgb("d0")), 1.0, False, "cabin"
+        dx = x - cabin_x
+        if abs(dx) < 0.07 and shore - 0.12 < y:         # a log cabin with a snowy gable roof
+            eave = shore - 0.055
+            roof = eave - (0.065 - abs(dx)) * 0.9
+            if y >= roof and abs(dx) < 0.065:
+                if y < eave and y < roof + 0.022:
+                    return pal.path("a4 t6 t8")(clamp(0.9 - dx * 8)), 1.0, False, "cabin"   # snow
+                if y < eave:
+                    return pal.rgb("x1"), 1.0, False, "cabin"      # the gable
+                if abs(dx) < 0.052:
+                    win = abs(dx - 0.018) < 0.012 and shore - 0.042 < y < shore - 0.016
+                    door = abs(dx + 0.022) < 0.009 and y > shore - 0.04
+                    if win:
+                        return pal.rgb("w7"), 1.0, False, "cabin"
+                    if door:
+                        return pal.rgb("d0"), 1.0, False, "cabin"
+                    log = (y * 160) % 1.0 < 0.3
+                    return pal.rgb("x0" if log else "x2"), 1.0, False, "cabin"
+            if 0.03 < dx < 0.045 and roof - 0.03 < y < roof + 0.01:   # chimney
+                return pal.rgb("d1"), 1.0, False, "cabin"
         c, foc, tag = land(x, y)
         return c, 1.0, foc, tag
 
     def texts(rows, x_left, cw, unit):
-        return stars(field, rows, x_left, cw, unit, rows * 5, 0.35, [pal.rgb("t8"), pal.rgb("a8")], 23,
+        return stars(field, rows, x_left, cw, unit, rows * 5, 0.3, [pal.rgb("t8"), pal.rgb("a8")], 23,
                      chars="..·'")
 
     return scene("nord", field, texts, inks={"sky": "dat", "peak": "date", "range": "dat",
-                                             "trees": "dga", "fjord": "dat w", "cabin": "dw"})
+                                             "trees": "dga", "fjord": "dat w", "cabin": "dxwta"})
 
 
 # ---------------------------------------------------------------- gruvbox
