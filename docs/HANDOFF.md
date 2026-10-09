@@ -184,3 +184,13 @@ The art work left is listed, with the owner's own notes, in
    trusting the numbers: the flat-colour candidate was scored over one dot
    but competed against all eight, so every cell came out solid; and with no
    shade candidate the gradients banded badly.
+
+   Measured against the scene with exact glyph coverage (braille dots,
+   quadrants, eighths, verticals and shades all computed, not approximated),
+   the upscaled island is closer than the revamp one: mean error 2625
+   against 2872, median 734 against 887. On this picture the gain is modest
+   because it is mostly smooth gradient, where both styles do well; the
+   visible difference is the sky, which no longer bands. A useful caution:
+   the same measurement said the opposite - 2761 against 1407 - while the
+   glyph estimator was still approximating braille and the shade families,
+   so fix the measurement before believing it.
