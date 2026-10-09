@@ -12,7 +12,7 @@ Then `docs/art-notes.md` for anything about the corner art.
   when asked ("push it"); when asked to do several things, push after each.
 - Run the app: `python -m minitype` (Python 3.10+, no dependencies).
 - Tests: `python tests/run_all.py` (or `python tests/run_all.py decor`).
-  Each `*_check.py` prints `ALL OK`; 29 checks with smoke4. They run against
+  Each `*_check.py` prints `ALL OK`; 30 checks with smoke4. They run against
   the real modules with the terminal mocked. `tests/menu_look.py` prints a
   menu frame as text (`python tests/menu_look.py 120 34 ember sidebar left`)
   and `tests/shows_check.py` reports which art the app actually draws at
@@ -107,12 +107,14 @@ the project is picked up with an AI until answered - see CLAUDE.md /
 AGENTS.md at the repo root.
 
 ## Known issues
-- The **art fade settings don't fully work** yet (each amount is a
+- The **art fade settings** have two open points (each amount is a
   strength: 0% = no fade, 100% = no art, in between on an exponential
-  curve, subject kept whole - that part is as intended): they only apply to
-  pictures with background colours; the edge beside the menu text still
-  steps; nothing bleeds above the picture's top; the amounts weren't
-  checked in a real terminal.
+  curve, subject kept whole - as intended, and steered in a real terminal):
+  they only apply to pictures with background colours, and the edge beside
+  the menu text still steps. The bleed above the picture's top is **done**
+  (`Picture.taller`, `art._filler`, `console._dressed`; up to `art.TALLER`,
+  half the picture's own height). Note the owner's own `settings.json` has
+  `fade_on: false`, so the fold is off globally there by choice.
 
 ## In progress / next (as the owner asked)
 The art work left is listed, with the owner's own notes, in
@@ -150,3 +152,13 @@ The art work left is listed, with the owner's own notes, in
    hints, and two red tail lights. Only the car changed - every other cell
    of the picture is byte-identical. The sizes are unchanged, so the tests
    that pin the big pictures to 28/22/16 rows still hold.
+5. Same day: `tests/pictures_check.py` (30 checks now). It closes a trap
+   nobody had guarded: `make_revamp.py` builds every name in
+   `art_wow.WOW` but `write()` only saves the names listed in
+   `revamp_art.PICTURES`, so a new wow picture that is not also registered
+   as a picture is built and then silently dropped. The check asserts the
+   two sets match, that the stored `REVAMP` data covers exactly those
+   pictures, and that every picture a theme points at exists in `ART` and
+   `REVAMP` (that last one catches art that was never rebuilt). The check
+   was verified by planting a fake unregistered wow picture and watching it
+   fail.
