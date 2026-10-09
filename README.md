@@ -254,7 +254,12 @@ Skipping pages:
 - **help box** (settings → interface, also in ui): where a setting's help
   shows when the art is on - *inline* under the selected row (default),
   or *top left / top right / bottom left / bottom right* in a
-  double-lined box; on the left it sits just right of the menu text
+  double-lined box; on the left it sits just right of the menu text (or
+  the text panel), at the bottom just above the key hints (or their panel)
+- **help border** (settings → interface, also in ui): the help box's
+  border - *auto* (single-lined under the row, double-lined in a corner),
+  *frame* (the same as the screen's border), *line / rounded / double /
+  heavy / ascii / block*, or *off* (just the box, no lines)
 - **see-through** (settings → art, 40%): how much of the art shows
   through boxes drawn over it - the help box, the text panel, the pause
   and warning boxes. 0% solid, 100% the art at full brightness

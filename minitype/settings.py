@@ -11,7 +11,7 @@ from .config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS,
                      THEME_BACKGROUNDS,
                      ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS,
                      FADE_STARTS, FADE_ANGLES, FADE_CURVES, NUMBER_RANGES,
-                     TEXT_CONTRASTS, SEE_THROUGH, HELP_POSITIONS)
+                     TEXT_CONTRASTS, SEE_THROUGH, HELP_POSITIONS, HELP_BORDERS)
 from .terminal.style import theme_names
 from .words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 
@@ -49,6 +49,7 @@ CHOICES = {
     "text_contrast": TEXT_CONTRASTS,
     "see_through": SEE_THROUGH,
     "help_position": HELP_POSITIONS,
+    "help_border": HELP_BORDERS,
     "text_lighten": SEE_THROUGH,
     "untyped_lighten": SEE_THROUGH,
     "fade_start_top": FADE_STARTS,
@@ -144,6 +145,7 @@ class Settings:
     text_contrast: str = "off"   # letters over the art: off, nudge (until they read), flip
     text_bold: bool = False      # letters over the art in bold
     help_position: str = "inline"   # the help box: under the selected row, or in a corner
+    help_border: str = "auto"       # the help box's border: auto, frame, a border style, off
     see_through: int = 40        # how much of the art shows through boxes (help, panel, dialogs), %
     fade_on: bool = True         # the art fade at all (every picture's own fade settings kept)
     art_fade: str = "edges"      # how the art dissolves at its edges: edges / corner / off

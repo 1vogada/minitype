@@ -25,6 +25,9 @@ BORDER_STYLES = ["off", "ascii", "line", "rounded", "double", "heavy", "block",
 ART_FADES = ["edges", "corner", "off"]       # how the art dissolves into the screen
 SEE_THROUGH = list(range(0, 101, 10))   # how much art shows through boxes, %
 HELP_POSITIONS = ["inline", "top left", "top right", "bottom left", "bottom right"]
+# the help box's border: auto (single inline, double in a corner), frame (the
+# screen border's), one of the border styles, or off (no border at all)
+HELP_BORDERS = ["auto", "frame", "line", "rounded", "double", "heavy", "ascii", "block", "off"]
 TEXT_CONTRASTS = ["off", "nudge", "flip"]    # letters over the art: as they are, nudged until
                     # they read, or flipped to the theme's darkest / lightest colour
 FADE_LEVELS = list(range(0, 101, 10))          # a fade's strength: 0 none .. 100 no art left

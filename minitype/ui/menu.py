@@ -88,6 +88,8 @@ class Menu:
         self.style = style
         self.sidebar_tabs = "off"
         self.help_pos = "inline"  # the help box: under the row, or in a corner
+        self.help_border = "auto"  # its border (config.HELP_BORDERS)
+        self.frame_border = None   # the screen's border style, for help_border "frame"
         self.query = ""          # only items matching it are shown
         self.on_sections = True   # two-column layout: focus on the section buttons,
                                   # where you start
@@ -307,28 +309,46 @@ class Menu:
         if self.help_pos != "inline":
             return self._help_corner(st, text, item, width)
         inner = min(max(map(console.visible_len, lines)), room)
-        edge = " " * (indent - 2) + console.FLOAT + st.dim
-        return ([f"{edge}┌{'─' * (inner + 2)}┐{RESET}"]
-                + [f"{edge}│{RESET} {console.pad(ln, inner)} {st.dim}│{RESET}"
+        edge = " " * (indent - 2) + console.FLOAT
+        return [edge + ln for ln in self._help_box(lines, inner, st.dim, corner=False)]
+
+    def _help_chars(self, corner):
+        """The help box's border characters (as console.BORDERS has them),
+        by the help border setting: auto is single-lined under the row and
+        double-lined in a corner (like the pause box), frame follows the
+        screen's border, off is a box with blank edges - the same size, so
+        it sits where a bordered one would, without the lines."""
+        name = self.help_border
+        if name == "auto":
+            name = "double" if corner else "line"
+        elif name == "frame":
+            name = self.frame_border
+        if name == "off":
+            return (" ",) * 6
+        chars = console.BORDERS.get(name)
+        if not chars or any(len(c) != 1 for c in chars):   # off, or two-column sides
+            chars = console.BORDERS["line"]
+        return chars
+
+    def _help_box(self, lines, inner, style, corner):
+        """The help lines in a box `inner` wide, its border in `style`."""
+        tl, tr, bl, br, across, down = self._help_chars(corner)
+        return ([f"{style}{tl}{across * (inner + 2)}{tr}{RESET}"]
+                + [f"{style}{down}{RESET} {console.pad(ln, inner)} {style}{down}{RESET}"
                    for ln in lines]
-                + [f"{edge}└{'─' * (inner + 2)}┘{RESET}"])
+                + [f"{style}{bl}{across * (inner + 2)}{br}{RESET}"])
 
     def _help_corner(self, st, text, item, width):
         """The help in a corner of the screen (the help position setting),
-        in a double-lined box like the pause box; nothing goes under the
-        row. The console places it (see console.set_corner)."""
+        in a box with the help border; nothing goes under the row. The
+        console places it (see console.set_corner)."""
         room = max(20, min(56, console.size()[0] // 2 - 6))
         lines = [f"{st.dim}{ln}{RESET}" for ln in textwrap.wrap(text, room)] if text else []
         if item.preview:
             lines += item.preview()
         if lines:
             inner = min(max(map(console.visible_len, lines)), room)
-            frame = st.title
-            console.set_corner(self.help_pos,
-                               [f"{frame}╔{'═' * (inner + 2)}╗{RESET}"]
-                               + [f"{frame}║{RESET} {console.pad(ln, inner)} {frame}║{RESET}"
-                                  for ln in lines]
-                               + [f"{frame}╚{'═' * (inner + 2)}╝{RESET}"])
+            console.set_corner(self.help_pos, self._help_box(lines, inner, st.title, corner=True))
         return []
 
     def _rows(self, st, indices, label_width, with_value=True, inline_help=True,

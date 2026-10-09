@@ -22,7 +22,7 @@ from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICU
                       ART_SCOPES, ART_STYLES, ART_COLOURS, THEME_BACKGROUNDS,
                       ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS,
                       FADE_STARTS, FADE_ANGLES, FADE_CURVES, NUMBER_RANGES,
-                      TEXT_CONTRASTS, SEE_THROUGH, HELP_POSITIONS)
+                      TEXT_CONTRASTS, SEE_THROUGH, HELP_POSITIONS, HELP_BORDERS)
 from ..terminal.art import ART_NAMES, THEME_ART
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import storage
@@ -474,6 +474,11 @@ def build_items(app):
                       "screen in a double-lined box (on the left it sits just "
                       "right of the menu, at the top or bottom)",
                  tags=("help", "tooltip", "popup", "box", "corner", "position")),
+        b.choice("help border", "help_border", HELP_BORDERS,
+                 help="the help box's border: auto is single-lined under the "
+                      "row and double-lined in a corner, frame matches the "
+                      "screen's border, off leaves just the box",
+                 tags=("help", "tooltip", "box", "border", "frame", "lines")),
     ]
     b.section = "fun"
     fun_tags = ("fun", "effects", "animation", "modifier")
@@ -616,7 +621,8 @@ LAYOUT = [
                        ("look", "layout", "keyboard layout"), ("look", "lowkey"),
                        ("look", "sound")]),
     ("interface", [("look", "ui style"), ("look", "sidebar tabs"), ("look", "border"),
-                   ("look", "key hints"), ("look", "help box")]),
+                   ("look", "key hints"), ("look", "help box"),
+                   ("look", "help border")]),
     ("results", [("results", "speed chart"), ("results", "key heatmap"),
                  ("results", "personal best"), ("results", "worst keys"),
                  ("results", "session keys"), ("results", "bad words"), ("results", "session")]),
@@ -627,7 +633,8 @@ LAYOUT = [
 # Every switch for how the app looks, gathered in one "ui" tab (they stay in
 # their own tabs too): (section, label) after LAYOUT.
 UI_TAB = [("interface", "ui style"), ("interface", "sidebar tabs"), ("interface", "border"),
-          ("interface", "key hints"), ("interface", "help box"), ("theme", "theme background"), ("art", "show art"),
+          ("interface", "key hints"), ("interface", "help box"), ("interface", "help border"),
+          ("theme", "theme background"), ("art", "show art"),
           ("art", "art behind text"), ("art", "text panel"), ("art", "text contrast"),
           ("art", "bold text"), ("art", "see-through"), ("theme", "lighter text"), ("theme", "lighter untyped"), ("art fade", "fade (all pictures)"),
           ("typing screen", "show timer"), ("typing screen", "show progress"),
