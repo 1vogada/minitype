@@ -45,21 +45,27 @@ def _dot_pattern(bits):
 # a braille glyph for every non-empty pattern
 PATTERN_GLYPH = {_dot_pattern(b): chr(0x2800 + b) for b in range(1, 256)}
 
-# block shapes that cover exactly a set of dots, where one exists: these
-# draw a cleaner edge than the same shape as dots
-QUADS = {"▘": (1, 0, 0, 0), "▝": (0, 1, 0, 0), "▖": (0, 0, 1, 0), "▗": (0, 0, 0, 1),
-         "▀": (1, 1, 0, 0), "▄": (0, 0, 1, 1), "▌": (1, 0, 1, 0), "▐": (0, 1, 0, 1),
-         "▚": (1, 0, 0, 1), "▞": (0, 1, 1, 0), "▛": (1, 1, 1, 0), "▜": (1, 1, 0, 1),
-         "▙": (1, 0, 1, 1), "▟": (0, 1, 1, 1)}
+# Block shapes, as the dots they ink. Only shapes that ink whole dots are
+# listed: a cell is drawn as 8 dots, so a glyph covering half a dot (the
+# verticals ▏▎▍▋▊▉▕, and the single-row ▔) cannot be drawn exactly and is
+# left to the dot patterns.
+_HALF = {(1, 0, 0, 0): "▘", (0, 1, 0, 0): "▝", (0, 0, 1, 0): "▖", (0, 0, 0, 1): "▗",
+         (1, 1, 0, 0): "▀", (0, 0, 1, 1): "▄", (1, 0, 1, 0): "▌", (0, 1, 0, 1): "▐",
+         (1, 0, 0, 1): "▚", (0, 1, 1, 0): "▞", (1, 1, 1, 0): "▛", (1, 1, 0, 1): "▜",
+         (1, 0, 1, 1): "▙", (0, 1, 1, 1): "▟", (1, 1, 1, 1): "█"}
 BLOCK_PATTERNS = {}
-for _ch, _q in QUADS.items():
-    # a quadrant covers a 2-dot x 2-dot block of the 8-dot grid
+for _q, _ch in _HALF.items():
+    # a quadrant is the 2 x 2 dot block at its corner
     _pat = tuple(1 if _q[(1 if dy > 1 else 0) * 2 + dx] else 0
                  for dy in range(4) for dx in range(2))
     BLOCK_PATTERNS.setdefault(_pat, []).append(_ch)
-# the eighths and half blocks, as the rows of dots they cover
-for _n, _ch in ((1, "▁"), (2, "▂"), (3, "▃"), (4, "▄"), (5, "▅"), (6, "▆"), (7, "▇")):
-    _pat = tuple(1 if dy >= 4 - (_n + 1) // 2 else 0 for dy in range(4) for dx in range(2))
+for _n, _ch in enumerate("▁▂▃▅▆▇", 1):
+    # the eighths fill 2n of the 16 coverage rows, which is a whole number of
+    # dots only for n up to 4 (▁▂▃▄); ▅▆▇ cut a dot in half
+    if 2 * _n % 4:
+        continue
+    _rows = 2 * _n // 4
+    _pat = tuple(1 if dy >= 4 - _rows else 0 for dy in range(4) for dx in range(2))
     BLOCK_PATTERNS.setdefault(_pat, []).append(_ch)
 
 # shades: a flat blend of the two colours, for a smooth gradient
@@ -168,8 +174,11 @@ def render(scene, rows, pal=None):
             for dy in range(4):
                 for dx in range(2):
                     acc = [0.0, 0.0, 0.0]
-                    for sj in (0.25, 0.75):
-                        for si in (0.25, 0.75):
+                    n = 0
+                    # nine points across the dot, so a dot that straddles an
+                    # edge gets the colour it mostly is
+                    for sj in (1 / 6, 0.5, 5 / 6):
+                        for si in (1 / 6, 0.5, 5 / 6):
                             x = x_left + (c + (dx + si) / 2) * cw
                             y = (r + (dy + sj) / 4) * unit
                             rgb, a, foc, tag = scene.field(x, y)
@@ -179,7 +188,8 @@ def render(scene, rows, pal=None):
                             acc[0] += col[0]
                             acc[1] += col[1]
                             acc[2] += col[2]
-                    dots.append((acc[0] / 4, acc[1] / 4, acc[2] / 4))
+                            n += 1
+                    dots.append((acc[0] / n, acc[1] / n, acc[2] / n))
             ch, fk, bk = enc.cell(dots)
             lrow.append(ch)
             prow.append(fk[0] if ch != " " else " ")
