@@ -162,3 +162,25 @@ The art work left is listed, with the owner's own notes, in
    `REVAMP` (that last one catches art that was never rebuilt). The check
    was verified by planting a fake unregistered wow picture and watching it
    fail.
+6. Same day: a new art style, **upscaled** (`tools/art_upscaled.py`,
+   `tools/make_art_upscaled.py`, `minitype/terminal/art_upscaled.py`,
+   `tests/upscaled_check.py`; 31 checks now). It draws the same scene as the
+   revamp picture but on the dot grid a braille character is made of: 2 x 4
+   dots a cell, so eight separate marks instead of one glyph of ~30
+   candidates, with a foreground and a background colour per cell. For each
+   cell it measures each dot, then for every pair of palette colours assigns
+   each dot to the nearer of the two (measured along the line between them,
+   so the split is the pair's own midpoint); the assignment is a braille
+   pattern, or a block shape when one covers the same dots. It also tries a
+   flat colour and a shade of two colours, which is what carries a sky
+   gradient. A clean block shape scores better than it measures
+   (`Encoder.shape_bonus`), or trunks and horizons break into dots.
+
+   Built one picture at a time - `python tools/make_art_upscaled.py island`
+   - because it is ~15 KB a picture and a good few seconds each; a theme
+   whose picture has no upscaled version falls back to its revamp one
+   (`art.resolve`, style "upscaled"). Only `island` (ocean) is built so far.
+   Two bugs worth remembering, both found by looking at a render rather than
+   trusting the numbers: the flat-colour candidate was scored over one dot
+   but competed against all eight, so every cell came out solid; and with no
+   shade candidate the gradients banded badly.

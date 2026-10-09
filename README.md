@@ -169,6 +169,12 @@ Skipping pages:
   **tabs** (one section at a time). The sidebar can also show a tab bar on
   top, or the sections as buttons down the left (settings → interface → sidebar
   tabs)
+- art styles (settings → art → art style): **revamp** (the default: the
+  scenes described below), **upscaled** (the same scenes drawn at braille
+  resolution - 8 marks a cell instead of one glyph, so edges and gradients
+  are much finer; built one picture at a time, so a theme without one falls
+  back to its revamp picture), **blocks**, **detailed**, **og** and
+  **combined**
 - 45 themes (settings → theme → theme; a sample line under the row shows
   each one as you flip through):
   - plain: default, ocean, forest, sunset, dracula, nord, gruvbox,

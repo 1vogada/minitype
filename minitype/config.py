@@ -43,8 +43,9 @@ NUMBER_RANGES = {
     "daily_goal": (0, 600),
 }
 ART_SCOPES = ["off", "menus", "everywhere"]  # where the theme's picture shows
-ART_STYLES = ["revamp", "blocks", "detailed", "og", "combined"]   # hand-drawn line art,
-                    # pixel art, shaded ASCII, the originals, or every technique at once
+ART_STYLES = ["revamp", "blocks", "detailed", "og", "combined", "upscaled"]   # hand-drawn line art,
+                    # pixel art, shaded ASCII, the originals, every technique
+                    # at once, or the same scenes at braille resolution
 # theme: themes that have a background paint it; always: every theme does,
 # one made from its colours if it has none (for light terminals); off
 THEME_BACKGROUNDS = ["theme", "always", "off"]
