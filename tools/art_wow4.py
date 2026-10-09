@@ -453,7 +453,7 @@ def _curtain(base, waves, height, strength, seed):
             return -d / 0.02, -1.0                         # the pink fringe under the edge
         slope = abs(edge(x + 0.004) - edge(x - 0.004)) / 0.008
         fold = 0.65 + min(0.6, slope * 0.9)               # folds catch more light
-        rays = 0.45 + 0.55 * noise(x * 55, y * 2 + x * 3, seed) ** 1.3
+        rays = 0.55 + 0.3 * noise(x * 22, y * 1.5 + x, seed) + 0.15 * noise(x * 45, y * 2, seed + 1)
         glow = math.exp(-d / height) * fold * rays * strength * 1.5
         if d < 0.012:
             glow = max(glow, strength * (1 - d / 0.03))   # the bright lower edge
@@ -490,6 +490,7 @@ def aurora(pal):
 
     def sky(x, y):
         c = pal.path("- - - d0 d1")(clamp(y / shore))
+        c = mix(c, pal.path("a2 x2")(0.5 + 0.5 * math.sin(x * 1.3)), math.exp(-((shore - y) / 0.16) ** 2) * 0.6)  # airglow
         for at in curtains:
             hit = at(x, y)
             if hit is None:
@@ -635,7 +636,7 @@ def jellyfish(pal):
                  for k, dx in enumerate((-0.13, -0.09, -0.05, -0.01, 0.03, 0.07, 0.11))]
     arms = strokes([(bezier((jx + dx, jy + 0.05), (jx + dx * 2 + 0.05, jy + 0.22), (jx + dx - 0.04, jy + 0.38), 14),
                      0.016, 0.004) for dx in (-0.035, 0.0, 0.035)])
-    small = [(-0.4, 0.4, 0.05, "e"), (0.5, 0.65, 0.04, "w"), (0.15, 0.2, 0.03, "a"), (-1.8, 0.3, 0.05, "g"),
+    small = [(-0.4, 0.4, 0.05, "e"), (0.5, 0.65, 0.04, "w"), (0.15, 0.22, 0.048, "a"), (-1.8, 0.3, 0.05, "g"),
              (-2.6, 0.6, 0.035, "e")]
 
     def bell(x, y, cx, cy, r):
