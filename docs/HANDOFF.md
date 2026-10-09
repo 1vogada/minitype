@@ -132,3 +132,14 @@ The art work left is listed, with the owner's own notes, in
   exponential's sharpness, 0 straight .. 10) - own "art fade" tab; `d` in the
    gallery. Possible next: fade the art where it meets text beside it
    (rows next to the menu), and a bleed above the picture's top.
+3. 2026-10-09: seven items from `docs/ART-TODO.md` (amber, party, pine,
+   autumn, coral reef, gruvbox, bubbly) - two redesigns and five polish,
+   branch `art/owner-todo-polish`. New helpers worth reusing in scenes:
+   a return alpha below 1 makes the renderer mix the field with the ground
+   (`art_combined.render`), which is how the pine's island now fades into
+   its lake; a scene's `inks` must list any letter its field uses or the
+   colour is dropped. Note that `pal.path(...)` interpolates between the
+   given colours, so a stop in the middle can cross a hue the theme never
+   had (g6 gave the amber stone an olive cast) - pick stops that stay on
+   the wanted hue. Remaining art items are still listed with the owner's
+   notes in `docs/ART-TODO.md`.

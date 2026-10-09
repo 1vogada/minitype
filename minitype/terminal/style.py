@@ -291,8 +291,11 @@ COMPLEX = {
     # fun ones: movement and flourishes
     "party": {
         "base": "default", "background": "#12001f", "accent": "#ff5fd7",
-        "gradient": ["#ff005f", "#ffaf00", "#d7ff00", "#00ffaf", "#00afff",
-                     "#af5fff"],
+        # pinks and warm lights rather than the old green: the party picture
+        # (balloons) takes its colours from here too
+        "gradient": ["#ff005f", "#ff5fa8", "#ff9fd7", "#ffaf5f", "#ffd75f",
+                     "#ff5fd7"],
+        "good": "#ff8ad7", "extra": "#c45fa8", "warn": "#ffaf5f",
         "by": "letter", "flow": 12, "bold": True,
         "bounce": "gentle", "pop": True, "caret": "rainbow",
     },

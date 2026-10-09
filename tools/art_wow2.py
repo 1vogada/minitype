@@ -11,7 +11,7 @@ import math
 import random
 
 from art_combined import Scene, mix
-from art_wow import SHADE, SIZES, palm, pine, ridge, sphere_light, stars
+from art_wow import SHADE, SIZES, pine, ridge, sphere_light, stars
 
 
 # ---------------------------------------------------------------- helpers
@@ -207,19 +207,36 @@ def lone_pine(pal):
     shore = 0.66
     far = ridge([(0.3, 0.55, 0.26), (1.0, 0.5, 0.32), (1.75, 0.45, 0.22), (-0.8, 0.7, 0.28), (-2.0, 0.7, 0.22)], shore)
     sky = pal.path("d1 a1 a4 g4 w6")
-    tree = pine(1.42, 0.82, 0.66, 0.24, 8)
-    tree2 = pine(1.73, 0.84, 0.38, 0.14, 6)
+    tree = pine(1.46, 0.92, 0.66, 0.24, 8)
+    tree2 = pine(1.74, 0.94, 0.38, 0.14, 6)
 
     def rock(x, y):
-        top = 0.8 + 0.08 * ((x - 1.5) / 0.45) ** 2 + 0.01 * math.sin(x * 70)
-        return abs(x - 1.5) < 0.45 and y >= top
+        """The point the pines stand on: a round-topped outcrop whose sides
+        and base are soft, so it never ends on a hard edge."""
+        dx = (x - 1.55) / 0.5
+        wobble = fbm(x * 7, y * 4, 12) * 0.05
+        if abs(dx) > 1.1:
+            return False
+        top = 0.86 + 0.09 * dx * dx + 0.01 * math.sin(x * 70) - wobble
+        base = 1.0 + 0.07 * fbm(x * 5, 3, 21) - wobble * 2.4
+        return top - wobble * 0.6 <= y <= base
 
     def field(x, y):
         if tree(x, y) or tree2(x, y):
             rim = not (tree(x + 0.012, y) or tree2(x + 0.012, y))
             return (pal.rgb("g4") if rim else pal.ground), 1.0, True, "tree"
         if rock(x, y):
-            return pal.path("x4 d1 -")(clamp((y - 0.8) * 5 + fbm(x * 30, y * 30) * 0.3)), 1.0, True, "rock"
+            # grain runs down the face, and moss creeps about the crown
+            grain = fbm(x * 30, y * 30, 3)
+            light = clamp((y - 0.86) * 5 + grain * 0.3 + 0.25)
+            c = pal.path("x4 d1 -")(light)
+            if fbm(x * 12, y * 18, 6) > 0.62 and y < 0.93:
+                c = mix(c, pal.rgb("g1"), 0.5)
+            # below the waterline the lake takes it: rock fades into water,
+            # which is the soft edge the owner asked for
+            above = clamp((shore - y) / 0.09 + grain * 0.35)
+            alpha = 1.0 if above >= 1.0 else 0.55 + 0.45 * above
+            return c, alpha, True, "rock"
         if y < shore:
             top = far(x)
             if y >= top:
@@ -263,17 +280,30 @@ def leaf(pal):
         return (1 - r / lobes) if r <= lobes else -1, a, u, v
 
     def stem(x, y):
+        """The leaf's stalk: thick enough for the grid to hold it, and
+        shaded across so it reads as a stalk, not a hairline."""
         u, v = (x - cx) / size, (y - cy) / size
         u, v = u * math.cos(ang0) - v * math.sin(ang0), u * math.sin(ang0) + v * math.cos(ang0)
-        return 0.0 < v < 0.75 and abs(u - v * v * 0.15) < 0.025
+        if not (0.02 < v < 0.78):
+            return -1.0
+        off = abs(u - v * v * 0.18)
+        half = 0.055 - 0.02 * v
+        return 1.0 - off / half if off <= half else -1.0
 
     flesh = pal.path("e1 e4 e6 a6 w6 w8")
 
     def field(x, y):
         inside, a, u, v = maple(x, y)
-        if inside >= 0 or stem(x, y):
+        stalk = stem(x, y)
+        if inside >= 0 or stalk >= 0:
             if inside < 0:
-                return pal.rgb("x4"), 1.0, True, "leaf"
+                # the stalk: the leaf's own colours, so it reads as part of
+                # the leaf rather than a scratch on the wood, with a dark rim
+                # down one side and the lit side turning gold
+                lit = clamp(0.55 + stalk * 0.55)
+                c = flesh(lit)
+                c = mix(c, pal.rgb("x1"), clamp(0.75 - stalk * 0.8))
+                return c, 1.0, True, "leaf"
             vein = any(abs(math.sin(a - va)) * math.hypot(u, v) < 0.022 and math.cos(a - va) > 0
                        for va in (math.pi / 2, math.pi / 2 + 1.1, math.pi / 2 - 1.1, math.pi / 2 + 2.1,
                                   math.pi / 2 - 2.1))

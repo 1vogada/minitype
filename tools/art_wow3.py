@@ -285,6 +285,40 @@ def reef(pal):
                 return stripe
         return None
 
+    # a clownfish: orange, three white bands, a fin top and bottom, an eye -
+    # big enough that the bands actually land on the grid
+    clown = (0.95, 0.3, 0.08, 1)
+
+    def clownfish(x, y):
+        fx_, fy_, s, flip = clown
+        u, v = (x - fx_) / s * flip, (y - fy_) / (s * 1.5)
+        body = u * u + (v * 1.1) ** 2 <= 1
+        tail = -1.8 < u < -0.9 and abs(v) < (u + 1.8) * 1.3
+        fin = abs(u) < 0.6 and 0.8 < abs(v) < 1.5
+        if not (body or tail or fin):
+            return None, False
+        band = abs(u + 0.52) < 0.16 or abs(u - 0.02) < 0.14 or abs(u - 0.62) < 0.13
+        eye = ((u - 0.5) * 1.9) ** 2 + ((v + 0.42) * 1.9) ** 2 < 0.07
+        edge = not (body and ((u - 0.02) ** 2 + (v * 1.05) ** 2 < 0.82)) or tail or fin
+        return band, (eye or edge)
+
+    # a jellyfish: a striped bell with long trailing tentacles
+    jelly = (1.45, 0.2, 0.13)
+
+    def jellyfish(x, y):
+        jx, jy, jr = jelly
+        u, v = (x - jx) / jr, (y - jy) / (jr * 1.7)
+        if u * u + v * v <= 1:
+            if v < -0.15 * (1 - u * u):
+                return False, False                     # the gap under the bell
+            rib = int((u + 1.4) * 3.1) % 2
+            return bool(rib), (abs(v) > 0.78 or abs(u) > 0.86)
+        if 1.0 < v < 2.6 and abs(u) < 0.5:
+            wobble = 0.12 * math.sin(v * 5 + jx)
+            if abs(abs(u) - 0.28) < 0.06 or abs(u - wobble) < 0.05:
+                return True, True
+        return None, False
+
     def field(x, y):
         bx, by, br = brain
         if math.hypot(x - bx, (y - by) * 1.4) <= br and y < 0.97:
@@ -297,6 +331,18 @@ def reef(pal):
         f = fish(x, y)
         if f is not None:
             return (pal.rgb("t8") if f else pal.rgb("w6")), 1.0, x > 0.4, "fish"
+        band, dark = clownfish(x, y)
+        if band or dark:
+            if dark:
+                return pal.rgb("d1"), 1.0, True, "fish"
+            return (pal.rgb("w9") if band else pal.rgb("e6")), 1.0, True, "fish"
+        jband, jedge = jellyfish(x, y)
+        if jband or jedge:
+            if jedge:
+                return pal.rgb("a8"), 1.0, True, "jelly"
+            # the bell is a jelly: only its ribs and rim take colour, the
+            # rest is water seen through it
+            return pal.path("a4 a6 w6")(clamp(0.35 + (jelly[1] - y) * 3)), 0.34, True, "jelly"
         if y > 0.93:
             return pal.path("w4 x1 -")(clamp((y - 0.93) * 12 + noise(x * 50, 3) * 0.3)), 1.0, False, "sand"
         shaft = clamp(math.sin((x + y * 0.35) * 7) * 0.5 + 0.5) ** 8 * (1 - y)
@@ -312,7 +358,8 @@ def reef(pal):
                 out.append((int((x - x_left) / cw), int(y / unit), rnd2.choice("o°.·"), pal.rgb("t8"), False))
         return out
 
-    return scene("coral reef", field, texts, inks={"water": "gdt", "coral": "eawx"})
+    return scene("coral reef", field, texts,
+                 inks={"water": "gdt", "coral": "eawx", "fish": "eaxwd", "jelly": "awxe"})
 
 
 # ---------------------------------------------------------------- volcanic
@@ -529,11 +576,11 @@ def coffee(pal):
             c = pal.path("- x1 a4 x4")(clamp(grain * 0.7 + (0.2 if not plank else -0.2)))
             shadow = math.exp(-((x - cx - 0.15) / 0.3) ** 2 - ((y - 0.84) / 0.03) ** 2)
             return mix(c, pal.ground, shadow * 0.7), 1.0, False, "table"
-        window = -0.4 < x < 0.5 and 0.12 < y < 0.7
-        if window and not (abs(x - 0.05) < 0.01 or abs(y - 0.4) < 0.01):
-            return pal.path("a4 a6 w6 w8")(clamp(0.9 - y)), 1.0, False, "window"
-        glow = math.exp(-((x - 0.05) / 0.9) ** 2 - ((y - 0.4) / 0.5) ** 2)
-        return pal.path("- d1 x1 a4")(glow * 0.8), 1.0, False, "wall"
+        # no window (the owner wanted just the mug): the light it threw is
+        # still on the wall, warm and soft against the darkening room
+        glow = math.exp(-((x - 0.05) / 0.95) ** 2 - ((y - 0.42) / 0.55) ** 2)
+        c = pal.path("- d1 x1 a4")(clamp(glow * 0.85))
+        return c, 1.0, False, "wall"
 
     def lines(rows):
         return [(pts, pal.rgb("t6"), False, None) for pts in steam]

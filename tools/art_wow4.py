@@ -56,51 +56,75 @@ def rain(pal):
 # ---------------------------------------------------------------- amber
 
 def monitor(pal):
-    """An old amber CRT on a desk: a curved, glowing screen with text and
-    scanlines, a chunky case, a keyboard in front, a warm halo."""
-    sx0, sy0, sx1, sy1 = 0.92, 0.14, 1.62, 0.62
+    """A piece of amber with a small dinosaur trapped inside, lit from
+    behind: a glowing core, cloudy inclusions, a bright rim, warm falloff
+    into a dark room."""
+    ax, ay, ar = 1.25, 0.5, 0.28
 
-    def screen(x, y):
-        u, v = (x - (sx0 + sx1) / 2) / ((sx1 - sx0) / 2), (y - (sy0 + sy1) / 2) / ((sy1 - sy0) / 2)
-        return abs(u) ** 6 + abs(v) ** 6 <= 1, u, v
+    def in_amber(x, y):
+        """The polished stone: a rounded blob with an irregular outline."""
+        u, v = (x - ax) / ar, (y - ay) / (ar * 1.32)
+        w = 0.06 * fbm(x * 15, y * 15, 3) + 0.03 * math.sin(y * 26 + x * 5)
+        return u * u + v * v <= 1 + w
+
+    def rex(x, y):
+        """A little theropod caught in the resin: body, tail, neck, head,
+        two legs. True inside the silhouette, None outside it."""
+        # the animal fills most of the stone, a bit below its middle
+        bx, by = ax - 0.01, ay + 0.015
+        u, v = (x - bx) / 0.2, (y - by) / 0.2
+        body = (u / 0.85) ** 2 + ((v + 0.05) / 0.4) ** 2 <= 1
+        taper = clamp((u + 2.2) / 1.5)
+        tail = -2.2 < u < -0.7 and abs(v + 0.05 - (u + 0.7) * 0.18) < 0.17 * taper
+        neck = -0.6 < u < 0.2 and -0.85 < v < -0.2 and abs(u - 0.05 + (v + 0.5) * 0.55) < 0.19
+        head = ((u - 0.36) / 0.3) ** 2 + ((v + 0.94) / 0.19) ** 2 <= 1
+        snout = 0.42 < u < 0.86 and -1.05 < v < -0.82
+        leg1 = -0.46 < u < -0.18 and 0.15 < v < 0.95
+        leg2 = 0.14 < u < 0.42 and 0.15 < v < 0.88
+        foot1 = -0.6 < u < -0.12 and 0.9 < v < 1.06
+        foot2 = 0.02 < u < 0.5 and 0.82 < v < 0.98
+        arm = 0.22 < u < 0.55 and -0.3 < v < -0.02
+        return body or tail or neck or head or snout or leg1 or leg2 or foot1 or foot2 or arm
 
     def field(x, y):
-        on, u, v = screen(x, y)
-        if on:
-            scan = math.sin(y * 360) > 0.3
-            c = pal.path("- d1 x1 d4")(clamp(0.55 - (u * u + v * v) * 0.35 - (0.15 if scan else 0)))
-            return c, 1.0, True, "screen"
-        if sx0 - 0.07 <= x <= sx1 + 0.07 and sy0 - 0.06 <= y <= sy1 + 0.1:
-            bevel = 0.6 if y < sy0 or x < sx0 else 0.35
-            if sy1 + 0.04 < y and abs(x - (sx1 - 0.05)) < 0.015:
-                return pal.rgb("a8"), 1.0, True, "case"            # the power light
-            return pal.path("- d1 d4")(bevel), 1.0, True, "case"
-        if 1.1 < x < 1.45 and sy1 + 0.1 < y < 0.8:
-            return pal.path("- d1")(0.6), 1.0, True, "case"        # the stand
-        kb = 0.84 < y < 0.93 and 0.8 + (0.93 - y) * 0.4 < x < 1.8 - (0.93 - y) * 0.4
-        if kb:
-            key = math.sin(x * 160) > -0.3 and math.sin(y * 260) > -0.4
-            return pal.path("- d1 d4")(0.65 if key else 0.3), 1.0, True, "keyboard"
-        if y > 0.8:
-            return pal.path("d1 x1 -")(clamp((y - 0.8) * 5)), 1.0, False, "desk"
-        halo = math.exp(-((x - 1.27) / 0.7) ** 2 - ((y - 0.38) / 0.45) ** 2)
-        return pal.path("- x1 d1")(halo * 0.8), 1.0, False, "room"
+        if in_amber(x, y):
+            u, v = (x - ax) / ar, (y - ay) / (ar * 1.32)
+            r = math.hypot(u, v)
+            # the stone is lit from behind: brightest in the middle
+            core = clamp(1.0 - r * 0.8)
+            cloudy = fbm(x * 9, y * 9, 2) * 0.3 + fbm(x * 24, y * 24, 5) * 0.12
+            t = clamp(core * 0.95 + cloudy * 0.35 + 0.15)
+            if rex(x, y):
+                # the animal shows as a darker amber: lit through where the
+                # resin is thin, deeper where the body is thick
+                return pal.path("x1 x4 g4 w6")(clamp(0.05 + core * 0.55)), 1.0, True, "rex"
+            # no g6 in the path: the mix either side of it comes out olive
+            c = pal.path("x1 x4 w6 w8 w9")(clamp(t * 1.35))
+            if r > 0.86:                                    # the polished edge
+                return pal.path("w6 w8 w9")(clamp(1 - (r - 0.86) * 3)), 1.0, True, "amber"
+            return c, 1.0, True, "amber"
+        # a warm halo on the table, then the dark room
+        halo = math.exp(-(((x - ax) / 0.62) ** 2 + ((y - ay) / 0.55) ** 2))
+        if y > 0.9:
+            grain = fbm(x * 4, y * 40, 2)
+            return mix(pal.path("- x1 a4 x4")(clamp(grain * 0.6)), pal.rgb("a4"), halo * 0.5), \
+                1.0, False, "table"
+        return pal.path("- x1 a4")(clamp(halo * 0.75)), 1.0, False, "room"
 
     def texts(rows, x_left, cw, unit):
+        # specks of dust and bubbles caught in the resin
+        rnd = random.Random(13)
         out = []
-        txt = ["> minitype", "", "wpm  112", "acc  98%", "", "> _"]
-        r0 = int((sy0 + 0.08) / unit)
-        step = max(1, int(0.07 / unit))
-        for i, line in enumerate(txt):
-            r = r0 + i * step
-            if (r + 1) * unit > sy1 - 0.04:
-                break
-            for k, ch in enumerate(line):
-                if ch != " ":
-                    out.append((_col(sx0 + 0.08, x_left, cw) + k, r, ch, pal.rgb("t9" if k == 0 else "t8"), True))
+        for _ in range(70):
+            ang, rad = rnd.uniform(0, 6.283), rnd.uniform(0, 0.95)
+            x = ax + math.cos(ang) * rad * ar * 0.92
+            y = ay + math.sin(ang) * rad * ar * 1.24
+            if in_amber(x, y) and not rex(x, y):
+                out.append((_col(x, x_left, cw), int(y / unit), rnd.choice(".,'`"),
+                            rnd.choice([pal.rgb("w8"), pal.rgb("a8"), pal.rgb("x4")]), True))
         return out
 
-    return scene("amber", field, texts, inks={"screen": "dxt", "case": "d", "room": "dx"})
+    return scene("amber", field, texts, inks={"amber": "xaw", "rex": "xa", "room": "xa", "table": "xa"})
 
 
 # ---------------------------------------------------------------- paper
@@ -225,48 +249,71 @@ def rainbow(pal):
 # ---------------------------------------------------------------- party
 
 def party(pal):
-    """A mirror ball turning above a dance floor: faceted and glinting,
-    beams of light fanning out, confetti, a glowing tiled floor."""
-    bx, by, br = 1.3, 0.3, 0.16
-    light = sphere_light(bx, by, br)
+    """Balloons floating up over a glowing floor, strings hanging, a few
+    drifting away - party colours, a pinker room (no disco ball)."""
+    # (x, y, radius); the strings of the lower ones reach the floor
+    balloons = [(1.05, 0.26, 0.13), (1.42, 0.17, 0.1), (1.68, 0.35, 0.085),
+                (0.78, 0.44, 0.075), (1.28, 0.52, 0.06)]
+
+    def balloon(x, y):
+        """(how far in 0..1, side -1..1) for the nearest balloon, or None."""
+        best = None
+        for bx, by, br in balloons:
+            u, v = (x - bx) / br, (y - by) / (br * 1.22)
+            d2 = u * u + v * v
+            if d2 <= 1.0 and (best is None or d2 < best[0]):
+                best = (d2, u, v)
+        if best is None:
+            return None
+        d2, u, v = best
+        return 1.0 - math.sqrt(d2), clamp(u)
 
     def field(x, y):
-        d = math.hypot(x - bx, y - by)
-        if d <= br:
-            u, v = (x - bx) / br, (y - by) / br
-            lon = math.atan2(u, math.sqrt(max(0.0, 1 - u * u - v * v))) * 5
-            lat = math.asin(clamp(v, -1, 1)) * 6
-            tile = (math.floor(lon) + math.floor(lat)) % 3
-            t = light(x, y) * 0.7 + tile * 0.15
-            if noise(math.floor(lon) * 3.1, math.floor(lat) * 2.7) > 0.85:
-                t = 1.0
-            return pal.path("d1 d4 d6 t8 t9")(clamp(t)), 1.0, True, "ball"
-        if abs(x - bx) < 0.006 and y < by - br:
-            return pal.rgb("d4"), 1.0, True, "ball"
+        b = balloon(x, y)
+        if b:
+            inside, side = b
+            # a balloon is lit from the upper left, with a soft sheen line
+            light = clamp(0.35 + inside * 0.75 - side * 0.22)
+            # narrow stripes down the balloon, party colours
+            s = int((side + 1.4) * 3.1) % 3
+            tone = ("a4", "e6", "w8")[s]
+            c = mix(pal.path("a1 a6 w8")(light), pal.rgb(tone), 0.35)
+            glint = ((side + 0.5) * 2.2) ** 2 + ((inside - 0.62) * 3.4) ** 2 < 0.05
+            if glint:
+                c = pal.rgb("w9")
+            elif inside < 0.06:
+                c = mix(c, pal.rgb("w6"), 0.5)              # the rim catches light
+            return c, 1.0, True, "balloon"
+        for bx, by, br in balloons:
+            # the knot, then the string, hanging from just under the balloon
+            if abs(x - bx) < br * 0.12 and 0 < y - (by + br * 1.1) < br * 0.16:
+                return pal.rgb("w8"), 1.0, True, "balloon"
+            sway = 0.012 * math.sin((y - by) * 30 + bx * 4)
+            if abs(x - bx - sway) < 0.004 and y > by + br * 1.16:
+                return pal.rgb("t8"), 1.0, True, "balloon"
         if y > 0.8:
             t = (y - 0.8) / 0.2
             u = (x - 1.0) / (t + 0.3)
             tile = (math.floor(u * 4) + math.floor(t * 8)) % 2
-            hue = ("a", "g", "e")[int(abs(math.floor(u * 4))) % 3]
-            return pal.path("- " + hue + "4 " + hue + "6")(0.4 + tile * 0.5 * (1 - t * 0.5)), 1.0, False, "floor"
-        ang = math.atan2(y - by, x - bx)
-        beam = clamp(math.cos(ang * 9 + 0.5) * 0.5 + 0.5) ** 12 * math.exp(-max(0.0, d - br) * 1.2)
-        hue = ("a6", "g6", "e6")[int((ang + 4) * 9 / math.pi) % 3]
+            hue = ("a", "e", "w")[int(abs(math.floor(u * 4))) % 3]
+            return pal.path("- " + hue + "4 " + hue + "6")(0.45 + tile * 0.5 * (1 - t * 0.5)), 1.0, False, "floor"
+        # a warm pink glow rising off the floor, no beams
+        glow = math.exp(-((y - 0.78) / 0.35) ** 2) * math.exp(-((x - 1.2) / 1.1) ** 2)
         c = pal.path("- d1")(0.3 - y * 0.2)
-        return mix(c, pal.rgb(hue), beam * 0.7), 1.0, False, "room"
+        return mix(c, pal.rgb("a4"), glow * 0.5), 1.0, False, "room"
 
     def texts(rows, x_left, cw, unit):
         rnd = random.Random(19)
         out = []
-        for _ in range(rows * 4):
-            x, y = rnd.uniform(-3, 1.9), rnd.uniform(0.02, 0.8)
+        for _ in range(rows * 3):
+            x, y = rnd.uniform(-3, 1.9), rnd.uniform(0.02, 0.78)
             if field(x, y)[3] == "room":
                 out.append((_col(x, x_left, cw), int(y / unit), rnd.choice("*+.'~,"),
-                            rnd.choice([pal.rgb("a8"), pal.rgb("g8"), pal.rgb("w8"), pal.rgb("t9"), pal.rgb("e6")]),
+                            rnd.choice([pal.rgb("a8"), pal.rgb("e6"), pal.rgb("w8"), pal.rgb("t9")]),
                             False))
         return out
 
-    return scene("party", field, texts)
+    return scene("party", field, texts, inks={"balloon": "aew", "room": "da", "floor": "aew"})
 
 
 # ---------------------------------------------------------------- glitch
@@ -330,7 +377,9 @@ def bubbles(pal):
                 if glint:
                     return pal.rgb("t9"), 1.0, main, "bubble"
                 if rim:
-                    return mix(bg, pal.path("a6 a8 g6 t8")(swirl), 0.85), 1.0, main, "bubble"
+                    # no green on the skins (the owner asked for it out):
+                    # pinks and warm whites only
+                    return mix(bg, pal.path("a6 a8 w6 t8")(swirl), 0.85), 1.0, main, "bubble"
                 return mix(bg, pal.path("a4 a6 t6")(swirl), 0.18 + (d ** 4) * 0.4), 1.0, main, "bubble"
         return field_bg(x, y)
 
