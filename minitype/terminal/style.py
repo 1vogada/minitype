@@ -283,7 +283,8 @@ THEMES = {
 # themes with effects, in the same form as themes.json
 COMPLEX = {
     "rainbow": {
-        "base": "default", "accent": 213,
+        "base": "default", "accent": 213, "dim": "#7f9fd7", "error": "#ff5f5f",
+        "extra": "#ffaf5f", "good": "#5fd75f", "warn": "#ffd75f",
         "gradient": ["#ff5f5f", "#ffaf5f", "#ffff5f", "#5fff5f", "#5fffff",
                      "#5f87ff", "#d75fff"],
         "by": "letter", "flow": 8, "caret": "rainbow",
