@@ -159,6 +159,7 @@ class Settings:
     fade_angle: int = 0          # the side fade's edge tilted, degrees (+ leans in at the top)
     fade_curve: int = 3          # how sharp the fade's exponential is: 0 straight .. 10
     fades: dict = field(default_factory=dict)   # picture -> its own fade settings (FADE_FIELDS)
+    fav_quotes: list = field(default_factory=list)   # favourite quotes: [{"text", "source"}]
     esc_pause: bool = True       # esc in a test pauses it (resume? yes / no) instead of leaving
     art_picture: str = "theme"   # the theme's own picture, or any picture's name (a remix)
     art_recolour: str = "theme"  # a remixed picture in the theme's colours, or its own theme's
@@ -280,4 +281,7 @@ class Settings:
             if f.name == "fades":
                 v = {k: _clean_fade(e) for k, e in v.items()
                      if isinstance(k, str) and isinstance(e, dict)}
+            if f.name == "fav_quotes":
+                v = [{"text": q["text"], "source": str(q.get("source", ""))}
+                     for q in v if isinstance(q, dict) and isinstance(q.get("text"), str)]
             setattr(self, f.name, v)

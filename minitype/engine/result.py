@@ -20,3 +20,4 @@ class TestResult:
     events: list = field(default_factory=list)    # (elapsed, correct) per press
     presses: dict = field(default_factory=dict)   # char -> times it was due
     pb_before: float = 0.0                        # personal best going in, 0 if none
+    quote: str = ""                               # the quote's text, for favouriting it

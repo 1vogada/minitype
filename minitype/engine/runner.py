@@ -39,6 +39,7 @@ class TypingTest:
         self.stop = s.stop_on_error
         self.learning = spec.source == "learn"
         self.note = ""
+        self.quote = ""        # the quote as picked, for favouriting
         self.words = self._make_words()
         self.typed = [""] * len(self.words)
         self.wi = self.keys = self.bad_keys = 0
@@ -74,6 +75,7 @@ class TypingTest:
             text, who = app.quotes.pick(app.settings.quote_length,
                                         app.settings.quote_source)
             self.note = who
+            self.quote = text
             if not app.settings.punctuation:
                 text = text.replace("—", " ").replace("--", " ")
                 words = [w.strip(QUOTE_PUNCT).replace(",", "") for w in text.split()]
@@ -407,6 +409,7 @@ class TypingTest:
         result = TestResult(self.spec, wpm, raw, acc, elapsed, self.bad_keys,
                             self.best_combo, self.misses, self.failed, self.diff,
                             self.fail_reason, self.note, self.events, self.presses)
+        result.quote = self.quote
         result.pb_before = self.app.history.pb(result)
         self.app.history.add(result)
         self.app.save()
