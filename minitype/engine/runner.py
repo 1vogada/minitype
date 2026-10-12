@@ -87,6 +87,9 @@ class TypingTest:
         else:
             words = app.generator.make(
                 spec.amount if spec.kind == "words" else 200, src)
+        if app.settings.remove_apostrophe:
+            words = [w.replace("'", "").replace("’", "").replace("‘", "") for w in words]
+            words = [w for w in words if w]
         words = funbox.apply(words, app.settings.funbox)
         if app.settings.lowercase:
             words = [w.lower() for w in words]
@@ -299,6 +302,9 @@ class TypingTest:
         word, typed = self.words[self.wi], self.typed[self.wi]
         if not typed:
             return                              # ignore leading spaces
+        if self.app.settings.forgive_apostrophe and word.endswith(("'", "’", "‘")) \
+                and typed == word.rstrip("'’‘"):
+            typed = self.typed[self.wi] = word
         self._due(" ")
         if typed != word and self.stop != "off" and self.diff != "master":
             # stop on error: the space is a wrong key and the cursor stays put
@@ -335,9 +341,16 @@ class TypingTest:
         if len(self.typed[self.wi]) >= len(word) + MAX_EXTRA:
             return
         j = len(self.typed[self.wi])
+        if self.app.settings.forgive_apostrophe:
+            while j < len(word) and word[j] in ("'", "’", "‘") and j + 1 < len(word) and ch == word[j + 1]:
+                self.typed[self.wi] += word[j]
+                j += 1
         want = word[j] if j < len(word) else "+"
         self._due(want)
-        ok = j < len(word) and ch == word[j]
+        ok = j < len(word) and (ch == word[j] or (self.app.settings.forgive_apostrophe
+                                                  and ch in ("'", "’", "‘") and word[j] in ("'", "’", "‘")))
+        if ok and j < len(word) and ch != word[j]:
+            ch = word[j]
         self._press(el, ok)
         if j == 0:
             self.word_start = el

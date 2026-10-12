@@ -103,6 +103,8 @@ class Settings:
     typos: str = "off"           # show the wrong key: off, below, replace, both
     punctuation: bool = False
     lowercase: bool = False      # every word in lower case: quotes, books, custom text too
+    forgive_apostrophe: bool = False  # skip apostrophes without mistake (type cant for can't)
+    remove_apostrophe: bool = False   # remove apostrophes altogether from quotes and text
     numbers: bool = False        # sprinkle numbers into normal word tests
     blind: bool = False          # no feedback until the results screen
     time_amount: int = 30        # seconds, for the time mode
