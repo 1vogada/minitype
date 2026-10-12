@@ -319,72 +319,171 @@ def rainbow(pal):
 
 # ---------------------------------------------------------------- party
 
-def party(pal):
-    """Balloons floating up over a glowing floor, strings hanging, a few
-    drifting away - party colours, a pinker room (no disco ball)."""
-    # (x, y, radius); the strings of the lower ones reach the floor
-    balloons = [(1.05, 0.26, 0.13), (1.42, 0.17, 0.1), (1.68, 0.35, 0.085),
-                (0.78, 0.44, 0.075), (1.28, 0.52, 0.06)]
+def _scatter(n, seed, x0, x1, y0, y1, cell=(0.014, 0.022)):
+    """n small pieces (confetti) on a grid: {(i, j): (index, rnd 0..1)}."""
+    rnd = random.Random(seed)
+    out = {}
+    for k in range(n):
+        x, y = rnd.uniform(x0, x1), rnd.uniform(y0, y1)
+        out[(math.floor(x / cell[0]), math.floor(y / cell[1]))] = (k, rnd.random())
+    return out
 
-    def balloon(x, y):
-        """(how far in 0..1, side -1..1) for the nearest balloon, or None."""
-        best = None
-        for bx, by, br in balloons:
-            u, v = (x - bx) / br, (y - by) / (br * 1.22)
+
+def party(pal):
+    """A party hall in pink: a bunch of shiny balloons tied to a present,
+    curly strings, streamers and confetti in the air, bunting across the
+    top, bokeh lights in a soft pink haze and a glossy floor mirroring
+    it all."""
+    from art_wow3 import limbs
+    fl = 0.8                                                   # where the floor starts
+    # (x, y, radius, colour letter); first is nearest
+    balloons = [(1.22, 0.42, 0.075, "g"), (1.5, 0.36, 0.08, "x"), (1.06, 0.27, 0.085, "a"),
+                (1.36, 0.2, 0.08, "w"), (1.68, 0.2, 0.075, "a"), (1.78, 0.46, 0.07, "w"),
+                (0.9, 0.48, 0.065, "a"), (1.6, 0.6, 0.06, "g"), (1.2, 0.11, 0.06, "x"),
+                (1.88, 0.12, 0.06, "g")]
+    drift = [(0.35, 0.22, 0.045, "w"), (-0.2, 0.12, 0.04, "a"), (-1.1, 0.3, 0.04, "x"),
+             (-2.0, 0.16, 0.045, "g"), (-2.7, 0.34, 0.035, "w"), (0.0, 0.5, 0.035, "g")]
+    shade = {L: pal.path(f"{L}0 {L}2 {L}4 {L}6 {L}8 t6") for L in "agxw"}
+    box = (1.31, 0.76, 0.11, 0.12)                             # the present: centre x, top, half width, height
+    knot = (box[0], box[1] - 0.025)
+
+    # strings: curly, down to the bow on the present (or hanging free)
+    rnd = random.Random(12)
+    spaths = []
+    for bx, by, br, _ in balloons + drift:
+        top = (bx, by + br * 1.32)
+        tied = bx > 0.8
+        end = (knot[0] + rnd.uniform(-0.02, 0.02), knot[1]) if tied else (bx + rnd.uniform(-0.05, 0.05), by + 0.3)
+        ph, amp = rnd.uniform(0, 6), rnd.uniform(0.006, 0.012)
+        pts = []
+        for j in range(41):
+            s = j / 40
+            curl = amp * math.sin(s * 34 + ph) * (1 - s * 0.6) if s < 0.45 else amp * 0.4 * math.sin(s * 12 + ph)
+            pts.append((top[0] + (end[0] - top[0]) * s ** 1.3 + curl, top[1] + (end[1] - top[1]) * s))
+        spaths.append((pts, 0.0035, 0.003))
+    strings = limbs(spaths)
+
+    # streamers spiralling down from the ceiling
+    tpaths, tcol = [], []
+    for k in range(11):
+        x0, ln = rnd.uniform(-3.2, 1.9), rnd.uniform(0.25, 0.6)
+        ph, dx = rnd.uniform(0, 6), rnd.uniform(-0.15, 0.15)
+        tpaths.append(([(x0 + dx * s + 0.03 * math.sin(s * 16 + ph), s * ln) for s in (j / 30 for j in range(31))],
+                       0.008, 0.006))
+        tcol.append("agxw"[k % 4])
+    streamers = limbs(tpaths)
+    confetti = _scatter(380, 3, -3.2, 1.9, 0.0, fl)
+    bokeh = [(rnd.uniform(-3.2, 1.9), rnd.uniform(0.3, 0.75), rnd.uniform(0.03, 0.07), rnd.choice("agwx"))
+             for _ in range(30)]
+    sky = pal.path("- x0 x1 x2 a2 a4 g5")
+
+    def balloon(x, y, group):
+        for bx, by, br, L in group:
+            u, v = (x - bx) / br, (y - by) / (br * 1.18)
+            u /= 1 - 0.14 * max(0.0, v)                        # narrower at the bottom
             d2 = u * u + v * v
-            if d2 <= 1.0 and (best is None or d2 < best[0]):
-                best = (d2, u, v)
-        if best is None:
-            return None
-        d2, u, v = best
-        return 1.0 - math.sqrt(d2), clamp(u)
+            if d2 <= 1:
+                z = math.sqrt(1 - d2)
+                light = clamp(-u * 0.5 - v * 0.55 + z * 0.65)
+                if (u + 0.38) ** 2 + ((v + 0.45) * 1.4) ** 2 < 0.035:
+                    return pal.rgb("t9")                       # the shine
+                if (u + 0.15) ** 2 * 3 + (v + 0.62) ** 2 < 0.02:
+                    return pal.rgb("t6")
+                if d2 > 0.7 and u + v > 0.75:
+                    light = clamp(light + 0.3)                 # light bouncing back off the room
+                return shade[L](light * 0.92)
+            if abs(x - bx) < br * 0.13 * (1 - (y - by - br * 1.18) / (br * 0.16)) + 0.004 \
+                    and 0 <= y - by - br * 1.18 < br * 0.16:
+                return shade[L](0.35)                          # the knot
+        return None
+
+    def present(x, y):
+        cx, top, hw, h = box
+        if abs(x - cx) <= hw and top <= y <= top + h:
+            face = (x - cx) / hw
+            if abs(x - cx) < 0.014:
+                return pal.path("a2 a5 a7")(0.6 - face * 0.3)   # the ribbon
+            if y < top + 0.022:
+                return pal.path("w4 w6 w8")(0.8 + face * 0.2) if abs(y - top - 0.011) > 0.005 else pal.rgb("a6")
+            return pal.path("w1 w3 w5 w7")(clamp(0.7 - face * 0.35 - (y - top) * 2))
+        for side in (-1, 1):                                   # the bow: two loops
+            if math.hypot((x - cx - side * 0.03) / 0.032, (y - top + 0.012) / 0.024) < 1:
+                return pal.path("a3 a6 a8")(0.6 - side * 0.3)
+        return None
+
+    def room(x, y):
+        c = sky(clamp(0.25 + y * 0.85))
+        glow = math.exp(-((y - 0.72) / 0.2) ** 2) * math.exp(-((x - 1.3) / 1.4) ** 2)
+        c = mix(c, pal.rgb("g6"), glow * 0.45)
+        for bx, by, br, L in bokeh:
+            d = math.hypot(x - bx, y - by) / br
+            if d < 1:
+                c = mix(c, pal.rgb(L + "6"), 0.28 + (0.18 if d > 0.8 else 0))
+        return c
+
+    def air(x, y):
+        """Bunting, streamers and confetti, or None."""
+        sag = 0.03 + 0.07 * math.sin(math.pi * (((x + 3.2) / 0.85) % 1))
+        if abs(y - sag) < 0.005:
+            return pal.rgb("t5")
+        f = (x + 3.2) / 0.085
+        if 0 < y - sag < 0.085 * max(0.0, 1 - abs(f % 1 - 0.5) * 2.2) ** 0.8:
+            L = "agwx"[int(f) % 4]
+            return shade[L](0.75 - (y - sag) * 6)
+        hit = streamers(x, y)
+        if hit:
+            t, nx, ny, k = hit
+            return shade[tcol[k]](clamp(0.45 + nx * -0.4 + 0.25 * math.sin(t * 40)))
+        piece = confetti.get((math.floor(x / 0.014), math.floor(y / 0.022)))
+        if piece:
+            fx, fy = (x / 0.014) % 1, (y / 0.022) % 1
+            if (fx < 0.95 and fy < 0.3) if piece[0] % 2 else (fx < 0.5 and fy < 0.55):
+                return shade["agwa"[piece[0] % 4]](0.6 + piece[1] * 0.35)
+        return None
 
     def field(x, y):
-        b = balloon(x, y)
-        if b:
-            inside, side = b
-            # a balloon is lit from the upper left, with a soft sheen line
-            light = clamp(0.35 + inside * 0.75 - side * 0.22)
-            # narrow stripes down the balloon, party colours
-            s = int((side + 1.4) * 3.1) % 3
-            tone = ("a4", "e6", "w8")[s]
-            c = mix(pal.path("a1 a6 w8")(light), pal.rgb(tone), 0.35)
-            glint = ((side + 0.5) * 2.2) ** 2 + ((inside - 0.62) * 3.4) ** 2 < 0.05
-            if glint:
-                c = pal.rgb("w9")
-            elif inside < 0.06:
-                c = mix(c, pal.rgb("w6"), 0.5)              # the rim catches light
+        c = balloon(x, y, balloons)
+        if c:
             return c, 1.0, True, "balloon"
-        for bx, by, br in balloons:
-            # the knot, then the string, hanging from just under the balloon
-            if abs(x - bx) < br * 0.12 and 0 < y - (by + br * 1.1) < br * 0.16:
-                return pal.rgb("w8"), 1.0, True, "balloon"
-            sway = 0.012 * math.sin((y - by) * 30 + bx * 4)
-            if abs(x - bx - sway) < 0.004 and y > by + br * 1.16:
-                return pal.rgb("t8"), 1.0, True, "balloon"
-        if y > 0.8:
-            t = (y - 0.8) / 0.2
-            u = (x - 1.0) / (t + 0.3)
-            tile = (math.floor(u * 4) + math.floor(t * 8)) % 2
-            hue = ("a", "e", "w")[int(abs(math.floor(u * 4))) % 3]
-            return pal.path("- " + hue + "4 " + hue + "6")(0.45 + tile * 0.5 * (1 - t * 0.5)), 1.0, False, "floor"
-        # a warm pink glow rising off the floor, no beams
-        glow = math.exp(-((y - 0.78) / 0.35) ** 2) * math.exp(-((x - 1.2) / 1.1) ** 2)
-        c = pal.path("- d1")(0.3 - y * 0.2)
-        return mix(c, pal.rgb("a4"), glow * 0.5), 1.0, False, "room"
+        if present(x, y):
+            return present(x, y), 1.0, True, "present"
+        if strings(x, y) and y < fl + 0.1:
+            return pal.rgb("t7" if x > 0.8 else "t4"), 1.0, x > 0.8, "string" if x > 0.8 else "air"
+        c = balloon(x, y, drift)
+        if c:
+            return c, 1.0, False, "air"
+        if y >= fl:
+            t = (y - fl) / (1 - fl)
+            ripple = 0.006 * math.sin(x * 90 + y * 40)
+            my = fl - (y - fl) * 2.2 + ripple                        # mirrored, a little rippled
+            u = (x - 1.3) / (t + 0.12)
+            seam = abs((u * 2.2) % 1 - 0.5) > 0.45 or abs(((1 / (t + 0.12)) * 1.6) % 1 - 0.5) > 0.43
+            base = pal.path("x0 x1 x2 x3 a3 a5")(clamp(0.45 - t * 0.35 + (0.12 if seam else 0)
+                                                       + math.exp(-((x - 1.3) / 0.7) ** 2) * 0.3 * (1 - t)))
+            mb = box[1] + box[3]
+            r = present(x, 2 * mb - y + ripple) if y > mb else None
+            r = r or balloon(x, my, balloons + drift)
+            if r:
+                return mix(base, r, 0.6 - t * 0.3), 1.0, False, "floor"
+            return mix(base, room(x, my), 0.35 * (1 - t)), 1.0, False, "floor"
+        a = air(x, y)
+        if a:
+            return a, 1.0, False, "air"
+        return room(x, y), 1.0, False, "room"
 
     def texts(rows, x_left, cw, unit):
-        rnd = random.Random(19)
+        rnd2 = random.Random(19)
         out = []
         for _ in range(rows * 3):
-            x, y = rnd.uniform(-3, 1.9), rnd.uniform(0.02, 0.78)
-            if field(x, y)[3] == "room":
-                out.append((_col(x, x_left, cw), int(y / unit), rnd.choice("*+.'~,"),
-                            rnd.choice([pal.rgb("a8"), pal.rgb("e6"), pal.rgb("w8"), pal.rgb("t9")]),
-                            False))
+            x, y = rnd2.uniform(-3, 1.9), rnd2.uniform(0.05, 0.99)
+            tag = field(x, y)[3]
+            if tag in ("room", "floor"):
+                out.append((_col(x, x_left, cw), int(y / unit), rnd2.choice("+*·'" if tag == "room" else "+·*."),
+                            rnd2.choice([pal.rgb("a8"), pal.rgb("w9"), pal.rgb("t9"), pal.rgb("g8")]), False))
         return out
 
-    return scene("party", field, texts, inks={"balloon": "aew", "room": "da", "floor": "aew"})
+    return scene("party", field, texts, inks={"balloon": "agxwt", "room": "xag", "floor": "xagwt",
+                                              "present": "wat", "air": "agxwt", "string": "t"})
 
 
 # ---------------------------------------------------------------- glitch
