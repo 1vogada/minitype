@@ -110,6 +110,24 @@ assert t.words == ["Hello", "WORLD", "MiXeD"]
 c.settings.lowercase, c.settings.punctuation = True, True
 t = TypingTest(c, TestSpec("w", "words", 40, "english"))
 assert all(w == w.lower() for w in t.words), t.words
+# quote mode punctuation
+c.settings.punctuation = False
+c.settings.lowercase = False
+sample_quote = ("All the world's a stage, and all the men and women merely players.", "Shakespeare")
+with mock.patch.object(c.quotes, "pick", return_value=sample_quote):
+    t = TypingTest(c, TestSpec("q", "words", 0, "quote"))
+    assert t.words == ["All", "the", "world's", "a", "stage", "and", "all", "the", "men", "and", "women", "merely", "players"], t.words
+    assert not any("," in w for w in t.words)
+c.settings.lowercase = True
+with mock.patch.object(c.quotes, "pick", return_value=sample_quote):
+    t = TypingTest(c, TestSpec("q", "words", 0, "quote"))
+    assert t.words == ["all", "the", "world's", "a", "stage", "and", "all", "the", "men", "and", "women", "merely", "players"], t.words
+c.settings.punctuation = True
+c.settings.lowercase = False
+with mock.patch.object(c.quotes, "pick", return_value=sample_quote):
+    t = TypingTest(c, TestSpec("q", "words", 0, "quote"))
+    assert t.words == ["All", "the", "world's", "a", "stage,", "and", "all", "the", "men", "and", "women", "merely", "players."], t.words
+    assert "stage," in t.words
 # ---------------------------------------------------------------- gallery
 from minitype.ui.gallery import gallery
 g = App()

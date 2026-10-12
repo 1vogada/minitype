@@ -1,5 +1,6 @@
 import os
 import random
+import string
 import time
 
 from ..config import MAX_EXTRA, RULE_GRACE
@@ -22,6 +23,7 @@ REDRAW_ANIMATED = 0.05    # smoother when the theme has things moving
 SPACE_TYPO = "_"          # how a wrong space shows with indicate typos
 SLOW_WORDS = 20       # how many of your slowest words a drill draws from
 MIN_SLOW_WORDS = 5    # tracked words needed before the drill is offered
+QUOTE_PUNCT = string.punctuation + "“”‘’—–…«»"
 
 
 class TypingTest:
@@ -72,7 +74,12 @@ class TypingTest:
             text, who = app.quotes.pick(app.settings.quote_length,
                                         app.settings.quote_source)
             self.note = who
-            words = text.split()
+            if not app.settings.punctuation:
+                text = text.replace("—", " ").replace("--", " ")
+                words = [w.strip(QUOTE_PUNCT).replace(",", "") for w in text.split()]
+                words = [w for w in words if w]
+            else:
+                words = text.split()
         elif src == "code":
             self.note, words = code.pick(app.settings.code_lang)
         elif src == "slow":
