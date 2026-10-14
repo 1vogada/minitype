@@ -421,6 +421,19 @@ def _layer(row, pic, card, dim=None):
     return "".join(out).rstrip() + RESET
 
 
+@lru_cache(maxsize=2048)
+def _layered(row, pic, k, start, col, card, dim, see, fx, background):
+    """_layer for one row, remembered: the same text over the same art row
+    gives the same result. see, fx and background are only in the key: they
+    are what _layer reads from outside its arguments."""
+    return _layer(row, _art_cells(pic, k, start, col), card, dim)
+
+
+def _layer_cached(row, pic, k, start, col, card, dim):
+    return _layered(row, pic, k, start, col, card, dim, _decor.get("see_through", 0.4),
+                    _decor.get("text_fx"), _background)
+
+
 def overlay_art(rows, versions, width, pinned_n, behind=False, dim=None):
     """Put the art in the bottom-right corner, above any pinned lines with
     a row to spare. `versions` are the picture's sizes, biggest first (art
@@ -452,8 +465,8 @@ def overlay_art(rows, versions, width, pinned_n, behind=False, dim=None):
                 r = rows[top + k]
                 i = r.find(FLOAT)
                 card = (visible_len(r[:i]), visible_len(r)) if i >= 0 else (0, 0)
-                rows[top + k] = _layer(r, _art_cells(pic, k, pic.width - w, col), card,
-                                       (dim or {}).get(top + k))
+                rows[top + k] = _layer_cached(r, pic, k, pic.width - w, col, card,
+                                              (dim or {}).get(top + k))
             return rows
         return rows
     bottom = len(rows) - pinned_n - (2 if pinned_n else 1)
