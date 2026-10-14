@@ -45,6 +45,7 @@ class App:
         self.theme_draft = None   # the theme creator's work in progress
         self.current_test = None  # (test, redraw) while a test runs, for ctrl-o
         self.fade_picture = None  # the picture the fade settings are showing
+        self._styled = (None,)    # styles()'s last build, see there
 
     def styles(self, custom=None, art=None):
         """The current theme's colours, with every effect and fun-modifier
@@ -53,41 +54,57 @@ class App:
         console. `custom` is a (palette, effects) pair to show instead and
         `art` its picture (the theme creator's draft)."""
         s = self.settings
-        st = Styles(s.theme, s.lowkey, s.accent_text,
-                    background=s.theme_background, gradient=s.theme_gradient,
-                    flow=s.theme_flow, heat=s.theme_heat,
-                    text_style=s.theme_text_style,
-                    modifiers={"bounce": s.fun_bounce, "shake": s.fun_shake,
-                               "pop": s.fun_pop, "fade": s.fun_fade,
-                               "caret_fx": s.fun_caret, "glitch": s.fun_glitch},
-                    speed=s.effect_speed, reverse=s.flow_direction == "backward",
-                    custom=custom)
-        if s.untyped_lighten:
-            st.untyped = lightened(st.dim, s.untyped_lighten / 100)
+        # Everything below up to set_decor depends only on these settings,
+        # so it's built once and kept until one of them changes (styles()
+        # runs several times a frame). Not for a draft theme or draft art.
+        key = None if custom is not None or art is not None else (
+            s.theme, s.lowkey, s.accent_text, s.theme_background,
+            s.theme_gradient, s.theme_flow, s.theme_heat, s.theme_text_style,
+            s.fun_bounce, s.fun_shake, s.fun_pop, s.fun_fade, s.fun_caret,
+            s.fun_glitch, s.effect_speed, s.flow_direction, s.untyped_lighten,
+            s.art_style, s.art_colours, s.art_picture, s.art_recolour)
+        hit = self._styled if key is not None and self._styled[0] == key else None
+        if hit:
+            _, st, painted, extremes = hit
+        else:
+            st = Styles(s.theme, s.lowkey, s.accent_text,
+                        background=s.theme_background, gradient=s.theme_gradient,
+                        flow=s.theme_flow, heat=s.theme_heat,
+                        text_style=s.theme_text_style,
+                        modifiers={"bounce": s.fun_bounce, "shake": s.fun_shake,
+                                   "pop": s.fun_pop, "fade": s.fun_fade,
+                                   "caret_fx": s.fun_caret, "glitch": s.fun_glitch},
+                        speed=s.effect_speed, reverse=s.flow_direction == "backward",
+                        custom=custom)
+            if s.untyped_lighten:
+                st.untyped = lightened(st.dim, s.untyped_lighten / 100)
+            versions = theme_art(s.theme, s.art_style) if art is None else art
+            shaded = s.art_colours == "shaded"
+            palette = st.art_palette(shaded=shaded)
+            if art is None and s.art_picture != "theme":
+                # a remix: another theme's picture, in this theme's colours or
+                # in its own theme's
+                versions = resolve_art(s.art_picture, s.art_style) or versions
+                home = next((t for t, n in THEME_ART.items() if n == s.art_picture), None)
+                if s.art_recolour == "own" and home:
+                    palette = Styles(home).art_palette(shaded=shaded)
+            painted = [paint_art(piece, palette) for piece in versions]
+            extremes = _extremes(palette, st.background)
+            if key is not None:
+                self._styled = (key, st, painted, extremes)
         console.set_background(st.background)
         stealth = s.lowkey == "disguised"
-        versions = theme_art(s.theme, s.art_style) if art is None else art
-        shaded = s.art_colours == "shaded"
-        palette = st.art_palette(shaded=shaded)
-        if art is None and s.art_picture != "theme":
-            # a remix: another theme's picture, in this theme's colours or
-            # in its own theme's
-            versions = resolve_art(s.art_picture, s.art_style) or versions
-            home = next((t for t, n in THEME_ART.items() if n == s.art_picture), None)
-            if s.art_recolour == "own" and home:
-                palette = Styles(home).art_palette(shaded=shaded)
         if art is None:
             self.picture_fade(s.art_picture if s.art_picture != "theme"
                               else THEME_ART.get(s.theme) or f"theme {s.theme}")
         console.set_decor(
             border=None if stealth or s.border == "off" else s.border,
             border_style=st.title,
-            art=None if stealth or s.art == "off" else
-            [paint_art(piece, palette) for piece in versions],
+            art=None if stealth or s.art == "off" else painted,
             art_scope=s.art, behind=s.art_behind, panel=s.art_panel, shadow=st.dim,
             fade=(s.art_fade, s.fade_top, s.fade_side, s.fade_round, s.fade_start,
                   s.fade_start_top, s.fade_angle, s.fade_curve) if s.fade_on else None,
-            text_fx=(s.text_contrast, s.text_bold) + _extremes(palette, st.background),
+            text_fx=(s.text_contrast, s.text_bold) + extremes,
             see_through=s.see_through / 100, menu_lighten=s.text_lighten / 100)
         return st
 

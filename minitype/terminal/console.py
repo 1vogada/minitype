@@ -113,19 +113,23 @@ def visible_len(s):
 
 def clip(s, w):
     """Cut s to w visible characters, keeping escape codes intact."""
-    out, n, i = [], 0, 0
-    while i < len(s):
-        m = ANSI.match(s, i)
-        if m:
-            out.append(m.group())
-            i = m.end()
-            continue
-        if n >= w:
-            break
-        out.append(s[i])
-        n += 1
-        i += 1
+    out, n, pos = [], 0, 0
+    for m in ANSI.finditer(s):
+        if m.start() > pos:                 # plain text before this code
+            room = w - n
+            if room <= 0:
+                return "".join(out)
+            seg = s[pos:m.start()]
+            out.append(seg[:room])
+            n += len(seg)
+            if n > w:
+                return "".join(out)
+        out.append(m.group())
+        pos = m.end()
+    if pos < len(s) and w - n > 0:
+        out.append(s[pos:pos + w - n])
     return "".join(out)
+
 
 
 def pad(s, w):
