@@ -64,3 +64,8 @@ Art-on drawing was **read, not measured** (art is off in that profile).
 - The non-behind art path (`pic.row` per frame) and `_text_ends` / `_cells`
   parse escapes per character; they could be cached the same way.
 - Art-on performance was never profiled in a real terminal.
+
+## Also fixed on this branch
+
+- **Art off:** styles() skips the palette, art lookup, painting and text-flip colours when art is off (or disguised lowkey).
+- **Mistakes counted twice:** ad_keys added 1 per wrong key and another 1 for the wrong word at space / end of test. A word now only adds its own 1 when no wrong key was counted in it (letters skipped); see 	ests/mistakes_check.py. Errors and accuracy on the results screen are now one per mistake.

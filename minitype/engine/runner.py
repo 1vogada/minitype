@@ -55,6 +55,7 @@ class TypingTest:
         self.wrong = False      # last key was rejected by stop on error
         self.err_marks = set()  # (word, letter) positions that had a wrong key
         self.typo_keys = {}     # (word, letter) -> the last wrong key pressed there
+        self.missed_words = set()  # words that already had a wrong key counted
         self.last_error = -1.0  # when the last wrong key came (for shake)
         self.prev_t = None
         self.word_start = None  # when the first char of the current word landed
@@ -285,6 +286,7 @@ class TypingTest:
     def _miss(self, want):
         self.bad_keys += 1
         self.combo = 0
+        self.missed_words.add(self.wi)
         self.last_error = time.time()
         self.misses[want] = self.misses.get(want, 0) + 1
         self.app.stats.miss_key(want)
@@ -320,7 +322,8 @@ class TypingTest:
             return
         self._press(el, typed == word)
         if typed != word:
-            self.bad_keys += 1
+            if self.wi not in self.missed_words:
+                self.bad_keys += 1      # a wrong word with no wrong key in it
             self.combo = 0
             if not self.learning:
                 self.app.stats.miss_word(word)
@@ -382,7 +385,8 @@ class TypingTest:
             if self.typed[self.wi] != word:
                 if self.stop == "word":
                     return                      # fix it before you can finish
-                self.bad_keys += 1
+                if self.wi not in self.missed_words:
+                    self.bad_keys += 1
                 if not self.learning:
                     self.app.stats.miss_word(word)
             else:
