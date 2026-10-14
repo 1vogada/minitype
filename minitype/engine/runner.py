@@ -545,7 +545,7 @@ def _run(app, test, paint):
             dirty = False
 
         if not keys.key_ready():
-            time.sleep(0.01)
+            time.sleep(0.002)
             dirty = dirty or console.size() != size
             continue
 
