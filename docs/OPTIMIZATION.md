@@ -65,7 +65,8 @@ Art-on drawing was **read, not measured** (art is off in that profile).
   parse escapes per character; they could be cached the same way.
 - Art-on performance was never profiled in a real terminal.
 
-## Also fixed on this branch
+## Also fixed
 
-- **Art off:** styles() skips the palette, art lookup, painting and text-flip colours when art is off (or disguised lowkey).
-- **Mistakes counted twice:** ad_keys added 1 per wrong key and another 1 for the wrong word at space / end of test. A word now only adds its own 1 when no wrong key was counted in it (letters skipped); see 	ests/mistakes_check.py. Errors and accuracy on the results screen are now one per mistake.
+- **Art off:** `styles()` skips the palette, art lookup, painting and text-flip colours when art is off (or disguised lowkey).
+- **Mistakes counted twice:** `bad_keys` added 1 per wrong key and another 1 for the wrong word at space / end of test. A word now only adds its own 1 when no wrong key was counted in it (letters skipped); see `tests/mistakes_check.py`. Errors and accuracy on the results screen are now one per mistake.
+- **Punctuation modes:** `punctuation` is now a choice (`off` / `on` / `forgive`). In `forgive` mode, any punctuation mark can be skipped without counting as a mistake (auto-filled on typing the next letter or space/end of test). Old `forgive_apostrophe` and `remove_apostrophe` were consolidated: `apostrophes` is a dedicated toggle ("apostrophes visible" on/off) and `forgive` covers all punctuation. See `tests/punctuation_check.py`.
