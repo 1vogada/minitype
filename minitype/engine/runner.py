@@ -74,7 +74,8 @@ class TypingTest:
             return lesson_words(app.learn, app.bank, spec.amount)
         elif src == "quote":
             text, who = app.quotes.pick(app.settings.quote_length,
-                                        app.settings.quote_source)
+                                        app.settings.quote_source,
+                                        app.settings.quote_genre)
             self.note = who
             self.quote = text
             if app.settings.punctuation == "off":

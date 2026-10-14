@@ -17,6 +17,7 @@ BOOK_SCRIPTS = ["cyrillic", "shlokavitsa"]   # how Bulgarian books are typed
 WORD_COUNTS = [10, 25, 50, 100]
 QUOTE_LENGTHS = ["all", "short", "medium", "long"]
 QUOTE_SOURCES = ["built-in", "online"]
+QUOTE_GENRES = ["all", "funny", "deep", "philosophical", "movie", "book", "inspirational", "sci-fi"]
 CODE_LANGS = ["python", "javascript"]
 CARETS = ["underline", "block"]
 WORD_GAPS = ["blank", "dots", "underline"]   # what's drawn between words

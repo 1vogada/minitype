@@ -4,7 +4,7 @@ from .config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS,
                      CODE_LANGS, DIFFICULTIES,
                      FUNBOXES, GOALS, KEYBOARD_MODES, LAYOUTS, LOWKEY_MODES,
                      MEMORY_SECS, MIN_ACCS, MIN_WPMS, PACES, QUOTE_LENGTHS,
-                     QUOTE_SOURCES, SIDEBAR_TABS, STOP_MODES, UI_STYLES,
+                     QUOTE_SOURCES, QUOTE_GENRES, SIDEBAR_TABS, STOP_MODES, UI_STYLES,
                      WORD_GAPS, FUN_BOUNCE, FUN_SWITCH, FUN_CARET,
                      EFFECT_SPEEDS, FLOW_DIRECTIONS, CORRECTED, TYPOS,
                      PUNCTUATION_MODES,
@@ -34,6 +34,7 @@ CHOICES = {
     "memory": MEMORY_SECS,
     "quote_length": QUOTE_LENGTHS,
     "quote_source": QUOTE_SOURCES,
+    "quote_genre": QUOTE_GENRES,
     "code_lang": CODE_LANGS,
     "pace": PACES,
     "caret": CARETS,
@@ -127,6 +128,7 @@ class Settings:
     word_source: str = "online 1k"
     quote_length: str = "all"
     quote_source: str = "built-in"
+    quote_genre: str = "all"
     code_lang: str = "python"
     book_page: int = 50          # words per page in book mode
     book_script: str = "cyrillic"            # Bulgarian books: cyrillic or shlokavitsa

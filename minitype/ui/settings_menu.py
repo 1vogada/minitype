@@ -15,7 +15,7 @@ outside the setting's range shows a warning in the pause box.
 from ..words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICULTIES, FUNBOXES, GOALS,
                       KEYBOARD_MODES, LAYOUTS, LOWKEY_MODES, MEMORY_SECS,
-                      MIN_ACCS, MIN_WPMS, PACES, PCTS, QUOTE_SOURCES,
+                      MIN_ACCS, MIN_WPMS, PACES, PCTS, QUOTE_SOURCES, QUOTE_GENRES,
                       SIDEBAR_TABS, STOP_MODES, UI_STYLES, WORD_GAPS,
                       FUN_BOUNCE, FUN_SWITCH, FUN_CARET, EFFECT_SPEEDS,
                       FLOW_DIRECTIONS, CORRECTED, TYPOS, BORDER_STYLES,
@@ -228,6 +228,11 @@ def build_items(app):
                  help="built-in: a small public-domain set. online: "
                       "monkeytype's collection (needs internet)",
                  tags=("quote", "source", "online", "text")),
+        b.choice("quote genre", "quote_genre", QUOTE_GENRES,
+                 help="theme of the quote: all, funny, deep, philosophical, "
+                      "movie, book, inspirational, sci-fi",
+                 tags=("quote", "genre", "theme", "themes", "switch",
+                       "funny", "deep", "philosophical", "movie", "book", "text")),
         b.choice("book page", "book_page", BOOK_PAGES,
                  lambda: f"{s.book_page} words",
                  help="words per page in book mode; your place in each book "
@@ -602,7 +607,7 @@ LAYOUT = [
                     ("challenges", "memory"), ("challenges", "funbox")]),
     ("text", [("words", "word list"), ("test", "punctuation"), ("test", "all lowercase"),
               ("test", "apostrophes visible"),
-              ("test", "numbers"), ("words", "quotes from"), ("words", "book page"),
+              ("test", "numbers"), ("words", "quotes from"), ("words", "quote genre"), ("words", "book page"),
               ("words", "book filter"), ("words", "bulgarian books"),
               ("words", "shlokavitsa style")]),
     ("drills", [("drills", "bad keys"), ("drills", "bad key %"), ("drills", "edit keys"),
