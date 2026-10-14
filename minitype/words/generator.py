@@ -56,13 +56,13 @@ class WordGenerator:
         s = self.settings
         out = []
         sentence = 0
-        cap = s.punctuation
+        cap = s.punctuation != "off"
         for _ in range(count):
             if s.numbers and random.random() < 0.05:
                 out.append(str(random.randint(0, 9999)))
                 continue
             w = self.pick()
-            if s.punctuation:
+            if s.punctuation != "off":
                 if cap:
                     w = w.capitalize()
                     cap = False

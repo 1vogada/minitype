@@ -77,7 +77,7 @@ class TypingTest:
                                         app.settings.quote_source)
             self.note = who
             self.quote = text
-            if not app.settings.punctuation:
+            if app.settings.punctuation == "off":
                 text = text.replace("—", " ").replace("--", " ")
                 words = [w.strip(QUOTE_PUNCT).replace(",", "") for w in text.split()]
                 words = [w for w in words if w]
@@ -90,7 +90,7 @@ class TypingTest:
         else:
             words = app.generator.make(
                 spec.amount if spec.kind == "words" else 200, src)
-        if app.settings.remove_apostrophe:
+        if not app.settings.apostrophes:
             words = [w.replace("'", "").replace("’", "").replace("‘", "") for w in words]
             words = [w for w in words if w]
         words = funbox.apply(words, app.settings.funbox)
@@ -302,13 +302,16 @@ class TypingTest:
         self.failed = self.done = True
         self.fail_reason = reason
 
+    def _forgive(self):
+        """Whether punctuation can be skipped without a mistake."""
+        return self.app.settings.punctuation == "forgive"
+
     def _space(self, el):
         word, typed = self.words[self.wi], self.typed[self.wi]
         if not typed:
             return                              # ignore leading spaces
-        if self.app.settings.forgive_apostrophe and word.endswith(("'", "’", "‘")) \
-                and typed == word.rstrip("'’‘"):
-            typed = self.typed[self.wi] = word
+        if self._forgive() and typed == word.rstrip(QUOTE_PUNCT) != word:
+            typed = self.typed[self.wi] = word   # trailing punctuation skipped
         self._due(" ")
         if typed != word and self.stop != "off" and self.diff != "master":
             # stop on error: the space is a wrong key and the cursor stays put
@@ -346,13 +349,16 @@ class TypingTest:
         if len(self.typed[self.wi]) >= len(word) + MAX_EXTRA:
             return
         j = len(self.typed[self.wi])
-        if self.app.settings.forgive_apostrophe:
-            while j < len(word) and word[j] in ("'", "’", "‘") and j + 1 < len(word) and ch == word[j + 1]:
+        if self._forgive():
+            # punctuation you leave out is typed for you: the next key matches
+            # the letter after it, not the mark itself
+            while j < len(word) and word[j] in QUOTE_PUNCT and j + 1 < len(word) \
+                    and ch != word[j] and ch == word[j + 1]:
                 self.typed[self.wi] += word[j]
                 j += 1
         want = word[j] if j < len(word) else "+"
         self._due(want)
-        ok = j < len(word) and (ch == word[j] or (self.app.settings.forgive_apostrophe
+        ok = j < len(word) and (ch == word[j] or (self._forgive()
                                                   and ch in ("'", "’", "‘") and word[j] in ("'", "’", "‘")))
         if ok and j < len(word) and ch != word[j]:
             ch = word[j]
@@ -379,6 +385,10 @@ class TypingTest:
         else:
             self._hit()
         self.typed[self.wi] += ch
+        if self._forgive() and self.spec.kind == "words" and self.wi == len(self.words) - 1:
+            t = self.typed[self.wi]
+            if len(t) < len(word) and word.startswith(t) and not word[len(t):].strip(QUOTE_PUNCT):
+                self.typed[self.wi] = word      # only skipped punctuation left
         # the last word of a word test ends as soon as it's long enough
         if self.spec.kind == "words" and self.wi == len(self.words) - 1 \
                 and len(self.typed[self.wi]) >= len(word):

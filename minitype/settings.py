@@ -7,6 +7,7 @@ from .config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS,
                      QUOTE_SOURCES, SIDEBAR_TABS, STOP_MODES, UI_STYLES,
                      WORD_GAPS, FUN_BOUNCE, FUN_SWITCH, FUN_CARET,
                      EFFECT_SPEEDS, FLOW_DIRECTIONS, CORRECTED, TYPOS,
+                     PUNCTUATION_MODES,
                      BORDER_STYLES, ART_SCOPES, ART_STYLES, ART_COLOURS,
                      THEME_BACKGROUNDS,
                      ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS,
@@ -25,6 +26,7 @@ def _art_names():
 CHOICES = {
     "difficulty": DIFFICULTIES,
     "stop_on_error": STOP_MODES,
+    "punctuation": PUNCTUATION_MODES,
     "backspace": BACKSPACE_MODES,
     "min_wpm": MIN_WPMS,
     "min_acc": MIN_ACCS,
@@ -101,10 +103,9 @@ class Settings:
     backspace: str = "normal"    # off: no corrections at all. freedom: back into correct words too
     corrected: str = "marked"    # fixed letters: marked (warn colour), normal, or red
     typos: str = "off"           # show the wrong key: off, below, replace, both
-    punctuation: bool = False
+    punctuation: str = "off"     # off: stripped from quotes, none added. on: typed as is. forgive: all of it can be skipped
     lowercase: bool = False      # every word in lower case: quotes, books, custom text too
-    forgive_apostrophe: bool = False  # skip apostrophes without mistake (type cant for can't)
-    remove_apostrophe: bool = False   # remove apostrophes altogether from quotes and text
+    apostrophes: bool = True     # apostrophes visible; off removes them altogether from quotes and text
     numbers: bool = False        # sprinkle numbers into normal word tests
     blind: bool = False          # no feedback until the results screen
     time_amount: int = 30        # seconds, for the time mode
@@ -222,7 +223,9 @@ class Settings:
             flags.append(f"stop-{self.stop_on_error}")
         if self.backspace != "normal":
             flags.append("no-bksp" if self.backspace == "off" else "freedom")
-        for on, name in ((self.punctuation, "punct"), (self.lowercase, "lower"),
+        if self.punctuation != "off":
+            flags.append("punct" if self.punctuation == "on" else "punct-skip")
+        for on, name in ((self.lowercase, "lower"),
                          (self.numbers, "num"),
                          (self.blind, "blind"), (self.ghost, "ghost"),
                          (self.tape, "tape")):
@@ -260,6 +263,13 @@ class Settings:
         if isinstance(d.get("theme_background"), bool):
             # it was on/off before "always" came along
             d = dict(d, theme_background="theme" if d["theme_background"] else "off")
+        if isinstance(d.get("punctuation"), bool) or (
+                d.get("forgive_apostrophe") is True and "apostrophes" not in d):
+            # punctuation was on/off, with separate apostrophe toggles
+            d = dict(d, punctuation="forgive" if d.get("forgive_apostrophe")
+                     else "on" if d.get("punctuation") is True else "off")
+        if d.get("remove_apostrophe") is True and "apostrophes" not in d:
+            d = dict(d, apostrophes=False)
         for f in fields(self):
             v = d.get(f.name)
             if type(v) is not type(getattr(self, f.name)):

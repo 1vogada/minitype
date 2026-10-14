@@ -2,6 +2,7 @@
 
 DIFFICULTIES = ["normal", "expert", "master"]
 STOP_MODES = ["off", "letter", "word"]
+PUNCTUATION_MODES = ["off", "on", "forgive"]
 BACKSPACE_MODES = ["normal", "off", "freedom"]
 PACES = [0, 40, 60, 80, 100, 120]
 PCTS = [20, 40, 50, 60, 80, 100]

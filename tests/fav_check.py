@@ -58,7 +58,7 @@ out, frames = show(app, plain, ["f", keys.ESC])
 assert app.settings.fav_quotes == [] and "favourite" not in frames[0]
 
 # the quote reaches the result as picked, whatever the punctuation setting
-app.settings.punctuation = False
+app.settings.punctuation = "off"
 with mock.patch.object(app.quotes, "pick", return_value=(QUOTE, "proverb")):
     t = TypingTest(app, TestSpec("quote", "words", 0, "quote"))
 assert t.quote == QUOTE and "." not in t.words[-1]
