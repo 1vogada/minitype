@@ -64,6 +64,7 @@ EFFECT_SPEEDS = [0.25, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0]
 FLOW_DIRECTIONS = ["forward", "backward"]
 KEYBOARD_MODES = ["off", "learn", "always"]
 LOWKEY_MODES = ["off", "minimal", "disguised"]
+TAPE_MODES = ["off", "on", "from middle"]
 UI_STYLES = ["list", "sidebar", "tabs"]
 SIDEBAR_TABS = ["off", "top", "left"]
 BAD_KEYS_TRACKED = 6      # how many of your worst keys feed the pool

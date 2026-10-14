@@ -4,7 +4,8 @@ from .config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS,
                      CODE_LANGS, DIFFICULTIES,
                      FUNBOXES, GOALS, KEYBOARD_MODES, LAYOUTS, LOWKEY_MODES,
                      MEMORY_SECS, MIN_ACCS, MIN_WPMS, PACES, QUOTE_LENGTHS,
-                     QUOTE_SOURCES, QUOTE_GENRES, SIDEBAR_TABS, STOP_MODES, UI_STYLES,
+                     QUOTE_SOURCES, QUOTE_GENRES, SIDEBAR_TABS, STOP_MODES,
+                     TAPE_MODES, UI_STYLES,
                      WORD_GAPS, FUN_BOUNCE, FUN_SWITCH, FUN_CARET,
                      EFFECT_SPEEDS, FLOW_DIRECTIONS, CORRECTED, TYPOS,
                      PUNCTUATION_MODES,
@@ -74,6 +75,7 @@ CHOICES = {
     "layout": list(LAYOUTS),
     "theme": theme_names,
     "lowkey": LOWKEY_MODES,
+    "tape": TAPE_MODES,
     "ui_style": UI_STYLES,
     "sidebar_tabs": SIDEBAR_TABS,
     "daily_goal": GOALS,
@@ -184,7 +186,7 @@ class Settings:
     lowkey: str = "off"          # minimal: just the words. disguised: looks like a plain prompt
     ui_style: str = "list"       # how menus are laid out
     sidebar_tabs: str = "off"    # sidebar style: tab bar on top, or section buttons on the left
-    tape: bool = False           # one scrolling line instead of a block of lines
+    tape: str = "off"            # off / on (from left) / from middle
     caret: str = "underline"     # underline: the letter to type is underlined. block: inverted
     word_gap: str = "blank"      # between words: blank, dots or underline
     keyboard: str = "learn"      # on-screen keyboard: off, in learn mode, or always
@@ -229,10 +231,11 @@ class Settings:
             flags.append("punct" if self.punctuation == "on" else "punct-skip")
         for on, name in ((self.lowercase, "lower"),
                          (self.numbers, "num"),
-                         (self.blind, "blind"), (self.ghost, "ghost"),
-                         (self.tape, "tape")):
+                         (self.blind, "blind"), (self.ghost, "ghost")):
             if on:
                 flags.append(name)
+        if self.tape not in (False, "off"):
+            flags.append("tape" if self.tape == "on" else f"tape-{self.tape.replace(' ', '-')}")
         if self.funbox != "off":
             flags.append(self.funbox)
         if self.memory:
@@ -248,6 +251,11 @@ class Settings:
         if self.pace:
             flags.append(f"pace{self.pace}")
         return flags
+
+    def __setattr__(self, name, value):
+        if name == "tape" and isinstance(value, bool):
+            value = "on" if value else "off"
+        super().__setattr__(name, value)
 
     def to_dict(self):
         return asdict(self)
@@ -272,6 +280,8 @@ class Settings:
                      else "on" if d.get("punctuation") is True else "off")
         if d.get("remove_apostrophe") is True and "apostrophes" not in d:
             d = dict(d, apostrophes=False)
+        if isinstance(d.get("tape"), bool):
+            d = dict(d, tape="on" if d["tape"] else "off")
         for f in fields(self):
             v = d.get(f.name)
             if type(v) is not type(getattr(self, f.name)):

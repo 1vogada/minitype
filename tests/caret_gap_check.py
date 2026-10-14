@@ -67,6 +67,39 @@ assert 15 <= len(before) <= 25, (len(before), plain)
 s.tape = False
 s.word_gap = "blank"
 
+# 'from middle' mode: starts pre-padded at the middle and scrolls continuously
+s.tape = "from middle"
+t_mid = TypingTest(app, TestSpec("c", "words", len(words), "custom", words))
+line_mid0 = tape_line(paint(t_mid), 60, mode="from middle")[0]
+plain_mid0 = re.sub(r"\x1b\[[0-9;]*m", "", line_mid0)
+# starts with exactly 30 padding spaces, so the first letter is at column 30
+assert plain_mid0.startswith(" " * 30), repr(plain_mid0[:35])
+assert plain_mid0[30] == words[0][0], f"expected '{words[0][0]}' at 30, got '{plain_mid0[30]}'"
+
+# after typing 1 letter, it scrolls left instantly (29 padding spaces)
+t_mid.handle(words[0][0], time.time())
+line_mid1 = tape_line(paint(t_mid), 60, mode="from middle")[0]
+plain_mid1 = re.sub(r"\x1b\[[0-9;]*m", "", line_mid1)
+assert plain_mid1.startswith(" " * 29), repr(plain_mid1[:35])
+assert plain_mid1[29] == words[0][0] and plain_mid1[30] == words[0][1]
+
+# across subsequent keystrokes, caret stays locked at column 30
+for ch in words[0][1:]:
+    t_mid.handle(ch, time.time())
+t_mid.handle(" ", time.time())
+for ch in words[1]:
+    t_mid.handle(ch, time.time())
+line_mid_later = tape_line(paint(t_mid), 60, mode="from middle")[0]
+first_ul_mid = line_mid_later.find(UND)
+before_mid = re.sub(r"\x1b\[[0-9;]*m", "", line_mid_later[:first_ul_mid])
+assert len(before_mid) == 30, (len(before_mid), line_mid_later)
+s.tape = "off"
+
+# old settings carry over: boolean tape -> on/off
+n = Settings(); n.apply({"tape": True}); assert n.tape == "on"
+n = Settings(); n.apply({"tape": False}); assert n.tape == "off"
+n = Settings(); n.apply({"tape": "from middle"}); assert n.tape == "from middle"
+
 # old settings carry over: show spaces on -> dots
 n = Settings(); n.apply({"show_spaces": True}); assert n.word_gap == "dots"
 n = Settings(); n.apply({"show_spaces": True, "word_gap": "underline"}); assert n.word_gap == "underline"
