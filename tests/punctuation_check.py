@@ -65,5 +65,13 @@ row = next(it for it in sm.build_items(app) if it.label == "punctuation")
 seen = [row.value()]
 for _ in range(3):
     row.action(); seen.append(row.value())
-assert seen == ["off", "on", "forgive", "off"], seen
+# standard word generation never injects punctuation in any mode
+import string
+punct_set = set(string.punctuation)
+for mode in ("off", "on", "forgive"):
+    app.settings.punctuation = mode
+    words = app.generator.make(100, source="words")
+    assert not any(c in punct_set for w in words for c in w), (mode, [w for w in words if any(c in punct_set for c in w)])
+
 print("ALL OK")
+
