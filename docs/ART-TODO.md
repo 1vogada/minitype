@@ -6,6 +6,26 @@ built from a scene in `tools/art_wow.py` (the first six),
 `tools/art_wow2.py`, `tools/art_wow3.py` or `tools/art_wow4.py`. These
 are the owner's notes on them, to work through in this order.
 
+## Done in the 2026-10-09 pass
+Eight items below are done - **amber**, **party**, **pine**, **autumn**,
+**coral reef**, **gruvbox**, **bubbly** and **synthwave** (marked `[x]`).
+The notes are left as they were, so what was asked for is still readable.
+Rebuilt with `python tools/make_revamp.py`; 8 of the 40 pictures changed.
+
+## Done in the second 2026-10-09 pass
+The other twelve - every item that was left - are done too, so everything
+in this list is now `[x]`: the redesigns **solarized** (a sunrise over a
+lake), **monokai** (monokai-coloured code falling into glowing braces),
+**rose pine** (a layered, shaded rose) and **phosphor** (a real CRT
+terminal), and the polish of **moss**, **jungle**, **cherry blossom**,
+**lavender**, **aurora**, **deep sea**, **nord** and **rainbow**. The
+rainbow theme's own colours changed for it (`style.py`: dim, error,
+extra, good, warn), which also shows while typing in that theme. Known
+soft spots, if the owner wants another round: rose pine has no green, so
+the rose's leaves are teal-grey; the jungle is all one teal, so its depth
+haze is faint; the lavender rows are a little noisy where they resolve;
+nord's lit snow face is flat white at the top.
+
 ## How to work on a picture
 1. Edit its scene function (search the WOW / MORE dicts for the picture
    name; `minitype/terminal/art.py` THEME_ART maps theme -> picture).
@@ -21,38 +41,38 @@ are the owner's notes on them, to work through in this order.
    a full-height or full-width band, and some row must have no focus.
 
 ## 1. Redesigns (the owner didn't like these)
-- **amber** (picture `monitor`): an actual piece of amber with a small
+- [x] **amber** (picture `monitor`): an actual piece of amber with a small
   T-rex trapped inside, on a dark background, light shining through the
   amber from behind - "like the movies".
-- **solarized** (`sun`): needs a full redesign.
-- **monokai** (`code`): not an editor window. Code-themed in monokai's
+- [x] **solarized** (`sun`): needs a full redesign.
+- [x] **monokai** (`code`): not an editor window. Code-themed in monokai's
   colours, closer to matrix-style falling code.
-- **rose pine** (`rose`): an actual, realistic rose (layered petals).
-- **party** (`party`): balloons in the sky instead of the disco ball,
+- [x] **rose pine** (`rose`): an actual, realistic rose (layered petals).
+- [x] **party** (`party`): balloons in the sky instead of the disco ball,
   and a pinker palette - like the Party Girl / party centre in Terraria.
   (The palette lives in the theme, `minitype/terminal/style.py` / the
   theme list; change it there.)
-- **phosphor** (`terminal`): an actual terminal, with sharper lines.
+- [x] **phosphor** (`terminal`): an actual terminal, with sharper lines.
 
 ## 2. Polish
-- **moss** (`stones`): more detail on the rocks themselves; vines on
+- [x] **moss** (`stones`): more detail on the rocks themselves; vines on
   every other tree; brush / grass coming up around the tree trunks.
-- **pine** (`pine`): the rocky island under the pines cuts off too
+- [x] **pine** (`pine`): the rocky island under the pines cuts off too
   sharply - soften its edges.
-- **autumn** (`leaf`): make the leaf's stem more visible.
-- **jungle** (`jungle`): more trees and vines; keep the leaves as they are.
-- **cherry blossom** (`blossom`): a more detailed tree, and the blossom
+- [x] **autumn** (`leaf`): make the leaf's stem more visible.
+- [x] **jungle** (`jungle`): more trees and vines; keep the leaves as they are.
+- [x] **cherry blossom** (`blossom`): a more detailed tree, and the blossom
   far more scattered - it reads as one solid colour now.
-- **lavender** (`lavender`): a more complex, realistic tree (leaves
+- [x] **lavender** (`lavender`): a more complex, realistic tree (leaves
   scattered, branches showing).
-- **coral reef** (`reef`): add a clownfish and a jellyfish.
-- **aurora** (`aurora`): a bit more fidelity.
-- **deep sea** (`jellyfish`): more colourful jellyfish.
-- **nord** (`mountains`): the foot of the mountain cuts off too sharply.
-- **gruvbox** (`coffee`): remove the window, keep just the mug.
-- **rainbow** (`rainbow`): too dead - livelier.
-- **bubbly** (`bubbles`): remove the green.
-- **synthwave** (`grid`): the car needs more fidelity.
+- [x] **coral reef** (`reef`): add a clownfish and a jellyfish.
+- [x] **aurora** (`aurora`): a bit more fidelity.
+- [x] **deep sea** (`jellyfish`): more colourful jellyfish.
+- [x] **nord** (`mountains`): the foot of the mountain cuts off too sharply.
+- [x] **gruvbox** (`coffee`): remove the window, keep just the mug.
+- [x] **rainbow** (`rainbow`): too dead - livelier.
+- [x] **bubbly** (`bubbles`): remove the green.
+- [x] **synthwave** (`grid`): the car needs more fidelity.
 
 ## Leave as they are (the owner likes them)
 sunset, desert (cactus), meadow (flowers), tundra (snowpeaks), bamboo,

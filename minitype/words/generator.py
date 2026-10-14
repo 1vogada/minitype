@@ -1,7 +1,5 @@
 import random
 
-from ..config import PUNCT
-
 
 class WordGenerator:
     """Builds word sequences for normal tests, applying the bias settings."""
@@ -55,25 +53,10 @@ class WordGenerator:
                     for _ in range(count)]
         s = self.settings
         out = []
-        sentence = 0
-        cap = s.punctuation
         for _ in range(count):
             if s.numbers and random.random() < 0.05:
                 out.append(str(random.randint(0, 9999)))
                 continue
-            w = self.pick()
-            if s.punctuation:
-                if cap:
-                    w = w.capitalize()
-                    cap = False
-                sentence += 1
-                if sentence > 4 and random.random() < 0.3:
-                    p = random.choice(PUNCT)
-                    w += p
-                    if p in ".!?":
-                        sentence = 0
-                        cap = True
-                elif random.random() < 0.04:
-                    w = "'" + w + "'"
-            out.append(w)
+            out.append(self.pick())
         return out
+

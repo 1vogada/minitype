@@ -31,6 +31,7 @@ from .art_detailed import COMBINED as _COMBINED
 from .art_detailed import DETAILED as _DETAILED
 from .art_large import LARGE as _LARGE
 from .art_revamp import REVAMP as _REVAMP
+from .art_upscaled import UPSCALED as _UPSCALED
 
 
 def _art(text):
@@ -422,7 +423,7 @@ PARTS = ("dim", "text", "error", "extra", "accent", "good", "warn")
 PART_LETTERS = dict(zip("dtexagw", PARTS))
 LETTER_OF = {part: letter for letter, part in PART_LETTERS.items()}
 
-ART_STYLES = ("revamp", "blocks", "detailed", "og", "combined")
+ART_STYLES = ("revamp", "blocks", "detailed", "og", "combined", "upscaled")
 
 
 # art_detailed.py stores a character's colour letter and tone (0-9, how
@@ -516,6 +517,17 @@ def combined(name):
     return [_unpack(span, size) for size in sizes]
 
 
+@lru_cache(maxsize=None)
+def upscaled(name):
+    """A picture's upscaled sizes (the same scene drawn at braille
+    resolution), biggest first; [] for the pictures that don't have one, in
+    which case the theme falls back to its revamp picture."""
+    if name not in _UPSCALED:
+        return []
+    span, sizes = _load(_UPSCALED[name])
+    return [_unpack(span, size) for size in sizes]
+
+
 def _og(lines, colours):
     """An OG picture as a piece: all of it is focus."""
     parts = tuple("".join(" " if ch == " " else LETTER_OF[part]
@@ -527,15 +539,17 @@ def _og(lines, colours):
 
 def resolve(value, style="blocks"):
     """A theme's "art" value as a list of pieces, biggest first. A name
-    gives the picture's sizes in the style (revamp, blocks, detailed or
-    combined; none for og; a picture with no combined version is drawn in
-    blocks)
+    gives the picture's sizes in the style (revamp, upscaled, blocks,
+    detailed or combined; none for og; a picture with no combined version is
+    drawn in blocks, and one with no upscaled version falls back to its
+    revamp picture)
     and then the OG ones, large and coloured, then small; a list of lines
     is a single piece in the accent colour. None for anything else
     (including "none")."""
     if isinstance(value, str) and value in ART:
         pieces = list({"blocks": blocks, "detailed": detailed,
                        "combined": lambda n: combined(n) or blocks(n),
+                       "upscaled": lambda n: upscaled(n) or revamp(n),
                        "revamp": revamp}
                       .get(style, lambda n: [])(value))
         if value in LARGE:

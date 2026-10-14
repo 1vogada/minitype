@@ -107,9 +107,63 @@ assert t.words == ["hello", "world", "mixed"], t.words
 c.settings.lowercase = False
 t = TypingTest(c, TestSpec("c", "words", 3, "custom", ("Hello", "WORLD", "MiXeD")))
 assert t.words == ["Hello", "WORLD", "MiXeD"]
-c.settings.lowercase, c.settings.punctuation = True, True
+c.settings.lowercase, c.settings.punctuation = True, "on"
 t = TypingTest(c, TestSpec("w", "words", 40, "english"))
 assert all(w == w.lower() for w in t.words), t.words
+# quote mode punctuation and apostrophe settings
+c.settings.punctuation = "off"
+c.settings.lowercase = False
+c.settings.apostrophes = True
+sample_quote = ("You can't always get what you want, but if you try...", "Rolling Stones")
+with mock.patch.object(c.quotes, "pick", return_value=sample_quote):
+    t = TypingTest(c, TestSpec("q", "words", 0, "quote"))
+    assert t.words[:3] == ["You", "can't", "always"], t.words
+    assert not any("," in w for w in t.words)
+
+# remove apostrophe setting
+c.settings.apostrophes = False
+with mock.patch.object(c.quotes, "pick", return_value=sample_quote):
+    t = TypingTest(c, TestSpec("q", "words", 0, "quote"))
+    assert t.words[:3] == ["You", "cant", "always"], t.words
+    assert not any("'" in w or "’" in w for w in t.words)
+c.settings.apostrophes = True
+
+# forgive apostrophe setting
+c.settings.punctuation = "forgive"
+t = TypingTest(c, TestSpec("c", "words", 1, "custom", ("can't",)))
+for ch in "cant":
+    t.handle(ch, 0.1)
+assert t.typed[0] == "can't" and t.bad_keys == 0 and t.done
+_, _, acc = t.score(1.0)
+assert acc == 100
+
+# forgive apostrophe: typing apostrophe explicitly still works
+t = TypingTest(c, TestSpec("c", "words", 1, "custom", ("can't",)))
+for ch in "can't":
+    t.handle(ch, 0.1)
+assert t.typed[0] == "can't" and t.bad_keys == 0 and t.done
+
+# forgive apostrophe: trailing apostrophe with space
+t = TypingTest(c, TestSpec("c", "words", 2, "custom", ("dogs'", "run")))
+for ch in "dogs ":
+    t.handle(ch, 0.1)
+assert t.typed[0] == "dogs'" and t.bad_keys == 0
+
+# without forgive apostrophe: skipping counts as a mistake
+c.settings.punctuation = "off"
+t = TypingTest(c, TestSpec("c", "words", 1, "custom", ("can't",)))
+for ch in "cant":
+    t.handle(ch, 0.1)
+assert t.bad_keys >= 1
+
+sample_quote2 = ("All the world's a stage, and all the men and women merely players.", "Shakespeare")
+c.settings.punctuation = "on"
+c.settings.lowercase = False
+with mock.patch.object(c.quotes, "pick", return_value=sample_quote2):
+    t = TypingTest(c, TestSpec("q", "words", 0, "quote"))
+    assert t.words == ["All", "the", "world's", "a", "stage,", "and", "all", "the", "men", "and", "women", "merely", "players."], t.words
+    assert "stage," in t.words
+    assert "world's" in t.words
 # ---------------------------------------------------------------- gallery
 from minitype.ui.gallery import gallery
 g = App()

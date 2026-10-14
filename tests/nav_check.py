@@ -89,6 +89,71 @@ for where in HELP_POSITIONS[1:]:
             assert len(text) < col, (where, rows[r])
         assert "minitype" in rows[t + 1] or "gamemode" in rows[t + 3] or where.startswith("bottom")
     assert "type as many words" in rows[t + 1], (where, rows[t + 1])
+
+# ---------------------------------------------------------------- help box border
+from minitype.config import HELP_BORDERS
+from minitype.ui import settings_menu as sm
+assert Settings().help_border == "auto" and HELP_BORDERS[0] == "auto"
+
+
+def settings_frame(where, w=110, h=26, **extra):
+    """The settings screen (help showing for its first row) as text."""
+    console.term_size = lambda: (w, h)
+    console._last_size = (w, h)
+    a = App()
+    a.settings.theme, a.settings.help_position = "summit", where
+    for k, v in extra.items():
+        setattr(a.settings, k, v)
+    out = []
+    seq = iter([keys.ENTER] + [keys.ESC] * 6)
+    with mock.patch.object(keys, "read_key", lambda *x, **k: next(seq)), \
+            mock.patch.object(console, "write", out.append), \
+            mock.patch.object(console, "flush", lambda: None):
+        try:
+            sm.settings_menu(a)
+        except StopIteration:
+            pass
+    return _strip([o for o in out if o.startswith("\x1b[H")][1].split("\x1b[H", 1)[1]).split("\n")
+
+
+def corners(rows):
+    """The help box's top-left corner character and where it is."""
+    for i, r in enumerate(rows):
+        j = r.find("expert:")
+        if j >= 0:
+            above = rows[i - 1]
+            return above[j - 2], i - 1, j - 2
+    raise AssertionError("no help box")
+
+
+for name, want in (("line", "┌"), ("rounded", "╭"), ("double", "╔"), ("heavy", "┏"),
+                   ("ascii", "+"), ("block", "█"), ("off", " ")):
+    for where in ("inline", "top right"):
+        got = corners(settings_frame(where, help_border=name))[0]
+        assert got == want, (name, where, got)
+assert corners(settings_frame("inline", help_border="auto"))[0] == "┌"
+assert corners(settings_frame("top left", help_border="auto"))[0] == "╔"
+assert corners(settings_frame("top right", help_border="frame", border="heavy"))[0] == "┏"
+# a frame with two-column sides can't be a text box's: single lines instead
+assert corners(settings_frame("top right", help_border="frame", border="thick"))[0] == "┌"
+assert "help border" in [it.label for it in sm.build_items(App())]
+
+# in a corner with the text panel on, the box keeps clear of both panels:
+# beside the text panel on the left, above the key hints' panel at the bottom
+for where in HELP_POSITIONS[1:]:
+    rows = settings_frame(where, art_panel=True)
+    _, top, col = corners(rows)
+    bottom = next(i for i in range(top + 1, len(rows)) if "expert:" not in rows[i]
+                  and "wrong key" not in rows[i])
+    for r in range(top, bottom + 1):
+        assert "│" not in rows[r][col:col + 3], (where, "on a panel's edge", rows[r])
+    if where.endswith("left"):
+        panel_edge = rows[top + 1].index("│", 2)            # the text panel's right side
+        assert col > panel_edge, (where, col, panel_edge)
+    if where.startswith("bottom"):
+        hints = max(i for i, r in enumerate(rows) if "arrows" in r)
+        assert bottom < hints - 1, (where, "over the hints panel", bottom, hints)
+
 # a corner box is for its frame only: the next screen without help doesn't keep it
 console.set_corner("top right", ["X"])
 out = []

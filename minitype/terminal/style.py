@@ -283,7 +283,8 @@ THEMES = {
 # themes with effects, in the same form as themes.json
 COMPLEX = {
     "rainbow": {
-        "base": "default", "accent": 213,
+        "base": "default", "accent": 213, "dim": "#7f9fd7", "error": "#ff5f5f",
+        "extra": "#ffaf5f", "good": "#5fd75f", "warn": "#ffd75f",
         "gradient": ["#ff5f5f", "#ffaf5f", "#ffff5f", "#5fff5f", "#5fffff",
                      "#5f87ff", "#d75fff"],
         "by": "letter", "flow": 8, "caret": "rainbow",
@@ -291,8 +292,11 @@ COMPLEX = {
     # fun ones: movement and flourishes
     "party": {
         "base": "default", "background": "#12001f", "accent": "#ff5fd7",
-        "gradient": ["#ff005f", "#ffaf00", "#d7ff00", "#00ffaf", "#00afff",
-                     "#af5fff"],
+        # pinks and warm lights rather than the old green: the party picture
+        # (balloons) takes its colours from here too
+        "gradient": ["#ff005f", "#ff5fa8", "#ff9fd7", "#ffaf5f", "#ffd75f",
+                     "#ff5fd7"],
+        "good": "#ff8ad7", "extra": "#c45fa8", "warn": "#ffaf5f",
         "by": "letter", "flow": 12, "bold": True,
         "bounce": "gentle", "pop": True, "caret": "rainbow",
     },

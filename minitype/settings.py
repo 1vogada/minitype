@@ -7,11 +7,12 @@ from .config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS,
                      QUOTE_SOURCES, SIDEBAR_TABS, STOP_MODES, UI_STYLES,
                      WORD_GAPS, FUN_BOUNCE, FUN_SWITCH, FUN_CARET,
                      EFFECT_SPEEDS, FLOW_DIRECTIONS, CORRECTED, TYPOS,
+                     PUNCTUATION_MODES,
                      BORDER_STYLES, ART_SCOPES, ART_STYLES, ART_COLOURS,
                      THEME_BACKGROUNDS,
                      ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS,
                      FADE_STARTS, FADE_ANGLES, FADE_CURVES, NUMBER_RANGES,
-                     TEXT_CONTRASTS, SEE_THROUGH, HELP_POSITIONS)
+                     TEXT_CONTRASTS, SEE_THROUGH, HELP_POSITIONS, HELP_BORDERS)
 from .terminal.style import theme_names
 from .words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 
@@ -25,6 +26,7 @@ def _art_names():
 CHOICES = {
     "difficulty": DIFFICULTIES,
     "stop_on_error": STOP_MODES,
+    "punctuation": PUNCTUATION_MODES,
     "backspace": BACKSPACE_MODES,
     "min_wpm": MIN_WPMS,
     "min_acc": MIN_ACCS,
@@ -49,6 +51,7 @@ CHOICES = {
     "text_contrast": TEXT_CONTRASTS,
     "see_through": SEE_THROUGH,
     "help_position": HELP_POSITIONS,
+    "help_border": HELP_BORDERS,
     "text_lighten": SEE_THROUGH,
     "untyped_lighten": SEE_THROUGH,
     "fade_start_top": FADE_STARTS,
@@ -100,8 +103,9 @@ class Settings:
     backspace: str = "normal"    # off: no corrections at all. freedom: back into correct words too
     corrected: str = "marked"    # fixed letters: marked (warn colour), normal, or red
     typos: str = "off"           # show the wrong key: off, below, replace, both
-    punctuation: bool = False
+    punctuation: str = "off"     # off: stripped from quotes, none added. on: typed as is. forgive: all of it can be skipped
     lowercase: bool = False      # every word in lower case: quotes, books, custom text too
+    apostrophes: bool = True     # apostrophes visible; off removes them altogether from quotes and text
     numbers: bool = False        # sprinkle numbers into normal word tests
     blind: bool = False          # no feedback until the results screen
     time_amount: int = 30        # seconds, for the time mode
@@ -144,6 +148,7 @@ class Settings:
     text_contrast: str = "off"   # letters over the art: off, nudge (until they read), flip
     text_bold: bool = False      # letters over the art in bold
     help_position: str = "inline"   # the help box: under the selected row, or in a corner
+    help_border: str = "auto"       # the help box's border: auto, frame, a border style, off
     see_through: int = 40        # how much of the art shows through boxes (help, panel, dialogs), %
     fade_on: bool = True         # the art fade at all (every picture's own fade settings kept)
     art_fade: str = "edges"      # how the art dissolves at its edges: edges / corner / off
@@ -155,6 +160,7 @@ class Settings:
     fade_angle: int = 0          # the side fade's edge tilted, degrees (+ leans in at the top)
     fade_curve: int = 3          # how sharp the fade's exponential is: 0 straight .. 10
     fades: dict = field(default_factory=dict)   # picture -> its own fade settings (FADE_FIELDS)
+    fav_quotes: list = field(default_factory=list)   # favourite quotes: [{"text", "source"}]
     esc_pause: bool = True       # esc in a test pauses it (resume? yes / no) instead of leaving
     art_picture: str = "theme"   # the theme's own picture, or any picture's name (a remix)
     art_recolour: str = "theme"  # a remixed picture in the theme's colours, or its own theme's
@@ -217,7 +223,9 @@ class Settings:
             flags.append(f"stop-{self.stop_on_error}")
         if self.backspace != "normal":
             flags.append("no-bksp" if self.backspace == "off" else "freedom")
-        for on, name in ((self.punctuation, "punct"), (self.lowercase, "lower"),
+        if self.punctuation != "off":
+            flags.append("punct" if self.punctuation == "on" else "punct-skip")
+        for on, name in ((self.lowercase, "lower"),
                          (self.numbers, "num"),
                          (self.blind, "blind"), (self.ghost, "ghost"),
                          (self.tape, "tape")):
@@ -255,6 +263,13 @@ class Settings:
         if isinstance(d.get("theme_background"), bool):
             # it was on/off before "always" came along
             d = dict(d, theme_background="theme" if d["theme_background"] else "off")
+        if isinstance(d.get("punctuation"), bool) or (
+                d.get("forgive_apostrophe") is True and "apostrophes" not in d):
+            # punctuation was on/off, with separate apostrophe toggles
+            d = dict(d, punctuation="forgive" if d.get("forgive_apostrophe")
+                     else "on" if d.get("punctuation") is True else "off")
+        if d.get("remove_apostrophe") is True and "apostrophes" not in d:
+            d = dict(d, apostrophes=False)
         for f in fields(self):
             v = d.get(f.name)
             if type(v) is not type(getattr(self, f.name)):
@@ -276,4 +291,7 @@ class Settings:
             if f.name == "fades":
                 v = {k: _clean_fade(e) for k, e in v.items()
                      if isinstance(k, str) and isinstance(e, dict)}
+            if f.name == "fav_quotes":
+                v = [{"text": q["text"], "source": str(q.get("source", ""))}
+                     for q in v if isinstance(q, dict) and isinstance(q.get("text"), str)]
             setattr(self, f.name, v)

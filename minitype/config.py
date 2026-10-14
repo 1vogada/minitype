@@ -2,6 +2,7 @@
 
 DIFFICULTIES = ["normal", "expert", "master"]
 STOP_MODES = ["off", "letter", "word"]
+PUNCTUATION_MODES = ["off", "on", "forgive"]
 BACKSPACE_MODES = ["normal", "off", "freedom"]
 PACES = [0, 40, 60, 80, 100, 120]
 PCTS = [20, 40, 50, 60, 80, 100]
@@ -25,6 +26,9 @@ BORDER_STYLES = ["off", "ascii", "line", "rounded", "double", "heavy", "block",
 ART_FADES = ["edges", "corner", "off"]       # how the art dissolves into the screen
 SEE_THROUGH = list(range(0, 101, 10))   # how much art shows through boxes, %
 HELP_POSITIONS = ["inline", "top left", "top right", "bottom left", "bottom right"]
+# the help box's border: auto (single inline, double in a corner), frame (the
+# screen border's), one of the border styles, or off (no border at all)
+HELP_BORDERS = ["auto", "frame", "line", "rounded", "double", "heavy", "ascii", "block", "off"]
 TEXT_CONTRASTS = ["off", "nudge", "flip"]    # letters over the art: as they are, nudged until
                     # they read, or flipped to the theme's darkest / lightest colour
 FADE_LEVELS = list(range(0, 101, 10))          # a fade's strength: 0 none .. 100 no art left
@@ -43,8 +47,9 @@ NUMBER_RANGES = {
     "daily_goal": (0, 600),
 }
 ART_SCOPES = ["off", "menus", "everywhere"]  # where the theme's picture shows
-ART_STYLES = ["revamp", "blocks", "detailed", "og", "combined"]   # hand-drawn line art,
-                    # pixel art, shaded ASCII, the originals, or every technique at once
+ART_STYLES = ["revamp", "blocks", "detailed", "og", "combined", "upscaled"]   # hand-drawn line art,
+                    # pixel art, shaded ASCII, the originals, every technique
+                    # at once, or the same scenes at braille resolution
 # theme: themes that have a background paint it; always: every theme does,
 # one made from its colours if it has none (for light terminals); off
 THEME_BACKGROUNDS = ["theme", "always", "off"]

@@ -99,6 +99,7 @@ row = items["art style"]
 assert row.section == "art" and row.value() == "detailed"
 row.action(); assert app.settings.art_style == "og"
 row.action(); assert app.settings.art_style == "combined"
+row.action(); assert app.settings.art_style == "upscaled", "the new style is offered"
 row.action(); assert app.settings.art_style == "revamp"
 row.action(); assert app.settings.art_style == "blocks"
 row.action(); assert app.settings.art_style == "detailed"

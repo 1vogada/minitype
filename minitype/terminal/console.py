@@ -113,19 +113,23 @@ def visible_len(s):
 
 def clip(s, w):
     """Cut s to w visible characters, keeping escape codes intact."""
-    out, n, i = [], 0, 0
-    while i < len(s):
-        m = ANSI.match(s, i)
-        if m:
-            out.append(m.group())
-            i = m.end()
-            continue
-        if n >= w:
-            break
-        out.append(s[i])
-        n += 1
-        i += 1
+    out, n, pos = [], 0, 0
+    for m in ANSI.finditer(s):
+        if m.start() > pos:                 # plain text before this code
+            room = w - n
+            if room <= 0:
+                return "".join(out)
+            seg = s[pos:m.start()]
+            out.append(seg[:room])
+            n += len(seg)
+            if n > w:
+                return "".join(out)
+        out.append(m.group())
+        pos = m.end()
+    if pos < len(s) and w - n > 0:
+        out.append(s[pos:pos + w - n])
     return "".join(out)
+
 
 
 def pad(s, w):
@@ -178,20 +182,25 @@ def present(lines, focus=None, pinned=(), scene="menu"):
         view += [""] * (body_h - len(view))     # full height: pinned / art / frame
     view += pinned
     rows = [clip(line, w - 1) for line in view]
-    text_rows = rows                          # the text alone, before the art
+    # what a corner help box must keep clear of: per row, the first column
+    # free of text (a gap of two after it), and the row it must end above
+    taken = {r: end + 2 for r, row in enumerate(rows) if (end := _text_ends(row)[0])}
+    bottom = body_h
     if art and d["panel"]:
         # the art full size over the whole screen, the text in a panel of
         # its own on top of it, the key hints in another along the bottom
         body, hints = rows[:body_h], [r for r in rows[body_h:] if visible_len(r)]
         boxed, dim = _panel([""] * len(rows), body, w - 1, 0)
         if hints:
-            boxed, more = _panel(boxed, hints, w - 1, len(rows) - len(hints) - 2)
+            bottom = len(rows) - len(hints) - 2         # the hints panel's top edge
+            boxed, more = _panel(boxed, hints, w - 1, bottom)
             dim.update(more)
+        taken = {r: right + 1 for r, (_, right) in dim.items()}    # the panels' edges
         rows = overlay_art(boxed, art, w - 1, 0, True, dim)
     elif art:
         rows = overlay_art(rows, art, w - 1, len(pinned), d["behind"])
     if corner[1]:
-        rows = _in_corner(rows, text_rows, corner, w - 1, body_h)
+        rows = _in_corner(rows, taken, corner, w - 1, bottom)
     if d["border"]:
         rows = frame(rows, d["border"], d["border_style"], w - 1)
     if _overlay:
@@ -412,6 +421,19 @@ def _layer(row, pic, card, dim=None):
     return "".join(out).rstrip() + RESET
 
 
+@lru_cache(maxsize=2048)
+def _layered(row, pic, k, start, col, card, dim, see, fx, background):
+    """_layer for one row, remembered: the same text over the same art row
+    gives the same result. see, fx and background are only in the key: they
+    are what _layer reads from outside its arguments."""
+    return _layer(row, _art_cells(pic, k, start, col), card, dim)
+
+
+def _layer_cached(row, pic, k, start, col, card, dim):
+    return _layered(row, pic, k, start, col, card, dim, _decor.get("see_through", 0.4),
+                    _decor.get("text_fx"), _background)
+
+
 def overlay_art(rows, versions, width, pinned_n, behind=False, dim=None):
     """Put the art in the bottom-right corner, above any pinned lines with
     a row to spare. `versions` are the picture's sizes, biggest first (art
@@ -443,8 +465,8 @@ def overlay_art(rows, versions, width, pinned_n, behind=False, dim=None):
                 r = rows[top + k]
                 i = r.find(FLOAT)
                 card = (visible_len(r[:i]), visible_len(r)) if i >= 0 else (0, 0)
-                rows[top + k] = _layer(r, _art_cells(pic, k, pic.width - w, col), card,
-                                       (dim or {}).get(top + k))
+                rows[top + k] = _layer_cached(r, pic, k, pic.width - w, col, card,
+                                              (dim or {}).get(top + k))
             return rows
         return rows
     bottom = len(rows) - pinned_n - (2 if pinned_n else 1)
@@ -620,20 +642,21 @@ def set_corner(where, lines):
     _corner.update(where=where, lines=list(lines))
 
 
-def _in_corner(rows, text_rows, corner, width, body_h):
+def _in_corner(rows, taken, corner, width, bottom):
     """The rows with the corner box laid over them: at the top (row 0) or
-    the bottom of the screen's body (above the key hints), at the right
-    edge, or at the left - just to the right of the text instead, if the
-    text would be under it. The art shows through it like any box."""
+    ending just above row `bottom` (the key hints, or their panel), at the
+    right edge, or at the left - just right of whatever is in the rows it
+    covers instead: `taken` maps a row to the first column the box may
+    start at (past its text, or the text panel's edge). The art shows
+    through it like any box."""
     where, box = corner
     bw, bh = max(visible_len(b) for b in box), len(box)
-    top = 0 if where.startswith("top") else max(0, body_h - bh)
+    top = 0 if where.startswith("top") else max(0, bottom - bh)
     if where.endswith("right"):
         left = max(0, width - bw)
     else:
-        span = range(top, min(len(text_rows), top + bh))
-        ends = [len(ANSI.sub("", text_rows[r].split(FLOAT)[0]).rstrip()) for r in span]
-        left = 0 if not any(ends) else min(max(ends) + 2, max(0, width - bw))
+        need = max((taken.get(r, 0) for r in range(top, top + bh)), default=0)
+        left = min(need, max(0, width - bw))
     return _stamp(rows, box, top, left)
 
 

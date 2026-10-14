@@ -12,7 +12,7 @@ Then `docs/art-notes.md` for anything about the corner art.
   when asked ("push it"); when asked to do several things, push after each.
 - Run the app: `python -m minitype` (Python 3.10+, no dependencies).
 - Tests: `python tests/run_all.py` (or `python tests/run_all.py decor`).
-  Each `*_check.py` prints `ALL OK`; 29 checks with smoke4. They run against
+  Each `*_check.py` prints `ALL OK`; 30 checks with smoke4. They run against
   the real modules with the terminal mocked. `tests/menu_look.py` prints a
   menu frame as text (`python tests/menu_look.py 120 34 ember sidebar left`)
   and `tests/shows_check.py` reports which art the app actually draws at
@@ -107,12 +107,14 @@ the project is picked up with an AI until answered - see CLAUDE.md /
 AGENTS.md at the repo root.
 
 ## Known issues
-- The **art fade settings don't fully work** yet (each amount is a
+- The **art fade settings** have two open points (each amount is a
   strength: 0% = no fade, 100% = no art, in between on an exponential
-  curve, subject kept whole - that part is as intended): they only apply to
-  pictures with background colours; the edge beside the menu text still
-  steps; nothing bleeds above the picture's top; the amounts weren't
-  checked in a real terminal.
+  curve, subject kept whole - as intended, and steered in a real terminal):
+  they only apply to pictures with background colours, and the edge beside
+  the menu text still steps. The bleed above the picture's top is **done**
+  (`Picture.taller`, `art._filler`, `console._dressed`; up to `art.TALLER`,
+  half the picture's own height). Note the owner's own `settings.json` has
+  `fade_on: false`, so the fold is off globally there by choice.
 
 ## In progress / next (as the owner asked)
 The art work left is listed, with the owner's own notes, in
@@ -132,3 +134,63 @@ The art work left is listed, with the owner's own notes, in
   exponential's sharpness, 0 straight .. 10) - own "art fade" tab; `d` in the
    gallery. Possible next: fade the art where it meets text beside it
    (rows next to the menu), and a bleed above the picture's top.
+3. 2026-10-09: seven items from `docs/ART-TODO.md` (amber, party, pine,
+   autumn, coral reef, gruvbox, bubbly) - two redesigns and five polish,
+   branch `art/owner-todo-polish`. New helpers worth reusing in scenes:
+   a return alpha below 1 makes the renderer mix the field with the ground
+   (`art_combined.render`), which is how the pine's island now fades into
+   its lake; a scene's `inks` must list any letter its field uses or the
+   colour is dropped. Note that `pal.path(...)` interpolates between the
+   given colours, so a stop in the middle can cross a hue the theme never
+   had (g6 gave the amber stone an olive cast) - pick stops that stay on
+   the wanted hue. Remaining art items are still listed with the owner's
+   notes in `docs/ART-TODO.md`.
+4. Same day, on top of 3: the synthwave car (`grid`) - the owner's "needs
+   more fidelity". It was two faint dots on the road; it is now a car seen
+   from behind, sized as a share of the picture so it reads at 28, 22 and
+   16 rows alike: a boot lid catching the light, a dark rear window, wheel
+   hints, and two red tail lights. Only the car changed - every other cell
+   of the picture is byte-identical. The sizes are unchanged, so the tests
+   that pin the big pictures to 28/22/16 rows still hold.
+5. Same day: `tests/pictures_check.py` (30 checks now). It closes a trap
+   nobody had guarded: `make_revamp.py` builds every name in
+   `art_wow.WOW` but `write()` only saves the names listed in
+   `revamp_art.PICTURES`, so a new wow picture that is not also registered
+   as a picture is built and then silently dropped. The check asserts the
+   two sets match, that the stored `REVAMP` data covers exactly those
+   pictures, and that every picture a theme points at exists in `ART` and
+   `REVAMP` (that last one catches art that was never rebuilt). The check
+   was verified by planting a fake unregistered wow picture and watching it
+   fail.
+6. Same day: a new art style, **upscaled** (`tools/art_upscaled.py`,
+   `tools/make_art_upscaled.py`, `minitype/terminal/art_upscaled.py`,
+   `tests/upscaled_check.py`; 31 checks now). It draws the same scene as the
+   revamp picture but on the dot grid a braille character is made of: 2 x 4
+   dots a cell, so eight separate marks instead of one glyph of ~30
+   candidates, with a foreground and a background colour per cell. For each
+   cell it measures each dot, then for every pair of palette colours assigns
+   each dot to the nearer of the two (measured along the line between them,
+   so the split is the pair's own midpoint); the assignment is a braille
+   pattern, or a block shape when one covers the same dots. It also tries a
+   flat colour and a shade of two colours, which is what carries a sky
+   gradient. A clean block shape scores better than it measures
+   (`Encoder.shape_bonus`), or trunks and horizons break into dots.
+
+   Built one picture at a time - `python tools/make_art_upscaled.py island`
+   - because it is ~15 KB a picture and a good few seconds each; a theme
+   whose picture has no upscaled version falls back to its revamp one
+   (`art.resolve`, style "upscaled"). Only `island` (ocean) is built so far.
+   Two bugs worth remembering, both found by looking at a render rather than
+   trusting the numbers: the flat-colour candidate was scored over one dot
+   but competed against all eight, so every cell came out solid; and with no
+   shade candidate the gradients banded badly.
+
+   Measured against the scene with exact glyph coverage (braille dots,
+   quadrants, eighths, verticals and shades all computed, not approximated),
+   the upscaled island is closer than the revamp one: mean error 2625
+   against 2872, median 734 against 887. On this picture the gain is modest
+   because it is mostly smooth gradient, where both styles do well; the
+   visible difference is the sky, which no longer bands. A useful caution:
+   the same measurement said the opposite - 2761 against 1407 - while the
+   glyph estimator was still approximating braille and the shade families,
+   so fix the measurement before believing it.

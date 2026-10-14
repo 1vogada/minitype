@@ -19,10 +19,11 @@ from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICU
                       SIDEBAR_TABS, STOP_MODES, UI_STYLES, WORD_GAPS,
                       FUN_BOUNCE, FUN_SWITCH, FUN_CARET, EFFECT_SPEEDS,
                       FLOW_DIRECTIONS, CORRECTED, TYPOS, BORDER_STYLES,
+                      PUNCTUATION_MODES,
                       ART_SCOPES, ART_STYLES, ART_COLOURS, THEME_BACKGROUNDS,
                       ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS,
                       FADE_STARTS, FADE_ANGLES, FADE_CURVES, NUMBER_RANGES,
-                      TEXT_CONTRASTS, SEE_THROUGH, HELP_POSITIONS)
+                      TEXT_CONTRASTS, SEE_THROUGH, HELP_POSITIONS, HELP_BORDERS)
 from ..terminal.art import ART_NAMES, THEME_ART
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import storage
@@ -158,13 +159,20 @@ def build_items(app):
                           tags=("mistakes", "errors", "typos", "wrong key",
                                 "below", "replace")),
                  lambda: theme_sample(app)),
-        b.flag("punctuation", "punctuation",
-               "capitals, commas, full stops and quotes",
-               tags=("text", "symbols", "capitals")),
+        b.choice("punctuation", "punctuation", PUNCTUATION_MODES,
+                 help="off: stripped from quotes, none added. on: capitals, "
+                      "commas, full stops and quotes, typed exactly. forgive: "
+                      "the same, but you can skip any of it without a mistake "
+                      "(type cant for can't)",
+                 tags=("text", "symbols", "capitals", "rules", "apostrophe",
+                       "quote", "skip", "forgive")),
         b.flag("all lowercase", "lowercase",
                "every word in lower case, whatever the source: quotes, "
                "books, code and your own text too (no capitals to shift for)",
                tags=("text", "capitals", "lower", "case", "shift")),
+        b.flag("apostrophes visible", "apostrophes",
+               "off removes apostrophes altogether from quotes and text",
+               tags=("text", "rules", "apostrophe", "quote", "remove", "hide")),
         b.flag("numbers", "numbers", "sprinkle numbers into word tests",
                tags=("text", "digits")),
         b.flag("blind", "blind", "no feedback until the results",
@@ -474,6 +482,11 @@ def build_items(app):
                       "screen in a double-lined box (on the left it sits just "
                       "right of the menu, at the top or bottom)",
                  tags=("help", "tooltip", "popup", "box", "corner", "position")),
+        b.choice("help border", "help_border", HELP_BORDERS,
+                 help="the help box's border: auto is single-lined under the "
+                      "row and double-lined in a corner, frame matches the "
+                      "screen's border, off leaves just the box",
+                 tags=("help", "tooltip", "box", "border", "frame", "lines")),
     ]
     b.section = "fun"
     fun_tags = ("fun", "effects", "animation", "modifier")
@@ -588,6 +601,7 @@ LAYOUT = [
     ("challenges", [("challenges", "min speed"), ("challenges", "min accuracy"),
                     ("challenges", "memory"), ("challenges", "funbox")]),
     ("text", [("words", "word list"), ("test", "punctuation"), ("test", "all lowercase"),
+              ("test", "apostrophes visible"),
               ("test", "numbers"), ("words", "quotes from"), ("words", "book page"),
               ("words", "book filter"), ("words", "bulgarian books"),
               ("words", "shlokavitsa style")]),
@@ -616,7 +630,8 @@ LAYOUT = [
                        ("look", "layout", "keyboard layout"), ("look", "lowkey"),
                        ("look", "sound")]),
     ("interface", [("look", "ui style"), ("look", "sidebar tabs"), ("look", "border"),
-                   ("look", "key hints"), ("look", "help box")]),
+                   ("look", "key hints"), ("look", "help box"),
+                   ("look", "help border")]),
     ("results", [("results", "speed chart"), ("results", "key heatmap"),
                  ("results", "personal best"), ("results", "worst keys"),
                  ("results", "session keys"), ("results", "bad words"), ("results", "session")]),
@@ -627,7 +642,8 @@ LAYOUT = [
 # Every switch for how the app looks, gathered in one "ui" tab (they stay in
 # their own tabs too): (section, label) after LAYOUT.
 UI_TAB = [("interface", "ui style"), ("interface", "sidebar tabs"), ("interface", "border"),
-          ("interface", "key hints"), ("interface", "help box"), ("theme", "theme background"), ("art", "show art"),
+          ("interface", "key hints"), ("interface", "help box"), ("interface", "help border"),
+          ("theme", "theme background"), ("art", "show art"),
           ("art", "art behind text"), ("art", "text panel"), ("art", "text contrast"),
           ("art", "bold text"), ("art", "see-through"), ("theme", "lighter text"), ("theme", "lighter untyped"), ("art fade", "fade (all pictures)"),
           ("typing screen", "show timer"), ("typing screen", "show progress"),

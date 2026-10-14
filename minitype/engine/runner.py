@@ -1,5 +1,6 @@
 import os
 import random
+import string
 import time
 
 from ..config import MAX_EXTRA, RULE_GRACE
@@ -22,6 +23,7 @@ REDRAW_ANIMATED = 0.05    # smoother when the theme has things moving
 SPACE_TYPO = "_"          # how a wrong space shows with indicate typos
 SLOW_WORDS = 20       # how many of your slowest words a drill draws from
 MIN_SLOW_WORDS = 5    # tracked words needed before the drill is offered
+QUOTE_PUNCT = string.punctuation + "“”‘’—–…«»"
 
 
 class TypingTest:
@@ -37,6 +39,7 @@ class TypingTest:
         self.stop = s.stop_on_error
         self.learning = spec.source == "learn"
         self.note = ""
+        self.quote = ""        # the quote as picked, for favouriting
         self.words = self._make_words()
         self.typed = [""] * len(self.words)
         self.wi = self.keys = self.bad_keys = 0
@@ -52,6 +55,7 @@ class TypingTest:
         self.wrong = False      # last key was rejected by stop on error
         self.err_marks = set()  # (word, letter) positions that had a wrong key
         self.typo_keys = {}     # (word, letter) -> the last wrong key pressed there
+        self.missed_words = set()  # words that already had a wrong key counted
         self.last_error = -1.0  # when the last wrong key came (for shake)
         self.prev_t = None
         self.word_start = None  # when the first char of the current word landed
@@ -72,7 +76,13 @@ class TypingTest:
             text, who = app.quotes.pick(app.settings.quote_length,
                                         app.settings.quote_source)
             self.note = who
-            words = text.split()
+            self.quote = text
+            if app.settings.punctuation == "off":
+                text = text.replace("—", " ").replace("--", " ")
+                words = [w.strip(QUOTE_PUNCT).replace(",", "") for w in text.split()]
+                words = [w for w in words if w]
+            else:
+                words = text.split()
         elif src == "code":
             self.note, words = code.pick(app.settings.code_lang)
         elif src == "slow":
@@ -80,6 +90,9 @@ class TypingTest:
         else:
             words = app.generator.make(
                 spec.amount if spec.kind == "words" else 200, src)
+        if not app.settings.apostrophes:
+            words = [w.replace("'", "").replace("’", "").replace("‘", "") for w in words]
+            words = [w for w in words if w]
         words = funbox.apply(words, app.settings.funbox)
         if app.settings.lowercase:
             words = [w.lower() for w in words]
@@ -273,6 +286,7 @@ class TypingTest:
     def _miss(self, want):
         self.bad_keys += 1
         self.combo = 0
+        self.missed_words.add(self.wi)
         self.last_error = time.time()
         self.misses[want] = self.misses.get(want, 0) + 1
         self.app.stats.miss_key(want)
@@ -288,10 +302,16 @@ class TypingTest:
         self.failed = self.done = True
         self.fail_reason = reason
 
+    def _forgive(self):
+        """Whether punctuation can be skipped without a mistake."""
+        return self.app.settings.punctuation == "forgive"
+
     def _space(self, el):
         word, typed = self.words[self.wi], self.typed[self.wi]
         if not typed:
             return                              # ignore leading spaces
+        if self._forgive() and typed == word.rstrip(QUOTE_PUNCT) != word:
+            typed = self.typed[self.wi] = word   # trailing punctuation skipped
         self._due(" ")
         if typed != word and self.stop != "off" and self.diff != "master":
             # stop on error: the space is a wrong key and the cursor stays put
@@ -305,7 +325,8 @@ class TypingTest:
             return
         self._press(el, typed == word)
         if typed != word:
-            self.bad_keys += 1
+            if self.wi not in self.missed_words:
+                self.bad_keys += 1      # a wrong word with no wrong key in it
             self.combo = 0
             if not self.learning:
                 self.app.stats.miss_word(word)
@@ -328,9 +349,19 @@ class TypingTest:
         if len(self.typed[self.wi]) >= len(word) + MAX_EXTRA:
             return
         j = len(self.typed[self.wi])
+        if self._forgive():
+            # punctuation you leave out is typed for you: the next key matches
+            # the letter after it, not the mark itself
+            while j < len(word) and word[j] in QUOTE_PUNCT and j + 1 < len(word) \
+                    and ch != word[j] and ch == word[j + 1]:
+                self.typed[self.wi] += word[j]
+                j += 1
         want = word[j] if j < len(word) else "+"
         self._due(want)
-        ok = j < len(word) and ch == word[j]
+        ok = j < len(word) and (ch == word[j] or (self._forgive()
+                                                  and ch in ("'", "’", "‘") and word[j] in ("'", "’", "‘")))
+        if ok and j < len(word) and ch != word[j]:
+            ch = word[j]
         self._press(el, ok)
         if j == 0:
             self.word_start = el
@@ -354,13 +385,18 @@ class TypingTest:
         else:
             self._hit()
         self.typed[self.wi] += ch
+        if self._forgive() and self.spec.kind == "words" and self.wi == len(self.words) - 1:
+            t = self.typed[self.wi]
+            if len(t) < len(word) and word.startswith(t) and not word[len(t):].strip(QUOTE_PUNCT):
+                self.typed[self.wi] = word      # only skipped punctuation left
         # the last word of a word test ends as soon as it's long enough
         if self.spec.kind == "words" and self.wi == len(self.words) - 1 \
                 and len(self.typed[self.wi]) >= len(word):
             if self.typed[self.wi] != word:
                 if self.stop == "word":
                     return                      # fix it before you can finish
-                self.bad_keys += 1
+                if self.wi not in self.missed_words:
+                    self.bad_keys += 1
                 if not self.learning:
                     self.app.stats.miss_word(word)
             else:
@@ -387,6 +423,7 @@ class TypingTest:
         result = TestResult(self.spec, wpm, raw, acc, elapsed, self.bad_keys,
                             self.best_combo, self.misses, self.failed, self.diff,
                             self.fail_reason, self.note, self.events, self.presses)
+        result.quote = self.quote
         result.pb_before = self.app.history.pb(result)
         self.app.history.add(result)
         self.app.save()
@@ -522,7 +559,7 @@ def _run(app, test, paint):
             dirty = False
 
         if not keys.key_ready():
-            time.sleep(0.01)
+            time.sleep(0.002)
             dirty = dirty or console.size() != size
             continue
 

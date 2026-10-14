@@ -9,6 +9,22 @@ from .menu import Hints, Item, Menu, title_lines
 from .profile import goal_line, sparkline
 
 HINTS = "left/right choose   enter select   tab restart   esc menu"
+FAV_KEY = "f"
+FAV_HINT = "   f favourite"
+
+
+def is_fav(app, result):
+    return any(q["text"] == result.quote for q in app.settings.fav_quotes)
+
+
+def toggle_fav(app, result):
+    """Add the quote of this result to the favourites, or take it out."""
+    favs = app.settings.fav_quotes
+    if is_fav(app, result):
+        favs[:] = [q for q in favs if q["text"] != result.quote]
+    else:
+        favs.append({"text": result.quote, "source": result.note})
+    app.save_settings()
 
 
 def headline(app, st, r):
@@ -21,8 +37,9 @@ def headline(app, st, r):
         lines.append(f"  {ok}{r.wpm:5.1f}{RESET} wpm")
     lines.append(f"  {dim}{r.raw:5.1f} raw   {r.acc:5.1f}% acc   "
                  f"{r.elapsed:5.1f}s   {r.errors} errors   combo {r.best_combo}{RESET}")
-    if r.note:
-        lines.append(f"  {dim}- {r.note}{RESET}")
+    if r.note or r.quote:
+        star = f"{st.title}★{RESET} " if r.quote and is_fav(app, r) else ""
+        lines.append(f"  {star}{dim}{'- ' + r.note if r.note else ''}{RESET}")
     return lines
 
 
@@ -137,7 +154,8 @@ def show_results(app, result):
     while True:
         st = app.styles()
         lines, choices = draw(app, st, result, menu)
-        console.present(lines, 0, choices + hints.lines(st, HINTS))
+        console.present(lines, 0, choices + hints.lines(
+            st, HINTS + (FAV_HINT if result.quote else "")))
         key = keys.read_key()
         if key == keys.RESIZE:
             continue
@@ -145,6 +163,9 @@ def show_results(app, result):
             return MENU
         if key == keys.CTRL_C:
             return QUIT
+        if key == FAV_KEY and result.quote:
+            toggle_fav(app, result)
+            continue
         handled, choice = menu.handle(key)
         hints.note(key, handled)
         if choice is not None:

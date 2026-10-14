@@ -11,7 +11,7 @@ import math
 import random
 
 from art_combined import Scene, mix
-from art_wow import SHADE, SIZES, palm, pine, ridge, sphere_light, stars
+from art_wow import SHADE, SIZES, pine, ridge, sphere_light, stars
 
 
 # ---------------------------------------------------------------- helpers
@@ -140,45 +140,191 @@ def sunset(pal):
 
 # ---------------------------------------------------------------- moss
 
+def _fern(cx, base, size, seed):
+    """A fern clump rooted at (cx, base): a few big fronds that rise and
+    arch outward, each a midrib with leaflets, and a few grass blades.
+    inside(x, y) -> 0..1 along the frond (root to tip), or None."""
+    rnd = random.Random(seed)
+    fronds = []
+    for lean in (-1.0, 0.15 * rnd.choice((-1, 1)), 1.0):
+        ln = size * rnd.uniform(0.85, 1.1)
+        tip = (cx + lean * ln * 0.9, base - ln * (0.75 - 0.4 * abs(lean)))
+        ctrl = (cx + lean * ln * 0.35, base - ln * (1.15 - 0.2 * abs(lean)))
+        n = 14
+        pts = [((1 - t) ** 2 * cx + 2 * (1 - t) * t * ctrl[0] + t * t * tip[0],
+                (1 - t) ** 2 * base + 2 * (1 - t) * t * ctrl[1] + t * t * tip[1])
+               for t in (k / n for k in range(n + 1))]
+        fronds.append(pts)
+    blades = [(cx + rnd.uniform(-0.4, 0.4) * size, size * rnd.uniform(0.5, 0.9), rnd.uniform(-0.6, 0.6))
+              for _ in range(3)]
+
+    def inside(x, y):
+        if abs(x - cx) > size * 1.05 or y > base + 0.004 or y < base - size * 1.1:
+            return None
+        for bx, bh, lean in blades:                 # grass blades among the fronds
+            dy = base - y
+            t = dy / bh
+            if 0 <= t <= 1 and abs(x - bx - lean * dy * t) < 0.005 * (1 - t) + 0.0015:
+                return t * 0.8
+        for pts in fronds:
+            n = len(pts) - 1
+            for k in range(n):
+                (ax, ay), (bx, by) = pts[k], pts[k + 1]
+                dx, dy = bx - ax, by - ay
+                u = clamp(((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy))
+                d = math.hypot(x - ax - dx * u, y - ay - dy * u)
+                t = (k + u) / n
+                if d > 0.03:
+                    continue
+                if d < 0.0035:
+                    return t                            # the midrib
+                # leaflets: broad in the middle, tapering to the tip, with gaps
+                leaf = 0.024 * math.sin(math.pi * min(1.0, 0.2 + t)) * (1 - t * 0.5) * (0.6 + 0.4 * ((t * 8) % 1.0))
+                if d < leaf:
+                    return t + (0.3 if y < ay + dy * u else 0.0)   # upper side catches light
+        return None
+    return inside
+
+
+def _vine(tx, w, seed):
+    """A vine climbing a trunk at tx (half width w): inside(x, y) gives
+    'stem', 'leaf' or None."""
+    ph = seed * 1.7
+
+    def inside(x, y):
+        s = math.sin(y * 38 + ph)
+        if math.cos(y * 38 + ph) < -0.2:          # round the back of the trunk
+            return None
+        vx = tx + w * 0.9 * s
+        if abs(x - vx) < 0.0045:
+            return "stem"
+        # leaves in pairs every so often along the stem
+        k = math.floor(y * 55 + ph)
+        if noise(k * 1.3, seed, 5) > 0.35:
+            ly = (k + 0.5) / 55 - ph / 55
+            side = 1 if k % 2 else -1
+            lx = vx + side * 0.012
+            if ((x - lx) / 0.011) ** 2 + ((y - ly) / 0.009) ** 2 <= 1:
+                return "leaf"
+        return None
+    return inside
+
+
 def stones(pal):
-    """A cairn of round, moss-topped stones in a misty clearing, light
-    falling through the trees, ferns at its foot."""
+    """A cairn of weathered, moss-capped stones in a misty clearing, light
+    falling through the trees; vines climb every other trunk and ferns
+    and grass spring up at their feet."""
     ground_y = 0.88
     stack = [(1.3, 0.83, 0.22, 0.075), (1.27, 0.7, 0.17, 0.06), (1.33, 0.59, 0.13, 0.05),
              (1.29, 0.495, 0.095, 0.042), (1.31, 0.42, 0.065, 0.032), (1.3, 0.365, 0.04, 0.024)]
     rocks = [(1.72, 0.86, 0.12, 0.05), (0.9, 0.87, 0.1, 0.04)]
     rnd = random.Random(11)
-    trunks = [(rnd.uniform(-3.4, 1.9), rnd.uniform(0.02, 0.05), rnd.uniform(0.0, 1.0)) for _ in range(26)]
-    stone = pal.path("d1 x1 x4 t4 t6")
-    moss = pal.path("g1 a1 g4 a4 a6")
+    trunks = sorted((rnd.uniform(-3.4, 1.9), rnd.uniform(0.02, 0.05), rnd.uniform(0.0, 1.0)) for _ in range(26))
+    vines = {k: _vine(tx, w, k) for k, (tx, w, _) in enumerate(trunks) if k % 2 == 0}
+    ferns = []
+    for k, (tx, w, _) in enumerate(trunks):        # a big fern at every trunk's foot
+        side = 1 if k % 3 else -1
+        fx = tx + side * (w + rnd.uniform(0.01, 0.04))
+        ferns.append((fx, _fern(fx, ground_y + 0.012, rnd.uniform(0.16, 0.22), k)))
+    for fx in (1.02, 1.6):                          # and round the cairn
+        ferns.append((fx, _fern(fx, ground_y + 0.012, 0.13, int(fx * 100))))
+    stone = pal.path("- t0 t1 t3 t5 t6")
+    moss = pal.path("a0 a1 g2 g4 g6 g7")
+    bark = pal.path("- a0 d0 d2 d4 t1")
+    every = stack + rocks
 
     def in_stone(x, y):
-        for k, (cx, cy, rx, ry) in enumerate(stack + rocks):
-            if ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1:
-                return k, cx, cy, rx, ry
+        for k, (cx, cy, rx, ry) in enumerate(every):
+            ang = math.atan2((y - cy) / ry, (x - cx) / rx)
+            wob = 1 + 0.09 * (noise(ang * 1.6 + 4, k, 21) - 0.5) + 0.04 * (noise(ang * 5, k, 22) - 0.5)
+            if ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= wob * wob:
+                return k, cx, cy, rx * wob, ry * wob
+        return None
+
+    rifts = {0: [(-0.35, -0.75), (-0.25, -0.2), (-0.38, 0.25), (-0.3, 0.85)],
+             2: [(0.3, -0.8), (0.22, -0.1), (0.36, 0.4), (0.28, 0.9)],
+             len(stack): [(-0.1, -0.7), (0.05, 0.0), (-0.05, 0.8)]}
+
+    def cracks(k, u, v):
+        """A jagged crack down a few of the stones (u, v the stone's own
+        -1..1 coordinates): 'crack', 'lip' or None."""
+        pts = rifts.get(k)
+        if not pts:
+            return None
+        for (au, av), (bu, bv) in zip(pts, pts[1:]):
+            if av <= v <= bv:
+                cu = au + (bu - au) * (v - av) / (bv - av)
+                if abs(u - cu) < 0.06:
+                    return "crack"
+                if 0.06 <= cu - u < 0.13:
+                    return "lip"
+        return None
+
+    def beam_at(x, y):
+        return clamp(math.sin((x * 0.6 + y * 0.35) * 9) * 0.5 + 0.5) ** 6 * (1 - y)
+
+    def brush(x, y):
+        """Ferns and grass at the trunks' feet: colour, or None."""
+        for fx, fern in ferns:
+            if abs(x - fx) < 0.24:
+                t = fern(x, y)
+                if t is not None:
+                    return pal.path("- a0 a1 g2 g4 g6")(clamp(0.2 + t * 0.55 + beam_at(x, y) * 0.3))
         return None
 
     def field(x, y):
         s = in_stone(x, y)
         if s:
             k, cx, cy, rx, ry = s
-            light = sphere_light(cx, cy, max(rx, ry * 2), -0.5, -0.7)(cx + (x - cx), cy + (y - cy) * 2)
-            grain = fbm(x * 30, y * 60, k) * 0.25
-            c = stone(clamp(light * 0.85 + grain))
+            light = sphere_light(cx, cy, max(rx, ry * 2), -0.5, -0.7)(x, cy + (y - cy) * 2)
+            grain = (fbm(x * 40, y * 80, k) - 0.5) * 0.3
+            c = stone(clamp(light ** 1.4 * 1.05 + grain))
+            if k < len(stack) - 1 and (cy + ry - y) < ry * 0.25:   # shadow where it sits
+                c = mix(c, pal.ground, 0.35)
             top = (cy - y) / ry                      # 1 at the top, -1 at the bottom
-            if top > 0.25 - fbm(x * 25, y * 25, 7) * 0.5:
-                c = moss(clamp(light * 0.9 + grain))
+            fuzz = fbm(x * 70, y * 120, k + 30)
+            cap = top > 0.4 + (0.5 - fuzz) * 1.1 + (x - cx) / rx * 0.2
+            drip = fuzz > 0.66 and top > -0.5 and abs(x - cx) < rx * 0.7
+            if cap or drip:                          # moss cushions on top, creeping down
+                c = moss(clamp(light * 0.75 + (fuzz - 0.5) * 0.9))
+            else:
+                if noise(x * 160, y * 260, k + 50) > 0.84:
+                    c = mix(c, pal.rgb("w6"), 0.55)   # lichen
+            crack = cracks(k, (x - cx) / rx, (y - cy) / ry)
+            if crack == "crack":
+                c = mix(c, pal.ground, 0.85)
+            elif crack == "lip":
+                c = mix(c, pal.rgb("t7"), 0.45)        # the crack's lit lip
             return c, 1.0, True, "stone"
+        b = brush(x, y)
+        if b is not None:
+            return b, 1.0, False, "ferns"
         if y >= ground_y:
-            fern = math.sin(x * 160 + math.sin(x * 23) * 3) * 0.5 + 0.5
-            if y - ground_y < 0.05 * fern + 0.01:
-                return pal.path("g1 g4 a4")(fern * 0.8), 1.0, False, "ferns"
+            blade = math.sin(x * 160 + math.sin(x * 23) * 3) * 0.5 + 0.5
+            if y - ground_y < 0.05 * blade + 0.01:
+                return pal.path("- a0 g1 a4")(blade * 0.8 + 0.1), 1.0, False, "ferns"
             return pal.path("g1 d1 -")((y - ground_y) * 6), 1.0, False, "ground"
-        beam = clamp(math.sin((x * 0.6 + y * 0.35) * 9) * 0.5 + 0.5) ** 6 * (1 - y)
-        for tx, w, depth in trunks:
-            if abs(x - tx - (y - 0.5) * 0.02) < w:
-                c = mix(pal.ground, pal.rgb("d1"), 0.4 + depth * 0.4)
+        beam = beam_at(x, y)
+        for k, (tx, w, depth) in enumerate(trunks):
+            lean = (y - 0.5) * 0.02
+            flare = w * (1 + 1.6 * math.exp(-(ground_y - y) / 0.025))   # roots spread at the foot
+            u = (x - tx - lean) / flare
+            if abs(u) < 1:
+                v = vines.get(k)
+                part = v(x - lean, y) if v else None
+                if part == "stem":
+                    return pal.path("a0 g1 g3")(clamp(0.6 - u * 0.4)), 1.0, False, "vine"
+                if part == "leaf":
+                    return pal.path("a1 g2 g4 g6")(clamp(0.55 - u * 0.4 + beam * 0.4)), 1.0, False, "vine"
+                groove = noise(u * 5 + k * 7, y * 5, 60)    # bark furrows
+                lum = 0.45 - u * 0.3 + (groove - 0.5) * 0.5 + depth * 0.15
+                if abs(u) > 0.8 and u < 0:
+                    lum += 0.2                          # rim light on the lit side
+                c = bark(clamp(lum))
                 return mix(c, pal.rgb("a4"), beam * 0.3), 1.0, False, "trees"
+            if v := vines.get(k):
+                if abs(x - tx - lean) < flare + 0.02 and v(x - lean, y) == "leaf":
+                    return pal.path("a1 g2 g4 g6")(clamp(0.5 + beam * 0.4)), 1.0, False, "vine"
         canopy = fbm(x * 3, y * 6, 2)
         c = pal.path("- g1 d1 a1 a4")(clamp(y * 0.9 + canopy * 0.35 - 0.1))
         mist = math.exp(-((y - 0.78) / 0.12) ** 2) * 0.55
@@ -196,7 +342,8 @@ def stones(pal):
                             pal.rgb("w8"), False))
         return out
 
-    return scene("moss", field, texts, inks={"stone": "dxtga", "wood": "dgat w", "trees": "dga"})
+    return scene("moss", field, texts, inks={"stone": "dxtgaw", "wood": "dgat w", "trees": "dta",
+                                             "vine": "ga", "ferns": "ga"})
 
 
 # ---------------------------------------------------------------- pine
@@ -207,19 +354,36 @@ def lone_pine(pal):
     shore = 0.66
     far = ridge([(0.3, 0.55, 0.26), (1.0, 0.5, 0.32), (1.75, 0.45, 0.22), (-0.8, 0.7, 0.28), (-2.0, 0.7, 0.22)], shore)
     sky = pal.path("d1 a1 a4 g4 w6")
-    tree = pine(1.42, 0.82, 0.66, 0.24, 8)
-    tree2 = pine(1.73, 0.84, 0.38, 0.14, 6)
+    tree = pine(1.46, 0.92, 0.66, 0.24, 8)
+    tree2 = pine(1.74, 0.94, 0.38, 0.14, 6)
 
     def rock(x, y):
-        top = 0.8 + 0.08 * ((x - 1.5) / 0.45) ** 2 + 0.01 * math.sin(x * 70)
-        return abs(x - 1.5) < 0.45 and y >= top
+        """The point the pines stand on: a round-topped outcrop whose sides
+        and base are soft, so it never ends on a hard edge."""
+        dx = (x - 1.55) / 0.5
+        wobble = fbm(x * 7, y * 4, 12) * 0.05
+        if abs(dx) > 1.1:
+            return False
+        top = 0.86 + 0.09 * dx * dx + 0.01 * math.sin(x * 70) - wobble
+        base = 1.0 + 0.07 * fbm(x * 5, 3, 21) - wobble * 2.4
+        return top - wobble * 0.6 <= y <= base
 
     def field(x, y):
         if tree(x, y) or tree2(x, y):
             rim = not (tree(x + 0.012, y) or tree2(x + 0.012, y))
             return (pal.rgb("g4") if rim else pal.ground), 1.0, True, "tree"
         if rock(x, y):
-            return pal.path("x4 d1 -")(clamp((y - 0.8) * 5 + fbm(x * 30, y * 30) * 0.3)), 1.0, True, "rock"
+            # grain runs down the face, and moss creeps about the crown
+            grain = fbm(x * 30, y * 30, 3)
+            light = clamp((y - 0.86) * 5 + grain * 0.3 + 0.25)
+            c = pal.path("x4 d1 -")(light)
+            if fbm(x * 12, y * 18, 6) > 0.62 and y < 0.93:
+                c = mix(c, pal.rgb("g1"), 0.5)
+            # below the waterline the lake takes it: rock fades into water,
+            # which is the soft edge the owner asked for
+            above = clamp((shore - y) / 0.09 + grain * 0.35)
+            alpha = 1.0 if above >= 1.0 else 0.55 + 0.45 * above
+            return c, alpha, True, "rock"
         if y < shore:
             top = far(x)
             if y >= top:
@@ -263,17 +427,30 @@ def leaf(pal):
         return (1 - r / lobes) if r <= lobes else -1, a, u, v
 
     def stem(x, y):
+        """The leaf's stalk: thick enough for the grid to hold it, and
+        shaded across so it reads as a stalk, not a hairline."""
         u, v = (x - cx) / size, (y - cy) / size
         u, v = u * math.cos(ang0) - v * math.sin(ang0), u * math.sin(ang0) + v * math.cos(ang0)
-        return 0.0 < v < 0.75 and abs(u - v * v * 0.15) < 0.025
+        if not (0.02 < v < 0.78):
+            return -1.0
+        off = abs(u - v * v * 0.18)
+        half = 0.055 - 0.02 * v
+        return 1.0 - off / half if off <= half else -1.0
 
     flesh = pal.path("e1 e4 e6 a6 w6 w8")
 
     def field(x, y):
         inside, a, u, v = maple(x, y)
-        if inside >= 0 or stem(x, y):
+        stalk = stem(x, y)
+        if inside >= 0 or stalk >= 0:
             if inside < 0:
-                return pal.rgb("x4"), 1.0, True, "leaf"
+                # the stalk: the leaf's own colours, so it reads as part of
+                # the leaf rather than a scratch on the wood, with a dark rim
+                # down one side and the lit side turning gold
+                lit = clamp(0.55 + stalk * 0.55)
+                c = flesh(lit)
+                c = mix(c, pal.rgb("x1"), clamp(0.75 - stalk * 0.8))
+                return c, 1.0, True, "leaf"
             vein = any(abs(math.sin(a - va)) * math.hypot(u, v) < 0.022 and math.cos(a - va) > 0
                        for va in (math.pi / 2, math.pi / 2 + 1.1, math.pi / 2 - 1.1, math.pi / 2 + 2.1,
                                   math.pi / 2 - 2.1))

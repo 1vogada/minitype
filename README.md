@@ -169,6 +169,12 @@ Skipping pages:
   **tabs** (one section at a time). The sidebar can also show a tab bar on
   top, or the sections as buttons down the left (settings → interface → sidebar
   tabs)
+- art styles (settings → art → art style): **revamp** (the default: the
+  scenes described below), **upscaled** (the same scenes drawn at braille
+  resolution - 8 marks a cell instead of one glyph, so edges and gradients
+  are much finer; built one picture at a time, so a theme without one falls
+  back to its revamp picture), **blocks**, **detailed**, **og** and
+  **combined**
 - 45 themes (settings → theme → theme; a sample line under the row shows
   each one as you flip through):
   - plain: default, ocean, forest, sunset, dracula, nord, gruvbox,
@@ -248,7 +254,12 @@ Skipping pages:
 - **help box** (settings → interface, also in ui): where a setting's help
   shows when the art is on - *inline* under the selected row (default),
   or *top left / top right / bottom left / bottom right* in a
-  double-lined box; on the left it sits just right of the menu text
+  double-lined box; on the left it sits just right of the menu text (or
+  the text panel), at the bottom just above the key hints (or their panel)
+- **help border** (settings → interface, also in ui): the help box's
+  border - *auto* (single-lined under the row, double-lined in a corner),
+  *frame* (the same as the screen's border), *line / rounded / double /
+  heavy / ascii / block*, or *off* (just the box, no lines)
 - **see-through** (settings → art, 40%): how much of the art shows
   through boxes drawn over it - the help box, the text panel, the pause
   and warning boxes. 0% solid, 100% the art at full brightness

@@ -108,5 +108,14 @@ User verdict: revamp line art is "not that good" - NEXT: redo with the
 - Tiles must have even width when glyphs are every other column.
 - A blank after a background-coloured cell must get its own code
   (`Picture.row`), or backgrounds run on as bars.
-- Test scripts live outside the repo (Claude scratchpad, copied to
-  `C:\Claude 2\claude\...\scratchpad`); 24 of them, each prints ALL OK.
+- Checks live in `tests/` (see next); the preview helpers live in the
+  session's Claude scratchpad, *not* at a fixed path. `wow_png.py` (a scene
+  to a PNG, each cell drawn with its exact block shape) and `frame_png.py`
+  are the two worth having; both are small and easy to rewrite, and more
+  than one session has already done so. They draw letters as blobs, so for
+  anything with text in it the owner's own terminal is the ground truth -
+  they run the Code tab terminal in the Claude desktop app on Windows,
+  where the block and shade glyphs render correctly.
+- Nothing compares pictures pixel by pixel. `tests/` covers behaviour and
+  invariants (including `pictures_check.py`: the picture sets agree), but a
+  redrawn scene is only judged by eye.

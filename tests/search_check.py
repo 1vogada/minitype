@@ -35,7 +35,7 @@ typing = list
 
 # no hotkeys any more: rows have no key column, and letters don't toggle anything
 f, app = run(typing("p"))
-assert app.settings.punctuation is False, "p no longer toggles punctuation"
+assert app.settings.punctuation == "off", "p no longer toggles punctuation"
 f0, _ = run([])
 assert " > difficulty" in f0, f0.split("\n")[3:6]
 

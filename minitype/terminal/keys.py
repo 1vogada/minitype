@@ -33,7 +33,8 @@ if os.name == "nt":
 else:
     from . import _posix as backend
 
-POLL = 0.05
+POLL = 0.002           # how often a waiting read looks for a key
+SIZE_POLL = 0.05       # how often it looks for a resized terminal
 
 
 def setup():
@@ -66,10 +67,14 @@ def read_key(panic=True, resize=True):
     terminal size returns RESIZE so the caller can redraw."""
     if resize:
         start = console.size()
+        checked = time.monotonic()
         while not key_ready():
             time.sleep(POLL)
-            if console.size() != start:
-                return RESIZE
+            now = time.monotonic()
+            if now - checked >= SIZE_POLL:
+                checked = now
+                if console.size() != start:
+                    return RESIZE
     key = backend.read()
     if panic and key == CTRL_Q:
         console.bail()
