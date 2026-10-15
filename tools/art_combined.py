@@ -173,21 +173,43 @@ class Scene:
         self.texts = texts or (lambda rows, x_left, cw, unit: [])
 
 
-def render(scene, rows, pal=None):
-    """The scene `rows` tall: (lines, parts, tones, back_parts, back_tones,
-    keep), like artgen.render_blocks."""
-    pal = pal or Palette(scene.theme)
+def geometry(scene, rows):
+    """(unit, cell width, columns, x of the left edge) of the scene drawn
+    `rows` tall."""
     unit = 1.0 / rows
     cw = unit / 2
     box = max(1, round(scene.aspect / cw))
     cols = max(box, SPAN_COLS) if scene.span else box
-    x_left = scene.aspect - cols * cw
+    return unit, cw, cols, scene.aspect - cols * cw
+
+
+def render(scene, rows, pal=None):
+    """The scene `rows` tall: (lines, parts, tones, back_parts, back_tones,
+    keep), like artgen.render_blocks."""
+    pal = pal or Palette(scene.theme)
+    unit, cw, cols, x_left = geometry(scene, rows)
+    texts = {(r, c): (ch, rgb, foc) for c, r, ch, rgb, foc in scene.texts(rows, x_left, cw, unit)
+             if 0 <= r < rows and 0 <= c < cols}
+    grid = draw(scene, rows, pal, range(rows), range(cols), texts)
+    return _trim(scene, *grid[:6])
+
+
+def draw(scene, rows, pal, row_range, col_range, texts):
+    """The cells of rows `row_range` and columns `col_range` of the scene
+    drawn `rows` tall - in its own cell grid, so a row above the picture is
+    negative and a column left of it too, and every cell comes out exactly
+    as it does in the picture itself. `texts` maps (row, column) to
+    (character, rgb, focus). Returns (chars, parts, tones, back parts, back
+    tones, focus, tags), each a list of rows."""
+    unit, cw, cols, x_left = geometry(scene, rows)
     ground = pal.ground
+    r_lo, r_hi = row_range.start, row_range.stop
+    c_lo, c_hi = col_range.start, col_range.stop
 
     # the field, sampled
     cells = {}                        # (r, c) -> (samples, focus, tags, mean)
-    for r in range(rows):
-        for c in range(cols):
+    for r in row_range:
+        for c in col_range:
             samples, focus, tags, seen = [], False, {}, False
             for j in range(SY):
                 y = (r + (j + 0.5) / SY) * unit
@@ -215,45 +237,46 @@ def render(scene, rows, pal=None):
             steps = max(1, int(max(abs(bx - ax), abs(by - ay)) * 2))
             for st in range(steps + 1):
                 t = st / steps
-                R, C = int(ay + (by - ay) * t), int(ax + (bx - ax) * t)
-                if not (0 <= R < rows * 4 and 0 <= C < cols * 2):
+                R, C = math.floor(ay + (by - ay) * t), math.floor(ax + (bx - ax) * t)
+                if not (r_lo * 4 <= R < r_hi * 4 and c_lo * 2 <= C < c_hi * 2):
                     continue
                 x, y = x_left + (C + 0.5) / 2 * cw, (R + 0.5) / 4 * unit
                 if hidden and hidden(x, y):
                     continue
                 dots[(R, C)] = (colour(x, y) if callable(colour) else colour, foc)
 
-    texts = {(r, c): (ch, rgb, foc) for c, r, ch, rgb, foc in scene.texts(rows, x_left, cw, unit)
-             if 0 <= r < rows and 0 <= c < cols}
-
-    chars = [[" "] * cols for _ in range(rows)]
-    parts = [[" "] * cols for _ in range(rows)]
-    tones = [[" "] * cols for _ in range(rows)]
-    bparts = [[" "] * cols for _ in range(rows)]
-    btones = [[" "] * cols for _ in range(rows)]
-    focus = [[False] * cols for _ in range(rows)]
+    h, w = r_hi - r_lo, c_hi - c_lo
+    chars = [[" "] * w for _ in range(h)]
+    parts = [[" "] * w for _ in range(h)]
+    tones = [[" "] * w for _ in range(h)]
+    bparts = [[" "] * w for _ in range(h)]
+    btones = [[" "] * w for _ in range(h)]
+    focus = [[False] * w for _ in range(h)]
+    tagged = [[None] * w for _ in range(h)]
 
     def put(r, c, ch, fg, bg):
+        r, c = r - r_lo, c - c_lo
         chars[r][c] = ch
         if fg is not None:
             parts[r][c], tones[r][c] = fg
         if bg is not None:
             bparts[r][c], btones[r][c] = bg
 
-    for r in range(rows):
-        for c in range(cols):
+    for r in row_range:
+        for c in col_range:
             cell = cells.get((r, c))
             mean = cell[3] if cell else ground
             if cell:
-                focus[r][c] = cell[1]
+                focus[r - r_lo][c - c_lo] = cell[1]
             tag = max(cell[2], key=cell[2].get) if cell else None
+            tagged[r - r_lo][c - c_lo] = tag
             pal.allowed = scene.inks.get(tag)
             back = pal.nearest(mean)[0][0] if cell else None
             text = texts.get((r, c))
             if text:
                 ch, rgb, foc = text
                 put(r, c, ch, pal.nearest(rgb, ground=False)[0][0], back)
-                focus[r][c] = focus[r][c] or foc
+                focus[r - r_lo][c - c_lo] = focus[r - r_lo][c - c_lo] or foc
                 continue
             cell_dots = [(dy, dx, dots[(r * 4 + dy, c * 2 + dx)]) for dy in range(4) for dx in (0, 1)
                          if (r * 4 + dy, c * 2 + dx) in dots]
@@ -261,7 +284,7 @@ def render(scene, rows, pal=None):
                 bits = 0
                 for dy, dx, (rgb, foc) in cell_dots:
                     bits |= BRAILLE_BITS[dy][dx]
-                    focus[r][c] = focus[r][c] or foc
+                    focus[r - r_lo][c - c_lo] = focus[r - r_lo][c - c_lo] or foc
                 n = len(cell_dots)
                 avg = tuple(sum(d[2][0][k] for d in cell_dots) / n for k in range(3))
                 put(r, c, chr(0x2800 + bits), pal.nearest(avg, ground=False)[0][0], back)
@@ -272,8 +295,7 @@ def render(scene, rows, pal=None):
             if ch != " " or bg is not None:
                 put(r, c, ch, fg, bg)
     pal.allowed = None
-
-    return _trim(scene, chars, parts, tones, bparts, btones, focus)
+    return chars, parts, tones, bparts, btones, focus, tagged
 
 
 def encode(samples, mean, pal, shades=True, shade_cost=SHADE_COST):

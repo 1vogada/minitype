@@ -864,7 +864,7 @@ def mountains(pal):
                 c = pal.path(col)(clamp((y - ly) * 4 - (streak - 0.5) * 0.25 * (1 - k * 0.5)))
                 haze = clamp((y - 0.58) * 6) * 0.45
                 return mix(mix(c, pal.rgb("a6"), haze), pal.rgb("a6"), mist), False, "range"
-        return sky(clamp((y / 0.66) ** 1.3)), False, "sky"
+        return sky(clamp(y / 0.66) ** 1.3), False, "sky"   # clamped first: y < 0 above the picture
 
     def field(x, y):
         if y >= shore:

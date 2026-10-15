@@ -486,18 +486,20 @@ def overlay_art(rows, versions, width, pinned_n, behind=False, dim=None):
                 pic.keep[k] < pic.width and col + pic.keep[k] - skip < ends[k] + 2
                 for k in range(pic.height)):
             continue
-        box = min(starts) - col
         pic = _dressed(pic, top - 1)
         top -= pic.extra
         spans = [_text_ends(rows[top + k]) for k in range(pic.height)]
         ends = [solid for solid, _ in spans]
-        # the background only runs the full width below the last text;
-        # beside text it keeps to the picture's own box
+        # the background runs the full width below the last text; beside
+        # text it fills up to one straight edge, two columns past the
+        # widest of those text rows, so it neither hugs each line nor
+        # stops short in a step
         last_text = max((k for k in range(pic.height) if ends[k]), default=-1)
+        edge = max(ends[:last_text + 1], default=0) + 2 - col
         rows = list(rows)
         for k in range(pic.height):
             solid, full = spans[k]
-            start = max(0, solid + 2 - col, box if k <= last_text else 0)
+            start = max(0, solid + 2 - col, edge if k <= last_text else 0)
             if full > solid:             # floating text: the art goes on after it
                 start = max(start, full + 1 - col)
             if start >= w:

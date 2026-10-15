@@ -8,7 +8,9 @@ from minitype.terminal import console, style
 from minitype.terminal.art import paint, revamp, TALLER
 
 pal = style.Styles("ocean").art_palette(True)
-pic = paint(revamp("island")[0], pal)
+# the filler itself: a picture without the scene drawn on above it (that
+# comes first when a picture has it - see extend_check.py)
+pic = paint(revamp("island")[0]._replace(ext=None), pal)
 assert pic.back and pic.extra == 0
 assert pic.taller(0) is pic
 t = pic.taller(6)
@@ -46,7 +48,7 @@ assert w.width == pic.width + 40 and w.extra == 4 and w.height == pic.height + 4
 f = t.faded("edges", 50, 20, 50)
 assert f.extra == 6 and f.height == t.height
 # pictures without backgrounds get none
-d = paint(revamp("island")[0], pal)
+d = paint(revamp("island")[0]._replace(ext=None), pal)
 d2 = object.__new__(type(d)); d2.__dict__.update(d.__dict__); d2.back = False
 assert d2.taller(5) is d2
 
@@ -79,7 +81,7 @@ assert sum(1 for r in out if len(r) > 30) >= pic.height + 1
 # the filler carries on each column's own top colour: no flat slab of one
 # colour where the subject reaches the top edge
 import re as _re
-bam = paint(revamp("bamboo")[0], style.Styles("bamboo").art_palette(True)).taller(6)
+bam = paint(revamp("bamboo")[0]._replace(ext=None), style.Styles("bamboo").art_palette(True)).taller(6)
 top_cols = [_re.findall(r"38;2;([0-9;]+)m", c)[0] for c in bam._codes[0][-60:] if "38;2" in c]
 assert len(set(top_cols)) > len(top_cols) // 3, len(set(top_cols))
 print("ALL OK")
