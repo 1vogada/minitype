@@ -834,26 +834,60 @@ def _floor_rows(rows, hz, first=1.0, step=0.25):
     spaced in depth, so bunching towards the horizon. Returns (near, far):
     near lines snapped to cell edges (row numbers, drawn as eighth-block
     lines) while they're a row or more apart, then far ones as y in braille
-    dot rows while they're two dots apart."""
+    dot rows, every one that's clear of the last (four dots near the
+    viewer, two at the horizon), right up to the horizon (denser and
+    denser, so the grid runs into the glow)."""
     near, far, n = [], [], 0
-    last = None
-    while n < 200:
+    last, last_dot = None, None
+    horizon = math.floor(hz * rows * 4) + 1             # the first dot row below it
+    while n < 5000:
         t = 1 / (first + n * step)
         y = hz + (1 - hz) * t
         nxt = hz + (1 - hz) / (first + (n + 1) * step)
         n += 1
-        if (y - nxt) * rows >= 1.0:
+        if not far and (y - nxt) * rows >= 1.0:
             b = round(y * rows)
             if b != last and b * 1.0 / rows > hz + 0.5 / rows:
                 near.append(b)
                 last = b
-        elif (y - nxt) * rows * 4 >= 2.0:
-            r = math.floor(y * rows * 4)
-            if r / (rows * 4) < ((last if last is not None else rows) - 1) / rows:   # not in its cell
-                far.append((r + 0.5) / (rows * 4))
-        else:
+            continue
+        r = math.floor(y * rows * 4)
+        if r <= horizon:
             break
+        top = ((last if last is not None else rows) - 1) * 4    # not in the last near line's cell
+        need = 2 + round(2 * clamp(t * 2.5 - 0.25))       # sparser nearer the viewer
+        if r < top and (last_dot is None or r <= last_dot - need):
+            far.append((r + 0.5) / (rows * 4))
+            last_dot = r
     return near, far
+
+
+def _long_lines(rows, hz, sx, spread, lo=-46, hi=4):
+    """The floor's long lines for a picture `rows` tall: (x at the bottom,
+    t where it starts) for each, all meeting at (sx, hz). Evenly spaced
+    along the bottom near the middle; further out, where they lie flatter,
+    only every so many, so each stays clear of the next; each starts where
+    it's a cell (two dots across) clear of its neighbours (no moire at
+    the horizon)."""
+    depth = 1 - hz
+    cands = sorted((sx + k * spread for k in range(lo, hi + 1) if abs(k) > 3),   # the road covers the rest
+                   key=lambda xb: abs(xb - sx))
+    ang = lambda xb: math.atan2(xb - sx, depth)
+    kept = []
+    for xb in cands:                                    # outwards from the middle
+        side = [a for a in kept if (a - sx) * (xb - sx) > 0 or a == sx]
+        near = min(side, key=lambda a: abs(a - xb)) if side else None
+        reach = math.hypot(xb - sx, depth)
+        if near is None or abs(ang(xb) - ang(near)) * reach >= 1.6 / rows:
+            kept.append(xb)
+    kept.sort()
+    out = []
+    for i, xb in enumerate(kept):
+        gaps = [abs(ang(xb) - ang(o)) for o in kept[max(0, i - 1):i + 2] if o != xb]
+        gap = min(gaps) if gaps else 1.0
+        reach = math.hypot(xb - sx, depth)
+        out.append((xb, clamp(0.8 / rows / max(gap * reach, 1e-6), 0.02, 0.95)))
+    return out
 
 
 def grid(pal):
@@ -872,16 +906,17 @@ def grid(pal):
     rows_now = [28]                                  # set by texts(): the size being drawn
     cache = {}
 
-    ks = [k for k in range(-9, 10) if abs(k) > 3]      # the long lines (the road covers the rest)
-
     def cross(rows):
         if rows not in cache:
             cache[rows] = _floor_rows(rows, hz)
         return cache[rows]
 
-    def t_first(rows):
-        """Where the long lines start: 6 dots clear of each other."""
-        return clamp(6 / (spread * 4 * rows), 0.02, 0.9)
+    def longs(rows):
+        """The long lines across the whole floor: (x at the bottom, t
+        where each starts)."""
+        if ("long", rows) not in cache:
+            cache[("long", rows)] = _long_lines(rows, hz, sx, spread)
+        return cache[("long", rows)]
 
     def crossed(x, b, rows):
         """Whether a long line runs through the cell just above row edge
@@ -895,11 +930,11 @@ def grid(pal):
             x0, x1 = sx + side * (0.035 + 0.6 * ta), sx + side * (0.035 + 0.6 * t1)
             if max(x0, x1) >= xa and min(x0, x1) < xa + cw:
                 return True
-        t0 = max(t_first(rows), ta)
-        if t1 < t0:
-            return False
-        for k in ks:
-            x0, x1 = sx + k * spread * t0, sx + k * spread * t1
+        for xb, start in longs(rows):
+            t0 = max(start, ta)
+            if t1 < t0:
+                continue
+            x0, x1 = sx + (xb - sx) * t0, sx + (xb - sx) * t1
             if max(x0, x1) >= xa and min(x0, x1) < xa + cw:
                 return True
         return False
@@ -994,6 +1029,9 @@ def grid(pal):
         t = clamp((y - hz) / (1 - hz))
         return pal.path("a4 a6 a7")(t)
 
+    def haze(x, y):
+        return pal.path("e5 a3 a4 a6")(clamp((y - hz) / (1 - hz) / 0.35))
+
     def lines(rows):
         rows_now[0] = rows
         near, far = cross(rows)
@@ -1002,16 +1040,13 @@ def grid(pal):
             return road(x, (y - hz) / (1 - hz)) or (y > 0.76 and car(x, y) is not None)
 
         out = []
-        # the long lines, each from where it's 6 dots clear of the next
-        t0 = t_first(rows)
-        # (only the steeper ones: further out they'd lie almost flat and
-        # break up the cross lines; out there the floor is cross lines only)
-        for k in ks:
-            out.append(([(sx + k * spread * t0, hz + (1 - hz) * t0), (sx + k * spread, 1.0)],
-                        neon, False, off_floor))
-        # the far cross lines, in braille
+        # the long lines over the whole floor, each from where it's a cell
+        # clear of its neighbours
+        for xb, t0 in longs(rows):
+            out.append(([(sx + (xb - sx) * t0, hz + (1 - hz) * t0), (xb, 1.0)], neon, False, off_floor))
+        # the far cross lines, in braille, fading into the horizon's glow
         for y in far:
-            out.append(([(-7.6, y), (2.2, y)], neon, False, off_floor))
+            out.append(([(-7.6, y), (2.2, y)], haze, False, off_floor))
         # the near cross lines through the cells a long line crosses
         for b in near:
             out.append(([(-7.6, (b - 0.3) / rows), (2.2, (b - 0.3) / rows)], neon, False,
