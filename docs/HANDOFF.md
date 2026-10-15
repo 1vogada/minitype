@@ -162,35 +162,30 @@ The art work left is listed, with the owner's own notes, in
    `REVAMP` (that last one catches art that was never rebuilt). The check
    was verified by planting a fake unregistered wow picture and watching it
    fail.
-6. Same day: a new art style, **upscaled** (`tools/art_upscaled.py`,
-   `tools/make_art_upscaled.py`, `minitype/terminal/art_upscaled.py`,
-   `tests/upscaled_check.py`; 31 checks now). It draws the same scene as the
-   revamp picture but on the dot grid a braille character is made of: 2 x 4
-   dots a cell, so eight separate marks instead of one glyph of ~30
-   candidates, with a foreground and a background colour per cell. For each
-   cell it measures each dot, then for every pair of palette colours assigns
-   each dot to the nearer of the two (measured along the line between them,
-   so the split is the pair's own midpoint); the assignment is a braille
-   pattern, or a block shape when one covers the same dots. It also tries a
-   flat colour and a shade of two colours, which is what carries a sky
-   gradient. A clean block shape scores better than it measures
-   (`Encoder.shape_bonus`), or trunks and horizons break into dots.
-
-   Built one picture at a time - `python tools/make_art_upscaled.py island`
-   - because it is ~15 KB a picture and a good few seconds each; a theme
-   whose picture has no upscaled version falls back to its revamp one
-   (`art.resolve`, style "upscaled"). Only `island` (ocean) is built so far.
-   Two bugs worth remembering, both found by looking at a render rather than
-   trusting the numbers: the flat-colour candidate was scored over one dot
-   but competed against all eight, so every cell came out solid; and with no
-   shade candidate the gradients banded badly.
-
-   Measured against the scene with exact glyph coverage (braille dots,
-   quadrants, eighths, verticals and shades all computed, not approximated),
-   the upscaled island is closer than the revamp one: mean error 2625
-   against 2872, median 734 against 887. On this picture the gain is modest
-   because it is mostly smooth gradient, where both styles do well; the
-   visible difference is the sky, which no longer bands. A useful caution:
-   the same measurement said the opposite - 2761 against 1407 - while the
-   glyph estimator was still approximating braille and the shade families,
-   so fix the measurement before believing it.
+6. Same day: a new art style, **upscaled**. Its first version (a braille
+   dot encoder, island only) was rejected by the owner as "slop" and
+   removed on 2026-10-15; see 9.
+7. 2026-10-09/12: every item in docs/ART-TODO.md done (12 pictures by four
+   worktree agents, reviewed and merged), then touch-ups started on the
+   first-pass eight; only **party** landed before the agents hit the usage
+   limit. Still to touch up: bubbly (owner: "remove the green, a bit more
+   fidelity"), synthwave (noisy grid floor), amber (glitchy floor strip),
+   coral reef, gruvbox, pine, autumn.
+8. Help box: a **help border** setting, and corner boxes keep clear of the
+   text panel and the key hints' panel.
+9. 2026-10-15: **the art fills a big window with its own scene.** Every wow
+   picture is stored with more of its scene drawn on to the left and above
+   it (`tools/art_extend.py`; `art_combined.draw` draws any window of
+   cells, so the picture itself is byte for byte unchanged).
+   `Picture.wider()` / `taller()` use those real columns and rows first and
+   only past them fall back to quilting (`_grow`) and filler (`_filler`).
+   Beside menu text the art now comes up to one straight edge two columns
+   past the widest text line (it used to stop at the picture's own box,
+   leaving a step). The **upscaled** style is now the same hand-drawn
+   scenes drawn bigger (44 and 36 rows, `tools/make_art_upscaled.py`), then
+   the revamp sizes - more detail on a big screen, never a stretched
+   picture. Scene fields must be defined everywhere now (negative y above
+   the picture, far-left x): the extension guards against a scene that
+   fails out there, but clamp before powers (`clamp(y / h) ** k`).
+   Builds: `make_revamp.py -j4` / `make_art_upscaled.py -j4` (four at a
+   time; ~15 and ~25 minutes for everything).

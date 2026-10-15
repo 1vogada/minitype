@@ -170,11 +170,10 @@ Skipping pages:
   top, or the sections as buttons down the left (settings → interface → sidebar
   tabs)
 - art styles (settings → art → art style): **revamp** (the default: the
-  scenes described below), **upscaled** (the same scenes drawn at braille
-  resolution - 8 marks a cell instead of one glyph, so edges and gradients
-  are much finer; built one picture at a time, so a theme without one falls
-  back to its revamp picture), **blocks**, **detailed**, **og** and
-  **combined**
+  scenes described below), **upscaled** (the same hand-drawn scenes drawn
+  bigger - 44 and 36 rows - for big windows, so a big screen gets more
+  detail instead of a small picture filled out; a smaller window gets the
+  revamp sizes), **blocks**, **detailed**, **og** and **combined**
 - 45 themes (settings → theme → theme; a sample line under the row shows
   each one as you flip through):
   - plain: default, ocean, forest, sunset, dracula, nord, gruvbox,
@@ -212,16 +211,19 @@ Skipping pages:
   menu row is the exception: it goes in a box drawn over the art, so the
   art keeps its size as you move. Lowkey disguised hides it along with
   the border. On a screen wider than a picture was drawn for, its
-  scenery (sea, hills, grid...) grows on to the left to fill it, from
-  runs of its own columns joined where they line up, so it doesn't look
-  like one strip repeated
-- **taller art**: pictures with backgrounds carry their sky on up above
-  themselves (up to half their height again) where the screen has room:
-  the top edge's own colours just above the picture, evening out into
-  one sky higher up that carries on the picture's own gradient (a dusk
-  keeps darkening into night), with the odd star or speck. The picture is still
-  placed by its own height - the filler never decides whether it fits -
-  and the fade dissolves through the filler first
+  scene carries on to the left to fill it: the scene itself, drawn on
+  that far when the picture was made (so the sea, hills and grid simply
+  continue, no seams). Beside the menu text the art comes up to one
+  straight edge just past the widest line. Only past what was drawn
+  (very wide screens) does it grow on from runs of its own columns
+- **taller art**: pictures with backgrounds carry on up above themselves
+  (up to half their height again) where the screen has room - again the
+  scene itself, drawn on above the picture (its sky, stars, light rays).
+  Past that (art behind text on a tall screen) the sky carries on from
+  the top edge's own colours, evening out into one sky that keeps the
+  picture's own gradient. The picture is still placed by its own height -
+  what's above it never decides whether it fits - and the fade dissolves
+  through it first
 - **art fade** (settings → art fade, `d` in the gallery): the art dissolves into
   the screen instead of stopping on a straight line - dithered, its colour
   thinning through ▓ ▒ ░ on an exponential curve: light dithering for most

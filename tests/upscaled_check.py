@@ -1,10 +1,8 @@
-"""The upscaled art style: stored data, glyphs, and the fallback.
-
-The style is built one picture at a time (tools/make_art_upscaled.py), so
-this checks the pictures that exist rather than assuming all of them do.
+"""The upscaled art style: every picture's hand-drawn scene drawn bigger
+for big windows (tools/make_art_upscaled.py), then its revamp sizes, so a
+window too small for the big ones still gets the picture.
 """
 import os
-import re
 import sys
 import tempfile
 
@@ -15,57 +13,43 @@ sys.path[:0] = [os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
 
 from minitype.config import ART_STYLES                       # noqa: E402
 from minitype.terminal import art as art_mod, style          # noqa: E402
-from minitype.terminal.art import ART, THEME_ART, resolve, revamp, upscaled   # noqa: E402
+from minitype.terminal.art import THEME_ART, resolve, revamp, upscaled   # noqa: E402
+import make_art_upscaled                                     # noqa: E402
 
 UPSCALED = art_mod._UPSCALED          # the stored data, as the loader sees it
 
 assert "upscaled" in ART_STYLES and "upscaled" in art_mod.ART_STYLES
 assert ART_STYLES[0] == "revamp", "revamp is still the default"
 
-# only the block / braille set may be invented: a cell must not draw random
-# text, except for a glyph the scene itself asked for (stars, sparkles)
-ALLOWED = set(" █▀▄▌▐▁▂▃▅▆▇▔░▒▓")
-ALLOWED |= set("▘▝▖▗▚▞▛▜▙▟")
-ALLOWED |= {chr(c) for c in range(0x2800, 0x2900)}
+# drawn like the revamp pictures: blocks, shades, braille, and only the
+# text a scene asks for itself (stars, sparkles, falling code)
+BLOCKS = set(" █▀▄▌▐▁▂▃▅▆▇▔░▒▓▘▝▖▗▚▞▛▜▙▟▎▊▕") | {chr(c) for c in range(0x2800, 0x2900)}
 
-assert UPSCALED, "no upscaled pictures are built"
-
+assert set(UPSCALED) == set(art_mod._REVAMP), "every picture has its upscaled sizes"
 for name in sorted(UPSCALED):
-    sizes = upscaled(name)
-    assert sizes, name
-    big = sizes[0]
-    assert len(big.lines) == 28, (name, len(big.lines))
-    assert len({len(l) for l in big.lines}) == 1, (name, "ragged rows")
-    assert big.back_parts, (name, "upscaled pictures carry background colours")
-    for row in big.lines:
-        bad = set(row) - ALLOWED - set(".,'`*+~°·oO0v_/\\|-)(][<>")
-        assert not bad, (name, "unexpected characters", bad)
-    assert set("".join(big.parts)) <= set("dtexagw "), name
-    assert set("".join(big.back_parts)) <= set("dtexagw "), name
-    assert all((ch == " ") == (p == " ") for l, q in zip(big.lines, big.parts)
-               for ch, p in zip(l, q)), name
-    # the same subject rule as the other styles: not every row is focus
-    width = len(big.lines[0])
-    assert sum(k < width for k in big.keep) < len(big.lines), (name, "not all focus")
+    big = upscaled(name)
+    small = revamp(name)
+    assert [len(p.lines) for p in big] == list(make_art_upscaled.SIZES), name
+    assert len(big[-1].lines) > len(small[0].lines), (name, "bigger than the revamp sizes")
+    for p in big:
+        assert len({len(l) for l in p.lines}) == 1, (name, "ragged rows")
+        assert p.back_parts and p.ext, (name, "backgrounds and the scene drawn on beyond it")
+        assert set("".join(p.parts)) <= set("dtexagw "), name
+        assert all((ch == " ") == (q == " ") for l, r in zip(p.lines, p.parts)
+                   for ch, q in zip(l, r)), name
+        width = len(p.lines[0])
+        assert sum(k < width for k in p.keep) < len(p.lines), (name, "not all focus")
+    # mostly blocks: a scene's own text is a sprinkle, not the picture
+    cells = "".join(big[0].lines)
+    assert sum(ch in BLOCKS for ch in cells) > 0.6 * len(cells), name
 
-# every theme can ask for the style: a picture with no upscaled version
-# falls back to its revamp picture, so nothing comes back empty
+# every theme asks for the style and gets the big sizes, then the revamp ones
 for theme in style.theme_names():
     if theme == "mono":
         continue
-    pieces = style.theme_art(theme, "upscaled")
-    assert pieces, (theme, "no art at all")
     name = THEME_ART[theme]
-    want = upscaled(name) or revamp(name)
+    pieces = style.theme_art(theme, "upscaled")
+    want = upscaled(name) + revamp(name)
     assert [p.lines for p in pieces[:len(want)]] == [p.lines for p in want], theme
-
-# a picture that was never built falls back, and one that was is used as it is
-assert resolve(THEME_ART["ocean"], "upscaled"), "the ocean theme resolves"
-assert [p.lines for p in style.theme_art("ocean", "upscaled")[:1]] == \
-    [p.lines for p in upscaled(THEME_ART["ocean"])[:1]], "ocean draws the upscaled picture"
-missing = next(n for n in ART if n not in UPSCALED)
-assert upscaled(missing) == [], (missing, "should have no upscaled version")
-assert [p.lines for p in resolve(missing, "upscaled")[:1]] == [p.lines for p in revamp(missing)[:1]], \
-    (missing, "should fall back to revamp")
-
+    assert [p.lines for p in resolve(name, "upscaled")[:len(want)]] == [p.lines for p in want]
 print("ALL OK")
