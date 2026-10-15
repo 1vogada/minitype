@@ -161,4 +161,11 @@ with mock.patch.object(console, "write", out.append), mock.patch.object(console,
     console.present(["one"])
     console.present(["two"])
 assert "X" in _strip(out[0]) and "X" not in _strip(out[1])
+# learn warns beside itself when the word list is too small for lessons
+from minitype.ui.main_menu import SMALL_LIST, _small_list
+_a = App()
+_a.bank.words = _a.bank.words[:200]
+assert "small word list" in _small_list(_a) and "settings" in _small_list(_a)
+_a.bank.words = ["word"] * SMALL_LIST
+assert _small_list(_a) == ""
 print("ALL OK")

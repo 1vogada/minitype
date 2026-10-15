@@ -20,6 +20,17 @@ HINTS = ("enter start   tab next section   ` ~ theme   ctrl-o settings   "
          "esc quit   ctrl-q hide")
 
 
+
+SMALL_LIST = 500      # fewer words than this and learn lessons run short of real ones
+
+
+def _small_list(app):
+    """A warning beside learn when the word list is too small for lessons
+    (they then make up words, which can look like typos), else ""."""
+    n = len(app.bank.words)
+    return f"! small word list ({n} words) - change it in settings" if n < SMALL_LIST else ""
+
+
 def ask_length():
     v = prompt("how long? a number of words, or seconds like 45s:")
     if not v:
@@ -105,8 +116,13 @@ def build_items(app):
         Item("8", "custom text", ask_text,
              help="paste text or give a file path", section="gamemode"),
 
-        Item("9", "learn", lambda: learn_menu(app),
-             help="keybr-style lessons that unlock letters as you get faster",
+        Item("9", "learn", lambda: learn_menu(app), lambda: _small_list(app),
+             help=lambda: "keybr-style lessons that unlock letters as you get faster"
+                  + (f". Your word list ({app.bank.source}, {len(app.bank.words)} words) "
+                     "is small: few real words fit the letters you have, so lessons "
+                     "lean on made-up ones that can look like typos. Pick a bigger "
+                     "one in settings -> text -> word list"
+                     if _small_list(app) else ""),
              section="practice"),
         Item("0", "slow words", slow_drill,
              lambda: f"{len(app.stats.word_speed)} words timed",
