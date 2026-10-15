@@ -3,6 +3,63 @@
 Read this first when picking the project up (you or an AI coding agent).
 Then `docs/art-notes.md` for anything about the corner art.
 
+## Pick up here (left off 2026-10-15)
+The last long session ran on the owner's work laptop. Its chat and the
+agent's memory don't travel, so this section is the memory.
+
+**Do next, in order:**
+1. **Finish the upscaled build.** Only 6 of 40 pictures are in truecolour:
+   grid, island, keyboard, moon, pines and sunset. The other 34 still show
+   their revamp picture in that style, which works but doesn't look
+   upscaled. Run `python tools/make_art_upscaled.py -j<cores>` (pure
+   Python, CPU-bound; it skips finished pictures and writes after each
+   one, so it can be stopped and resumed). Then `python tests/run_all.py`,
+   commit `minitype/terminal/art_upscaled.py` and push. It takes about 2
+   hours on 4 cores. The owner meant to run it on their workstation.
+2. **A new settings menu.** The owner asked for one; the design isn't
+   started. Ask them what they have in mind before building. Their
+   attempt to answer the last design question was interrupted, so it's
+   still open. Today the settings screen has 87 rows in 12 sections
+   (`minitype/ui/settings_menu.py`: `build_items`, `LAYOUT`, `UI_TAB`).
+3. Optional soft spots, listed in `docs/ART-TODO.md`.
+
+**What the owner wants, and how they work:**
+- They judge art by eye. Send a preview PNG at every notable step
+  (`tools/preview/`, see its README) and be honest about weak spots.
+- They hand-design the art. They rejected an automatic braille "upscaled"
+  encoder as "slop". Pictures are hand-composed scene functions in
+  `tools/art_wow*.py`; improve the scenes, not an encoder.
+- They love dense, colourful pictures built from shades, eighths,
+  quadrants and braille. The deep sea jellyfish and the vaporwave sky are
+  favourites.
+- They're short and direct ("status report", "push it"). Give a status
+  without being asked when work runs long.
+- Commit locally without asking. Push when asked: "push" usually means
+  the current branch, "merge it" means into `main`. Author is
+  `1vogada <112830070+1vogada@users.noreply.github.com>`, never a
+  Co-Authored-By trailer.
+- For big batches of art, the working pattern was parallel agents, one
+  git worktree each and one file each (`art_wow2/3/4.py`), with every
+  result reviewed by rendering it in its own theme before merging. Tell
+  agents to `git merge --ff-only <branch>` first: worktrees can start
+  from an older `main`.
+
+**Traps found the hard way:**
+- **Disk:** the work laptop's C: drive was full (0 GB free). Tests then
+  fail with odd errors (`OSError 28`, book, save and smoke checks) and a
+  build can die mid-write.
+- **Temp folders:** every test run leaves an empty `tmp*` folder in the
+  temp dir (`MINITYPE_DIR`). Thousands piled up.
+- **Python on Windows:** `python` can be the Microsoft Store alias;
+  `python3.13` worked.
+- **Scenes off the picture:** scenes are now also drawn above and to the
+  left of the picture (`tools/art_extend.py`), so a field must work for
+  y < 0 and far-left x. Clamp before fractional powers. nord once crashed
+  on `(y/h) ** 1.3` with y < 0.
+- **Blank cells:** `Picture.row` trims blanks off the end of a row. A cell
+  that shows only a background colour must be a full block in that
+  colour, not a blank.
+
 ## Repo and workflow
 - GitHub: `1vogada/minitype`. Work happens on `main` (the old `art-blocks`
   branch was merged in and is kept level with it).

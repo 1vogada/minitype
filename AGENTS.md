@@ -1,5 +1,8 @@
 # Notes for AI coding agents (read first)
 
+**Start with `docs/HANDOFF.md` → "Pick up here"**: what was left open last
+session, what to do next, and how the owner works.
+
 **Known issue:** the art fade settings (Settings → art fade tab: fade, fade
 top, fade start top, fade side, fade start, fade angle, fade round, fade
 curve; `d` in the gallery) each amount is a strength (0% = no fade, 100% = no
