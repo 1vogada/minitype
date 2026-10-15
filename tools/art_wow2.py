@@ -11,7 +11,7 @@ import math
 import random
 
 from art_combined import Scene, mix
-from art_wow import SHADE, SIZES, pine, ridge, sphere_light, stars
+from art_wow import SHADE, SIZES, ridge, sphere_light, stars
 
 
 # ---------------------------------------------------------------- helpers
@@ -348,143 +348,446 @@ def stones(pal):
 
 # ---------------------------------------------------------------- pine
 
+def _range_line(seed, base, spacing, lo, hi, x0=-9.0, x1=3.0):
+    """A mountain range defined everywhere: peaks every `spacing` (jittered)
+    with heights lo..hi over base; top(x) -> (y of the crest line, x of
+    the peak it belongs to, that peak's height)."""
+    peaks = []
+    k = 0
+    x = x0
+    while x < x1:
+        j = _hash(k, 1, seed)
+        peaks.append((x + (j - 0.5) * spacing * 0.6, spacing * (0.8 + 0.6 * _hash(k, 2, seed)),
+                      lo + (hi - lo) * _hash(k, 3, seed)))
+        x += spacing
+        k += 1
+
+    def top(x):
+        best = (0.0, x, 0.0)
+        for cx, w, ht in peaks:
+            if abs(x - cx) < w:
+                h = ht * (1 - abs(x - cx) / w) ** 1.25
+                if h > best[0]:
+                    best = (h, cx, ht)
+        h = best[0] + 0.012 * (fbm(x * 18, 0.3, seed) - 0.5) * min(1.0, best[0] * 10)
+        return base - max(0.0, h), best[1], best[2]
+    return top
+
+
+def _bough_pine(cx, base, height, width, tiers, seed):
+    """A pine of drooping bough layers: at(x, y) -> None, ("trunk", nx) or
+    ("bough", side, v, u, k): side -1 left .. 1 right of the trunk, v 0 at
+    a layer's shadowed underside to 1 on its lit top, u 0 at the trunk to 1
+    at the bough tips, k the layer (0 at the bottom)."""
+    layers = []
+    for k in range(tiers):
+        f = k / tiers
+        tk = 0.15 + 0.79 * f ** 0.92                         # the tips' height, 0..1 up the tree
+        wk = width * (1 - tk) ** 0.95 * (0.88 + 0.24 * _hash(k, 7, seed))
+        hk = (0.84 / tiers) * 1.9
+        layers.append((tk, wk, hk, 0.035 + 0.03 * (1 - f)))
+
+    def at(x, y):
+        t = (base - y) / height
+        if t < -0.02 or t > 1.0:
+            return None
+        dx = x - cx
+        hit = None
+        for k in range(tiers - 1, -1, -1):                   # the higher layer is in front
+            tk, wk, hk, droop = layers[k]
+            ragged = 1 + 0.16 * (noise(t * 70, k * 3.1, seed) - 0.5) + 0.1 * (noise(t * 22, dx * 9, seed + 5) - 0.5)
+            u = abs(dx) / (wk * ragged)
+            if u > 1:
+                continue
+            top = tk - droop * u * u + hk * (1 - u) ** 1.35
+            # the underside hangs in tufts of needles
+            under = tk - droop * u * u - 0.018 * u * (0.5 + 0.5 * math.sin(dx * 260 + k))
+            if under <= t <= top:
+                v = (t - under) / max(1e-6, top - under)
+                hit = ("bough", -1.0 if dx < 0 else 1.0, v, u, k)
+                break
+        if hit:
+            return hit
+        tw = width * 0.05 * (1.15 - t)
+        if abs(dx) < tw and t < 0.9:
+            return ("trunk", dx / tw)
+        return None
+    return at
+
+
+def _ball_light(nx, ny, lx=-0.6, ly=-0.55):
+    """0..1 light on a rounded stone at offset (nx, ny) from its middle."""
+    z = math.sqrt(max(0.0, 1 - nx * nx - ny * ny))
+    return clamp(nx * lx + ny * ly + z * math.sqrt(max(0.0, 1 - lx * lx - ly * ly)))
+
+
 def lone_pine(pal):
-    """A lone pine on a rocky point over a still lake at dawn, mountains
-    and their reflection, mist on the water."""
+    """A lone pine on a mossy rocky point over a still lake at dawn: tall
+    pines of drooping, lit bough layers, two ranges of ridged, snow-capped
+    mountains with a warm glow between them, a low moon, stars, mist
+    lying on the water and the whole scene mirrored in the lake."""
     shore = 0.66
-    far = ridge([(0.3, 0.55, 0.26), (1.0, 0.5, 0.32), (1.75, 0.45, 0.22), (-0.8, 0.7, 0.28), (-2.0, 0.7, 0.22)], shore)
-    sky = pal.path("d1 a1 a4 g4 w6")
-    tree = pine(1.46, 0.92, 0.66, 0.24, 8)
-    tree2 = pine(1.74, 0.94, 0.38, 0.14, 6)
+    far = _range_line(4, shore - 0.06, 0.62, 0.16, 0.34)
+    near = _range_line(9, shore, 0.48, 0.05, 0.16)
+    sky = pal.path("d0 d1 a1 a2 a4 g4 w5 w7")
+    far_lit = pal.path("d0 d1 a1 a2 a3 a5 t4")
+    near_lit = pal.path("- d0 d1 a1 a2 g2")
+    needles = pal.path("- d0 a1 d3 a4 g3 g5 g7")
+    stone = pal.path("- x0 x2 x4 e4 t4 t6")
+    moss = pal.path("d1 a1 g1 g3 g5")
+    glow_x, glow_y = 0.78, shore - 0.12
+    moon_x, moon_y, moon_r = 0.3, 0.17, 0.05
+    moon_lit = sphere_light(moon_x, moon_y, moon_r, 0.5, -0.3)
+    trees = [_bough_pine(1.5, 0.93, 0.7, 0.25, 9, 3), _bough_pine(1.8, 0.95, 0.42, 0.15, 7, 8),
+             _bough_pine(1.17, 0.95, 0.3, 0.1, 6, 13)]
+    boulders = [(1.12, 0.93, 0.11, 0.06), (1.32, 0.9, 0.15, 0.07), (1.56, 0.89, 0.2, 0.08),
+                (1.8, 0.91, 0.17, 0.07), (1.98, 0.92, 0.14, 0.07), (1.02, 0.97, 0.08, 0.04),
+                (1.42, 0.97, 0.18, 0.06), (1.7, 0.98, 0.2, 0.06)]
+
+    def glow(x, y):
+        return math.exp(-(((x - glow_x) / 0.55) ** 2 + ((y - glow_y) / 0.16) ** 2))
 
     def rock(x, y):
-        """The point the pines stand on: a round-topped outcrop whose sides
-        and base are soft, so it never ends on a hard edge."""
-        dx = (x - 1.55) / 0.5
-        wobble = fbm(x * 7, y * 4, 12) * 0.05
-        if abs(dx) > 1.1:
-            return False
-        top = 0.86 + 0.09 * dx * dx + 0.01 * math.sin(x * 70) - wobble
-        base = 1.0 + 0.07 * fbm(x * 5, 3, 21) - wobble * 2.4
-        return top - wobble * 0.6 <= y <= base
+        """The point: boulders, each round and lit from the upper left, with
+        moss on their crowns; soft where they meet the water. -> (rgb,
+        alpha) or None."""
+        best = None
+        for bx, by, rx, ry in boulders:
+            wob = 1 + 0.18 * (fbm(x * 14, y * 14, int(bx * 10)) - 0.5)
+            d = ((x - bx) / rx) ** 2 + ((y - by) / ry) ** 2
+            if d <= wob and (best is None or by > best[1]):        # lower ones in front
+                best = (bx, by, rx, ry, d / wob)
+        if best is None:
+            return None
+        bx, by, rx, ry, d = best
+        nx, ny = (x - bx) / rx, (y - by) / ry
+        lit = clamp(_ball_light(nx, ny) * 0.85 + 0.12 * (fbm(x * 40, y * 40, 3) - 0.5) + 0.05)
+        c = stone(lit * 0.95)
+        if d > 0.82:
+            c = mix(c, pal.rgb("x0"), 0.5)                        # the crack between stones
+        mossy = fbm(x * 16, y * 22, 6) + (-ny) * 0.35
+        if mossy > 0.62 and ny < 0.3:
+            c = moss(clamp(lit * 0.75 + (mossy - 0.62)))
+        alpha = clamp(0.55 + (1.02 - y) * 6) if y > 0.95 else 1.0
+        return c, alpha
+
+    def mountains(x, y):
+        """(rgb, tag) of the two ranges at (x, y), or None in the sky."""
+        ny, peak, ht = near(x)
+        # the near hills are wooded: a fringe of little spires on the crest
+        s = (x * 46) % 1.0
+        spire = (1 - abs(s - 0.5) * 2) ** 1.6 * (0.012 + 0.018 * _hash(math.floor(x * 46), 5, 2))
+        if y >= ny - spire:
+            side = -1 if x < peak else 1
+            ridge_ = fbm((x + (y - ny) * 0.8 * side) * 24, y * 3, 9)
+            v = clamp(0.5 - max(0.0, y - ny) * 5 + (0.18 if side < 0 else -0.12) + (ridge_ - 0.5) * 0.6)
+            c = near_lit(v)
+            return c, "mountains"
+        fy, peak, ht = far(x)
+        base = shore - 0.06
+        dip = 1 - 0.65 * math.exp(-((x - glow_x) / 0.32) ** 2)       # a pass where the dawn shows
+        fy, ht = base - (base - fy) * dip, ht * dip
+        if y >= fy:
+            side = -1 if x < peak else 1
+            depth = y - fy
+            # ridges fan out from each summit, down its faces
+            down = max(0.0, y - (base - ht))
+            fan = (x - peak) / (down + 0.03)
+            gully = fbm(fan * 2.2, down * 6, 4)
+            crease = abs(math.sin(fan * 4.5 + gully * 3))
+            v = 0.55 + (0.3 if side < 0 else -0.22) + (gully - 0.5) * 0.7 - crease * 0.35 - depth * 1.5
+            c = far_lit(clamp(v))
+            # snow above a line, reaching further down the gullies
+            alt = base - y
+            if alt > 0.19 + 0.05 * crease - 0.04 * gully:
+                lit_snow = side < 0 and crease < 0.75
+                c = pal.rgb(("t8" if lit_snow else "t5") if side < 0 else ("t4" if crease < 0.6 else "a3"))
+            haze = clamp((y - (shore - 0.12)) / 0.12) * 0.5
+            c = mix(c, pal.rgb("a3"), haze)
+            return mix(c, pal.rgb("w5"), glow(x, y) ** 3 * 0.3), "mountains"
+        return None
+
+    def sky_at(x, y):
+        c = sky(clamp(y / shore * 1.05) ** 1.2 * 0.85 + glow(x, y) * 0.3)
+        r = math.hypot(x - moon_x, (y - moon_y) * 1.0)
+        c = mix(c, pal.rgb("t5"), math.exp(-((r / 0.14) ** 2)) * 0.35)        # the moon's halo
+        streak = soft_clouds([(0.2, 0.33, 0.7, 0.012), (1.1, 0.29, 0.5, 0.01), (-1.2, 0.31, 0.9, 0.012),
+                              (0.85, 0.4, 0.35, 0.008), (-2.8, 0.36, 0.8, 0.01)])(x, y)
+        if streak:
+            c = mix(c, pal.path("a2 e3 w5")(clamp(glow(x, y) * 1.5)), streak * 0.55)
+        return c
 
     def field(x, y):
-        if tree(x, y) or tree2(x, y):
-            rim = not (tree(x + 0.012, y) or tree2(x + 0.012, y))
-            return (pal.rgb("g4") if rim else pal.ground), 1.0, True, "tree"
-        if rock(x, y):
-            # grain runs down the face, and moss creeps about the crown
-            grain = fbm(x * 30, y * 30, 3)
-            light = clamp((y - 0.86) * 5 + grain * 0.3 + 0.25)
-            c = pal.path("x4 d1 -")(light)
-            if fbm(x * 12, y * 18, 6) > 0.62 and y < 0.93:
-                c = mix(c, pal.rgb("g1"), 0.5)
-            # below the waterline the lake takes it: rock fades into water,
-            # which is the soft edge the owner asked for
-            above = clamp((shore - y) / 0.09 + grain * 0.35)
-            alpha = 1.0 if above >= 1.0 else 0.55 + 0.45 * above
-            return c, alpha, True, "rock"
+        for tr in trees:
+            hit = tr(x, y)
+            if hit:
+                if hit[0] == "trunk":
+                    return mix(pal.rgb("x1"), pal.rgb("x4"), clamp(-hit[1] * 0.5 + 0.4)), 1.0, True, "tree"
+                _, side, v, u, k = hit
+                grain = fbm(u * 9 + k, v * 3, k) - 0.5
+                light = 0.22 + 0.45 * v ** 1.3 - 0.18 * side + 0.15 * u * (-side) + grain * 0.3
+                if side < 0 and u > 0.78 and v > 0.35:
+                    light += 0.35                                 # rim light on the dawn side
+                return needles(clamp(light)), 1.0, True, "tree"
+        rk = rock(x, y)
+        if rk:
+            return rk[0], rk[1], True, "rock"
         if y < shore:
-            top = far(x)
-            if y >= top:
-                c = pal.path("a4 a1 d1")((y - top) * 4)
-                snow = y - top < 0.025 and top < shore - 0.18
-                return (pal.rgb("t6") if snow else c), 1.0, False, "mountains"
-            c = sky(clamp(y / shore * 1.1))
-            return mix(c, pal.rgb("w8"), math.exp(-(((x - 0.9) / 0.6) ** 2 + ((y - shore) / 0.12) ** 2)) * 0.5), \
-                1.0, False, "sky"
-        # the lake: the scene above, mirrored and darker, with ripples
-        my = shore - (y - shore) * 1.3 + 0.004 * math.sin(y * 300 + x * 8)
-        c, _, _, tag = field(x, clamp(my, 0.0, shore - 0.001))
-        c = mix(c, pal.ground, 0.35 + (y - shore) * 0.8)
-        mist = math.exp(-((y - shore - 0.02) / 0.05) ** 2) * 0.5
-        return mix(c, pal.rgb("t4"), mist), 1.0, False, "lake"
+            m = mountains(x, y)
+            if m:
+                return m[0], 1.0, False, m[1]
+            if math.hypot(x - moon_x, y - moon_y) <= moon_r:
+                return pal.path("a4 t5 t8 w9")(moon_lit(x, y)), 1.0, False, "moon"
+            mist = math.exp(-((y - shore + 0.015) / 0.025) ** 2) * clamp(fbm(x * 5, y * 12, 7) * 1.6 - 0.4)
+            return mix(sky_at(x, y), pal.rgb("t6"), mist * 0.5), 1.0, False, "sky"
+        # the lake: everything above mirrored, darker further down, with
+        # ripples that catch the glow
+        depth = y - shore
+        wob = 0.006 * math.sin(y * 260 + 3 * fbm(x * 3, y * 20, 5)) * min(1.0, depth * 12)
+        my = shore - depth * 1.25 - 0.004
+        c, _, _, tag = field(x + wob, clamp(my, -0.4, shore - 0.001))
+        c = mix(c, pal.rgb("d0"), 0.25 + depth * 0.9)
+        ripple = math.sin(y * 420 + fbm(x * 6, y * 30, 11) * 8)
+        if ripple > 0.82:
+            c = mix(c, pal.path("a4 w6")(glow(x, shore)), 0.45 * (1 - depth * 2))
+        # the moon's glitter: broken dashes down the water under it
+        spread = 0.03 + depth * 0.25
+        if abs(x - moon_x) < spread and math.sin(y * 640 + fbm(x * 30, y * 8, 13) * 5) > 0.25:
+            c = mix(c, pal.rgb("t7"), clamp(0.8 - depth * 2) * (1 - abs(x - moon_x) / spread))
+        mist = math.exp(-((depth - 0.015) / 0.035) ** 2) * clamp(fbm(x * 4, y * 16, 12) * 1.5 - 0.35) * 0.6
+        return mix(c, pal.rgb("t5"), mist), 1.0, False, "lake"
 
     def texts(rows, x_left, cw, unit):
-        return stars(field, rows, x_left, cw, unit, rows * 3, 0.25, [pal.rgb("t8"), pal.rgb("t6")], 2,
-                     chars="..·")
+        out = stars(field, rows, x_left, cw, unit, rows * 4, 0.3, [pal.rgb("t8"), pal.rgb("t6"), pal.rgb("w8")],
+                    2, chars="..·'+")
+        return [s for s in out if math.hypot(x_left + s[0] * cw - moon_x, s[1] * unit - moon_y) > 0.12]
 
     return scene("pine", field, texts)
 
 
 # ---------------------------------------------------------------- autumn
 
-def leaf(pal):
-    """A big maple leaf drifting down in front of an autumn wood - red
-    and gold, veined, lit from the left - with more leaves falling."""
-    cx, cy, size = 1.28, 0.47, 0.4
-    ang0 = math.radians(-18)
+# a maple leaf's lobes: (angle from its stem side round, length, half width)
+_LOBES = ((math.pi / 2, 1.0, 0.62), (math.pi / 2 + 0.92, 0.92, 0.58), (math.pi / 2 - 0.92, 0.92, 0.58),
+          (math.pi / 2 + 1.85, 0.6, 0.5), (math.pi / 2 - 1.85, 0.6, 0.5))
 
-    def maple(x, y):
-        """0..1 inside the leaf (by how far in), or -1 outside; and the
-        polar angle."""
-        u, v = (x - cx) / size, (y - cy) / size
-        u, v = u * math.cos(ang0) - v * math.sin(ang0), u * math.sin(ang0) + v * math.cos(ang0)
-        r, a = math.hypot(u, v * 1.0), math.atan2(-v, u)
-        lobes = 0.55 + 0.32 * abs(math.cos(a * 2.5)) ** 0.6 + 0.12 * abs(math.sin(a * 9)) ** 3
-        if a < -1.2 and a > -1.95:                     # the bottom notch where the stem goes
-            lobes *= 0.55 + 0.45 * abs(a + 1.57) / 0.38
-        return (1 - r / lobes) if r <= lobes else -1, a, u, v
+
+def _maple_reach(a):
+    """How far a maple leaf reaches at polar angle a (0 right, pi/2 up
+    the leaf, its stem straight down): five pointed lobes, each with two
+    side points, toothed all round, and deep notches between them.
+    -> (reach, the nearest lobe, angle from its middle)."""
+    best, lobe, off = 0.34, 0, math.pi
+    for k, (la, ln, w) in enumerate(_LOBES):
+        d = math.atan2(math.sin(a - la), math.cos(a - la))
+        if abs(d) < abs(off):
+            lobe, off = k, d
+        if abs(d) < w:
+            f = 1 - abs(d) / w
+            r = 0.34 + 0.66 * ln * f ** 0.75
+            for side in (-1, 1):                              # the lobe's own side points
+                g = 1 - abs(d - side * w * 0.45) / (w * 0.14)
+                if g > 0:
+                    r += 0.14 * ln * g
+            best = max(best, r)
+    teeth = abs(((a * 17 / math.pi) % 1.0) - 0.5) * 2         # small saw teeth all round
+    best += 0.04 * teeth * min(1.0, best - 0.34 + 0.2)
+    return best, lobe, off
+
+
+def _maple(cx, cy, size, ang):
+    """A maple leaf at (cx, cy) turned by ang: at(x, y) -> None or (how far
+    in 0..1 along its radius, the nearest lobe, angle from it, distance
+    from the middle in leaf units, u right, v up the leaf)."""
+    ca, sa = math.cos(ang), math.sin(ang)
+
+    def at(x, y):
+        dx, dy = (x - cx) / size, (cy - y) / size
+        if abs(dx) > 1.25 or abs(dy) > 1.25:
+            return None
+        u, v = dx * ca + dy * sa, -dx * sa + dy * ca
+        r = math.hypot(u, v)
+        reach, lobe, off = _maple_reach(math.atan2(v, u))
+        if r > reach:
+            return None
+        return r / reach, lobe, off, r, u, v
+    return at
+
+
+def leaf(pal):
+    """A big maple leaf drifting down in front of an autumn wood: five
+    toothed lobes, veined from the stem, turning from gold at its heart
+    through orange to red at the tips, folded along its veins and lit from
+    the upper left, a few dark spots, and a long curving stalk. Behind it
+    trunks stand in a blazing canopy with light slanting through, more
+    leaves are falling, and the floor is thick with fallen leaves."""
+    cx, cy, size, ang = 1.32, 0.43, 0.41, math.radians(16)
+    main = _maple(cx, cy, size, ang)
+    ca, sa = math.cos(ang), math.sin(ang)
+    flesh = pal.path("w8 w7 w6 a6 a5 e6 e5 e4")
+    stalk_c = pal.path("x1 x4 e4 a5 w6")
+    leafy = [pal.path("x2 e3 e5 e6 e7"), pal.path("x2 a3 a5 a6 w7"), pal.path("d2 w4 w6 w7 w8"),
+             pal.path("x2 x5 e4 a5 a6")]
+    bark = pal.path("- x0 d0 d1 d2 d3 a4")
+    air = pal.path("- x0 x1 x3 e3 a4 w6")
+    floor_y = 0.84
+
+    # the stalk: a curve below the leaf, in leaf units (u right, v up)
+    stem_pts = [((1 - t) ** 2 * 0.0 + 2 * (1 - t) * t * 0.0 + t * t * 0.2,
+                 (1 - t) ** 2 * -0.12 + 2 * (1 - t) * t * -0.55 + t * t * -0.78) for t in (k / 16 for k in range(17))]
 
     def stem(x, y):
-        """The leaf's stalk: thick enough for the grid to hold it, and
-        shaded across so it reads as a stalk, not a hairline."""
-        u, v = (x - cx) / size, (y - cy) / size
-        u, v = u * math.cos(ang0) - v * math.sin(ang0), u * math.sin(ang0) + v * math.cos(ang0)
-        if not (0.02 < v < 0.78):
-            return -1.0
-        off = abs(u - v * v * 0.18)
-        half = 0.055 - 0.02 * v
-        return 1.0 - off / half if off <= half else -1.0
+        """-> across the stalk -1..1 (left to right), or None."""
+        dx, dy = (x - cx) / size, (cy - y) / size
+        u, v = dx * ca + dy * sa, -dx * sa + dy * ca
+        if not (-0.95 < v < -0.05 and -0.15 < u < 0.35):
+            return None
+        for k, ((ax, ay), (bx, by)) in enumerate(zip(stem_pts, stem_pts[1:])):
+            ex, ey = bx - ax, by - ay
+            t = clamp(((u - ax) * ex + (v - ay) * ey) / (ex * ex + ey * ey))
+            px, py = u - ax - ex * t, v - ay - ey * t
+            half = 0.055 - 0.02 * (k + t) / 16
+            if px * px + py * py <= half * half:
+                return clamp((px * -ey + py * ex) / math.hypot(ex, ey) / half, -1.0, 1.0)
+        return None
 
-    flesh = pal.path("e1 e4 e6 a6 w6 w8")
+    def leaf_colour(hit, x, y):
+        k, lobe, off, r, u, v = hit
+        la = _LOBES[lobe][0]
+        along, across = r * math.cos(off), r * math.sin(off)
+        # gold at the heart to red at the tips, redder to the right
+        heat = clamp(0.02 + 0.95 * k ** 1.15 + 0.22 * u + 0.3 * (fbm(x * 9, y * 9, 4) - 0.5))
+        c = flesh(heat)
+        # folded along each lobe's vein: one half catches the light
+        lit = 0.55 + (0.22 if off * (1 if la > math.pi / 2 else -1) > 0 else -0.12) - 0.3 * u * 0.5 + 0.18 * v
+        lit += 0.2 * (fbm(x * 30, y * 30, 6) - 0.5)
+        if lit > 0.62:
+            c = mix(c, pal.rgb("w8"), clamp((lit - 0.62) * 1.4) * 0.5)
+        else:
+            c = mix(c, pal.rgb("e2"), clamp((0.62 - lit) * 1.6) * 0.7)
+        # veins: one down each lobe, side veins branching off towards the edge
+        vw = 0.024 * (1 - 0.6 * k)
+        side = (along - abs(across) * 1.25) % 0.17
+        if abs(across) < vw and along > 0:
+            c = mix(c, pal.rgb("w8"), 0.75)
+        elif min(side, 0.17 - side) < 0.009 and 0.15 < r and k < 0.9:
+            c = mix(c, pal.rgb("w7"), 0.45)
+        elif r < 0.06:
+            c = mix(c, pal.rgb("w8"), 0.6)
+        # tar spots
+        spot = fbm(x * 34, y * 34, 21)
+        if spot > 0.79 and 0.2 < k < 0.85:
+            c = mix(pal.rgb("x1"), pal.rgb("e3"), clamp((0.8 - spot) * 12))
+        if k > 0.92:
+            c = mix(c, pal.rgb("x2"), 0.65)                       # a darker rim
+        return c
+
+    # leaves falling, drifting and turning: (x, y, size, angle, colours)
+    fall = []
+    for i in range(90):
+        fx = -7.0 + 9.0 * _hash(i, 1, 31)
+        fy = -0.45 + 1.2 * _hash(i, 2, 31)
+        if math.hypot(fx - cx, (fy - cy) * 1.0) < size * 1.15 or fy > floor_y - 0.04:
+            continue
+        fall.append((_maple(fx, fy, 0.05 + 0.04 * _hash(i, 3, 31), 6.28 * _hash(i, 4, 31)),
+                     leafy[i % len(leafy)], fx, fy))
+
+    def trunk(x, y):
+        """A tree's trunk here: -> (across -1..1, how near 0..1, x) or None."""
+        slot = math.floor(x / 0.34)
+        for s in (slot - 1, slot, slot + 1):
+            near = _hash(s, 1, 77)
+            tx = s * 0.34 + 0.17 + 0.24 * (_hash(s, 2, 77) - 0.5)
+            w = 0.014 + 0.06 * near ** 2
+            lean = (_hash(s, 3, 77) - 0.5) * 0.08
+            mid = tx + lean * (floor_y - y) + 0.004 * math.sin(y * 30 + s)
+            if abs(x - mid) < w * (1 + 0.25 * clamp(y - floor_y + 0.08) * 12):
+                return (x - mid) / w, near, s
+        return None
+
+    def canopy(x, y):
+        """Leaves overhead: density 0..1 and which colour."""
+        dens = (fbm(x * 11, y * 15, 41, 3) + 0.62 - y * 1.1 + 0.15 * (fbm(x * 2, y * 2, 42) - 0.5)
+                + 0.22 * (noise(x * 70, y * 100, 44) - 0.5))
+        return dens, fbm(x * 2.2, y * 2.2, 43)
+
+    def wood(x, y):
+        """(rgb, tag) of the wood behind."""
+        yy = max(y, -0.5)
+        shaft = clamp(math.sin((x + yy * 0.55) * 9 + fbm(x * 2, 0, 3) * 4) * 1.6 - 0.9)
+        glow = math.exp(-(((x - 0.3) / 0.8) ** 2 + ((yy - 0.45) / 0.4) ** 2))
+        haze = clamp(0.18 + glow * 0.5 + shaft * 0.22 + 0.2 * (fbm(x * 3, yy * 3, 5) - 0.5))
+        edge = floor_y + 0.03 * (fbm(x * 4, 0.5, 8) - 0.5)
+        if yy >= edge:
+            # the floor: fallen leaves, small and hazy far off, big near
+            depth = clamp((yy - floor_y) / (1 - floor_y))
+            gx, gy = 0.05 + 0.04 * depth, 0.022 + 0.016 * depth
+            ix, iy = math.floor(x / gx), math.floor(yy / gy)
+            best = None
+            for jx in (ix - 1, ix, ix + 1):
+                for jy in (iy - 1, iy, iy + 1):
+                    px = (jx + _hash(jx, jy, 51)) * gx
+                    py = (jy + _hash(jx, jy, 52)) * gy
+                    d = ((x - px) / (gx * 0.75)) ** 2 + ((yy - py) / (gy * 0.8)) ** 2
+                    if d < 1 and (best is None or py > best[1]):
+                        best = (d, py, _hash(jx, jy, 53))
+            if best:
+                d, py, h = best
+                c = leafy[int(h * 4) % 4](clamp(0.9 - d * 0.6 - (1 - depth) * 0.45 + (h - 0.5) * 0.3))
+            else:
+                c = pal.rgb("x1")
+            c = mix(c, air(haze), clamp(0.4 - depth * 0.6))
+            c = mix(c, pal.rgb("x0"), clamp(0.6 - (yy - edge) * 9))           # the shade under the trees
+            return c, "ground"
+        tr = trunk(x, yy)
+        if tr:
+            nx, near, s = tr
+            light = clamp(0.62 - nx * 0.45 - abs(nx) ** 3 * 0.3) * (0.55 + 0.45 * near)
+            light += 0.18 * (noise(nx * 2 + s * 5, yy * 60, 61) - 0.5)       # bark furrows
+            c = bark(clamp(light))
+            if nx < -0.55 and near > 0.4:
+                c = mix(c, pal.rgb("a6"), 0.5)                               # rim lit
+            c = mix(c, air(haze), clamp(0.75 - near * 0.95))                  # far ones fade in the haze
+            return c, "trees"
+        dens, hue = canopy(x, yy)
+        if dens > 0.62:
+            pick = leafy[0] if hue < 0.45 else leafy[3] if hue < 0.56 else leafy[1] if hue < 0.64 else leafy[2]
+            # clumps of leaves: lit at their edges and from above, deep inside
+            sun = clamp(0.62 - min(0.3, dens - 0.62) * 1.3 + shaft * 0.2 + 0.6 * (noise(x * 55, yy * 80, 45) - 0.5)
+                        - max(0.0, yy - 0.12) * 1.1) * (0.55 + 0.45 * glow + 0.3 * shaft)
+            return pick(sun), "trees"
+        return air(haze + clamp(0.62 - dens) * 0.4), "wood"
 
     def field(x, y):
-        inside, a, u, v = maple(x, y)
-        stalk = stem(x, y)
-        if inside >= 0 or stalk >= 0:
-            if inside < 0:
-                # the stalk: the leaf's own colours, so it reads as part of
-                # the leaf rather than a scratch on the wood, with a dark rim
-                # down one side and the lit side turning gold
-                lit = clamp(0.55 + stalk * 0.55)
-                c = flesh(lit)
-                c = mix(c, pal.rgb("x1"), clamp(0.75 - stalk * 0.8))
-                return c, 1.0, True, "leaf"
-            vein = any(abs(math.sin(a - va)) * math.hypot(u, v) < 0.022 and math.cos(a - va) > 0
-                       for va in (math.pi / 2, math.pi / 2 + 1.1, math.pi / 2 - 1.1, math.pi / 2 + 2.1,
-                                  math.pi / 2 - 2.1))
-            light = clamp(0.35 + 0.5 * (-u * 0.6 - v * 0.4) + inside * 0.4 + fbm(x * 20, y * 20, 4) * 0.25)
-            c = flesh(light)
-            if vein:
-                c = mix(c, pal.rgb("w8"), 0.6)
-            if inside < 0.06:
-                c = mix(c, pal.rgb("e1"), 0.5)            # a darker rim
-            return c, 1.0, True, "leaf"
-        # the wood behind: trunks, a glowing canopy, a path of leaves
-        canopy = fbm(x * 2.5, y * 4, 9, 4)
-        if y > 0.86:
-            litter = fbm(x * 18, y * 30, 5)
-            return pal.path("- x1 e1 e4 a4")(clamp(litter * 0.9 - (y - 0.86) * 3)), 1.0, False, "ground"
-        for tx in (-2.9, -2.3, -1.7, -1.05, -0.5, 0.1, 0.7, 1.75):
-            w = 0.03 + 0.02 * math.sin(tx * 5) ** 2
-            if abs(x - tx - (0.86 - y) * 0.04 * math.sin(tx * 3)) < w and y > 0.3 + 0.1 * math.sin(tx * 7):
-                return mix(pal.ground, pal.rgb("x1"), 0.6), 1.0, False, "trees"
-        glow = math.exp(-(((x - 0.3) / 1.2) ** 2 + ((y - 0.6) / 0.45) ** 2))
-        c = pal.path("- x1 e1 e4 a4")(clamp(canopy * 0.55 + glow * 0.4 - y * 0.25))
-        return c, 1.0, False, "wood"
+        hit = main(x, y)
+        if hit:
+            return leaf_colour(hit, x, y), 1.0, True, "leaf"
+        st = stem(x, y)
+        if st is not None:
+            return stalk_c(clamp(0.6 - st * 0.45)), 1.0, True, "leaf"
+        for fl, col, fx, fy in fall:
+            if abs(x - fx) < 0.09 and abs(y - fy) < 0.09:
+                h = fl(x, y)
+                if h:
+                    c = col(clamp(1.0 - h[0] * 0.45 + 0.2 * h[4]))
+                    return (mix(c, pal.rgb("x1"), 0.6) if h[0] > 0.85 else c), 1.0, False, "falling"
+        c, tag = wood(x, y)
+        if main(x - 0.025, y - 0.035) or stem(x - 0.025, y - 0.035) is not None:
+            c = mix(c, pal.ground, 0.45)                          # the leaf's shadow
+        return c, 1.0, False, tag
 
     def texts(rows, x_left, cw, unit):
         rnd = random.Random(7)
         out = []
         for _ in range(rows):
-            x, y = rnd.uniform(-3.0, 1.9), rnd.uniform(0.05, 0.85)
-            if field(x, y)[3] in ("wood", "trees"):
-                out.append((int((x - x_left) / cw), int(y / unit), rnd.choice("*%&,'"),
-                            rnd.choice([pal.rgb("e6"), pal.rgb("a6"), pal.rgb("w6"), pal.rgb("a8")]), False))
+            x, y = rnd.uniform(-3.0, 1.9), rnd.uniform(0.05, 0.8)
+            if field(x, y)[3] == "wood":
+                out.append((int((x - x_left) / cw), int(y / unit), rnd.choice("·'.,"),
+                            rnd.choice([pal.rgb("w8"), pal.rgb("a8"), pal.rgb("t8")]), False))
         return out
 
-    return scene("autumn", field, texts, inks={"leaf": "eawx", "wood": "xeaw", "ground": "xeaw"})
+    return scene("autumn", field, texts, inks={"leaf": "eawx", "wood": "xeawt", "ground": "xeawd",
+                                               "trees": "xeawdg", "falling": "xeawdg"})
 
 
 # ---------------------------------------------------------------- desert

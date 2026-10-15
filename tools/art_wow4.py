@@ -86,30 +86,52 @@ def monitor(pal):
         arm = 0.22 < u < 0.55 and -0.3 < v < -0.02
         return body or tail or neck or head or snout or leg1 or leg2 or foot1 or foot2 or arm
 
+    top = 0.872                                         # the table's surface, back edge
+
+    def stone(x, y):
+        """The amber's colour and tag at (x, y), or None outside it."""
+        if not in_amber(x, y):
+            return None
+        u, v = (x - ax) / ar, (y - ay) / (ar * 1.32)
+        r = math.hypot(u, v)
+        # the stone is lit from behind: brightest in the middle
+        core = clamp(1.0 - r * 0.8)
+        cloudy = fbm(x * 9, y * 9, 2) * 0.3 + fbm(x * 24, y * 24, 5) * 0.12
+        t = clamp(core * 0.95 + cloudy * 0.35 + 0.15)
+        if rex(x, y):
+            # the animal shows as a darker amber: lit through where the
+            # resin is thin, deeper where the body is thick
+            return pal.path("x1 x4 g4 w6")(clamp(0.05 + core * 0.55)), "rex"
+        # no g6 in the path: the mix either side of it comes out olive
+        c = pal.path("x1 x4 w6 w8 w9")(clamp(t * 1.35))
+        if r > 0.86:                                    # the polished edge
+            return pal.path("w6 w8 w9")(clamp(1 - (r - 0.86) * 3)), "amber"
+        return c, "amber"
+
     def field(x, y):
-        if in_amber(x, y):
-            u, v = (x - ax) / ar, (y - ay) / (ar * 1.32)
-            r = math.hypot(u, v)
-            # the stone is lit from behind: brightest in the middle
-            core = clamp(1.0 - r * 0.8)
-            cloudy = fbm(x * 9, y * 9, 2) * 0.3 + fbm(x * 24, y * 24, 5) * 0.12
-            t = clamp(core * 0.95 + cloudy * 0.35 + 0.15)
-            if rex(x, y):
-                # the animal shows as a darker amber: lit through where the
-                # resin is thin, deeper where the body is thick
-                return pal.path("x1 x4 g4 w6")(clamp(0.05 + core * 0.55)), 1.0, True, "rex"
-            # no g6 in the path: the mix either side of it comes out olive
-            c = pal.path("x1 x4 w6 w8 w9")(clamp(t * 1.35))
-            if r > 0.86:                                    # the polished edge
-                return pal.path("w6 w8 w9")(clamp(1 - (r - 0.86) * 3)), 1.0, True, "amber"
-            return c, 1.0, True, "amber"
-        # a warm halo on the table, then the dark room
+        got = stone(x, y)
+        if got:
+            return got[0], 1.0, True, got[1]
         halo = math.exp(-(((x - ax) / 0.62) ** 2 + ((y - ay) / 0.55) ** 2))
-        if y > 0.9:
-            grain = fbm(x * 4, y * 40, 2)
-            return mix(pal.path("- x1 a4 x4")(clamp(grain * 0.6)), pal.rgb("a4"), halo * 0.5), \
-                1.0, False, "table"
-        return pal.path("- x1 a4")(clamp(halo * 0.75)), 1.0, False, "room"
+        if y < top:                                     # a warm halo, then the dark room
+            return pal.path("- x0 x1 w2")(clamp(halo * 0.8)), 1.0, False, "room"
+        # dark polished wood: long grain, a warm pool of light round the
+        # stone, its mirror image below it, softening with distance
+        d = (y - top) / (1 - top)                       # 0 at the back .. 1 at the front
+        grain = fbm(x * 2.5, y * 70, 2) * 0.6 + fbm(x * 9, y * 160, 7) * 0.4
+        pool_w = math.exp(-((x - ax) / 0.9) ** 2)          # the wood shows more near the light
+        wood = pal.path("- w0 t0 t1")(clamp(0.16 + (grain - 0.5) * (0.12 + 0.5 * pool_w) + pool_w * 0.25 - d * 0.06))
+        pool = math.exp(-((x - ax) / (0.42 + d * 0.2)) ** 2 - (d / 0.9) ** 2)
+        c = mix(wood, pal.rgb("w4"), pool * 0.45)
+        if y - top < 0.006:                              # the back edge catches the glow
+            c = mix(c, pal.rgb("w6"), 0.25 + 0.6 * math.exp(-((x - ax) / 0.5) ** 2))
+        ripple = 0.004 * math.sin(y * 300 + x * 4) * d    # the polish isn't perfect
+        mirror = stone(x + ripple, 2 * top - y)
+        if mirror:
+            c = mix(c, mirror[0], 0.62 - d * 0.35 - grain * 0.12)
+        if y - top < 0.008 and abs(x - ax) < ar * 0.55:  # the stone's contact shadow
+            c = mix(c, pal.ground, 0.6)
+        return c, 1.0, False, "table"
 
     def texts(rows, x_left, cw, unit):
         # specks of dust and bubbles caught in the resin
@@ -124,7 +146,7 @@ def monitor(pal):
                             rnd.choice([pal.rgb("w8"), pal.rgb("a8"), pal.rgb("x4")]), True))
         return out
 
-    return scene("amber", field, texts, inks={"amber": "xaw", "rex": "xa", "room": "xa", "table": "xa"})
+    return scene("amber", field, texts, inks={"amber": "xwt", "rex": "xwt", "room": "xw", "table": "tw"})
 
 
 # ---------------------------------------------------------------- paper
@@ -528,36 +550,116 @@ def glitch(pal):
 
 # ---------------------------------------------------------------- bubbly
 
+def _buckets(discs, cell=0.12):
+    """Discs (x, y, r, ...) by the grid squares they touch, so a field
+    with hundreds of them only tests the few nearby: at(x, y) -> list."""
+    grid = {}
+    for dsc in discs:
+        x, y, r = dsc[:3]
+        for i in range(math.floor((x - r) / cell), math.floor((x + r) / cell) + 1):
+            for j in range(math.floor((y - r) / cell), math.floor((y + r) / cell) + 1):
+                grid.setdefault((i, j), []).append(dsc)
+    return lambda x, y: grid.get((math.floor(x / cell), math.floor(y / cell)), ())
+
+
 def bubbles(pal):
-    """Big soap bubbles floating up through a soft pink haze: thin rims,
-    swirls of colour on their skins, bright window glints."""
+    """Soap bubbles drifting up through a rosy dusk: crisp bright rims,
+    thin-film swirls of pink, violet and gold on their skins, the room
+    behind seen upside down and darker through each one, a hard window
+    glint and a soft second reflection; far bubbles small and hazy, near
+    ones sharp, out-of-focus discs of light deep behind. No green."""
     rnd = random.Random(29)
-    big = [(1.3, 0.45, 0.24), (1.72, 0.25, 0.12), (0.92, 0.2, 0.09), (1.75, 0.72, 0.1)]
-    small = [(rnd.uniform(-3.1, 1.9), rnd.uniform(0.05, 0.95), rnd.uniform(0.015, 0.05)) for _ in range(60)]
+    # (x, y, r, depth 0 far .. 1 near); the big ones are the subject
+    big = [(1.3, 0.45, 0.24, 1.0), (1.72, 0.25, 0.12, 0.9), (0.92, 0.2, 0.09, 0.85), (1.75, 0.72, 0.1, 0.9)]
+    small = []
+    for _ in range(170):
+        k = rnd.random() ** 1.6                       # most of them far off
+        small.append((rnd.uniform(-7.4, 1.95), rnd.uniform(-0.6, 0.97), 0.014 + 0.05 * k, k * 0.75))
+    small = [b for b in small if all(math.hypot(b[0] - c[0], b[1] - c[1]) > c[2] + b[2] for c in big)]
+    bokeh = [(rnd.uniform(-7.4, 1.95), rnd.uniform(-0.6, 1.0), rnd.uniform(0.04, 0.11), rnd.choice("a5 a7 a8 a3".split()))
+             for _ in range(70)]
+    near_small = _buckets(small)
+    rows_now = [28]                                   # set by texts(): the size being drawn
+    near_bokeh = _buckets(bokeh, 0.25)
+    # the film's colours as it thins: no g and no w (the theme's olive) anywhere
+    film = pal.path("t2 a1 a0 a5 a6 a9 t5 a7 a2 t1 t2")
+    swirl = pal.path("a2 a5 a8 a6 t3 a1 a2")
+    glow_x, glow_y = 1.35, 0.5                       # where the light behind comes from
+
+    def backdrop(x, y):
+        """The rosy room: darker above, a warm pool of light low right,
+        soft haze and blurred discs of light."""
+        haze = fbm(x * 1.6, y * 2.4, 5)
+        pool = math.exp(-((x - glow_x) / 0.75) ** 2 - ((y - glow_y) / 0.5) ** 2)
+        t = clamp(0.1 + clamp(y + 0.2) * 0.1 + pool * 0.62 + (haze - 0.5) * 0.2)
+        c = pal.path("- - a0 a1 a2 a3 a5 a7")(t)
+        for bx, by, r, hue in near_bokeh(x, y):
+            d = math.hypot(x - bx, y - by) / r
+            if d < 1:
+                c = mix(c, pal.rgb(hue), 0.3 * clamp((1 - d) * 1.6) * (0.5 + 0.5 * (r > 0.08)))
+        return c
+
+    def skin(x, y, bx, by, r, k):
+        """A bubble's colour at (x, y): k is how near it is (sharpness)."""
+        u, v = (x - bx) / r, (y - by) / r
+        d = math.hypot(u, v)
+        # the room behind, flipped and shrunk by the bubble, a little darker
+        seen = mix(backdrop(bx - u * r * 0.75, by - v * r * 0.75), pal.ground, 0.3)
+        # thin-film colour: bands swirling with the film's thickness, which
+        # drains thinner at the top
+        ang = math.atan2(v, u)
+        flow = fbm(u * 1.4 + bx * 3, v * 1.4 + by * 3, 8)
+        phase = ang / 6.283 + flow * 0.6 - v * 0.2 + bx
+        hue = film(phase % 1.0)
+        fresnel = clamp((d - 0.3) / 0.6) ** 1.4
+        c = mix(seen, hue, (0.15 + 0.85 * fresnel) * (0.55 + 0.45 * k))
+        # swirling bands of colour drifting over the face
+        vein = clamp(1 - abs(fbm(u * 1.1 + bx * 7, v * 1.6 + by * 7, 9) - 0.5) * 9)
+        c = mix(c, swirl((phase + 0.3) % 1.0), vein * 0.5 * k * (1 - fresnel))
+        if d > 0.9:                                    # the bright rim
+            c = mix(hue, pal.rgb("t6"), 0.1 + 0.25 * k)
+        elif d > 0.82:                                 # a darker line just inside it
+            c = mix(c, pal.rgb("x0"), 0.35 * k)
+        # the soft second reflection: a crescent low right
+        cres = clamp(1 - abs(ang - 0.75) / 0.7) * clamp(1 - abs(d - 0.7) / 0.14)
+        c = mix(c, pal.rgb("t5"), cres * 0.55 * k)
+        # the window glint, top left: a hard bright pane and a small dot
+        gu, gv = u + 0.4, v + 0.4
+        if (gu - gv) ** 2 / 0.12 + (gu + gv) ** 2 / 0.025 <= 1:          # along the curve
+            return mix(c, pal.rgb("t9"), 0.4 + 0.6 * k)
+        if math.hypot(u + 0.02, v + 0.66) < 0.08:
+            return mix(c, pal.rgb("t8"), 0.8 * k)
+        # far bubbles melt into the haze
+        return mix(backdrop(x, y), c, 0.45 + 0.55 * k)
 
     def field(x, y):
-        for bx, by, r in big + small:
-            d = math.hypot(x - bx, y - by) / r
-            if d <= 1:
-                main = (bx, by, r) in big
-                rim = d > 0.86
-                swirl = math.sin(math.atan2(y - by, x - bx) * 2 + d * 6 + bx * 5) * 0.5 + 0.5
-                glint = math.hypot((x - bx) / r + 0.4, (y - by) / r + 0.45) < 0.16
-                bg, _, _, _ = field_bg(x, y)
-                if glint:
-                    return pal.rgb("t9"), 1.0, main, "bubble"
-                if rim:
-                    # no green on the skins (the owner asked for it out):
-                    # pinks and warm whites only
-                    return mix(bg, pal.path("a6 a8 w6 t8")(swirl), 0.85), 1.0, main, "bubble"
-                return mix(bg, pal.path("a4 a6 t6")(swirl), 0.18 + (d ** 4) * 0.4), 1.0, main, "bubble"
-        return field_bg(x, y)
+        for bx, by, r, k in big:
+            if (x - bx) ** 2 + (y - by) ** 2 <= r * r:
+                return skin(x, y, bx, by, r, k), 1.0, True, "bubble"
+        hit = None
+        for b in near_small(x, y):
+            if b[2] * rows_now[0] < 0.5:                 # under half a row: a speck, not a bubble
+                continue
+            if (x - b[0]) ** 2 + (y - b[1]) ** 2 <= b[2] * b[2] and (hit is None or b[3] > hit[3]):
+                hit = b
+        if hit:
+            return skin(x, y, *hit), 1.0, False, "bubble"
+        return backdrop(x, y), 1.0, False, "haze"
 
-    def field_bg(x, y):
-        haze = fbm(x * 2, y * 3, 5)
-        return pal.path("- d1 a1 a4")(clamp(0.2 + haze * 0.5 - y * 0.2)), 1.0, False, "haze"
+    def texts(rows, x_left, cw, unit):
+        # the farthest bubbles, too small to draw, and a few sparkles
+        rows_now[0] = rows
+        rng = random.Random(31)
+        out = []
+        for _ in range(rows * 5):
+            x, y = rng.uniform(-3.2, 1.9), rng.uniform(0.0, 1.0)
+            if field(x, y)[3] != "haze":
+                continue
+            out.append((_col(x, x_left, cw), int(y / unit), rng.choice("°°·.'"),
+                        rng.choice([pal.rgb("a5"), pal.rgb("a7"), pal.rgb("t4"), pal.rgb("a3")]), False))
+        return out
 
-    return scene("bubbly", field, inks={"haze": "da", "bubble": "atgd"})
+    return scene("bubbly", field, texts, inks={"haze": "a", "bubble": "at"})
 
 
 # ---------------------------------------------------------------- aurora
@@ -727,87 +829,239 @@ def aurora(pal):
 
 # ---------------------------------------------------------------- synthwave
 
+def _floor_rows(rows, hz, first=1.0, step=0.25):
+    """The neon floor's cross lines for a picture `rows` tall: evenly
+    spaced in depth, so bunching towards the horizon. Returns (near, far):
+    near lines snapped to cell edges (row numbers, drawn as eighth-block
+    lines) while they're a row or more apart, then far ones as y in braille
+    dot rows, every one that's clear of the last (four dots near the
+    viewer, two at the horizon), right up to the horizon (denser and
+    denser, so the grid runs into the glow)."""
+    near, far, n = [], [], 0
+    last, last_dot = None, None
+    horizon = math.floor(hz * rows * 4) + 1             # the first dot row below it
+    while n < 5000:
+        t = 1 / (first + n * step)
+        y = hz + (1 - hz) * t
+        nxt = hz + (1 - hz) / (first + (n + 1) * step)
+        n += 1
+        if not far and (y - nxt) * rows >= 1.0:
+            b = round(y * rows)
+            if b != last and b * 1.0 / rows > hz + 0.5 / rows:
+                near.append(b)
+                last = b
+            continue
+        r = math.floor(y * rows * 4)
+        if r <= horizon:
+            break
+        top = ((last if last is not None else rows) - 1) * 4    # not in the last near line's cell
+        need = 2 + round(2 * clamp(t * 2.5 - 0.25))       # sparser nearer the viewer
+        if r < top and (last_dot is None or r <= last_dot - need):
+            far.append((r + 0.5) / (rows * 4))
+            last_dot = r
+    return near, far
+
+
+def _long_lines(rows, hz, sx, spread, lo=-46, hi=4):
+    """The floor's long lines for a picture `rows` tall: (x at the bottom,
+    t where it starts) for each, all meeting at (sx, hz). Evenly spaced
+    along the bottom near the middle; further out, where they lie flatter,
+    only every so many, so each stays clear of the next; each starts where
+    it's a cell (two dots across) clear of its neighbours (no moire at
+    the horizon)."""
+    depth = 1 - hz
+    cands = sorted((sx + k * spread for k in range(lo, hi + 1) if abs(k) > 3),   # the road covers the rest
+                   key=lambda xb: abs(xb - sx))
+    ang = lambda xb: math.atan2(xb - sx, depth)
+    kept = []
+    for xb in cands:                                    # outwards from the middle
+        side = [a for a in kept if (a - sx) * (xb - sx) > 0 or a == sx]
+        near = min(side, key=lambda a: abs(a - xb)) if side else None
+        reach = math.hypot(xb - sx, depth)
+        if near is None or abs(ang(xb) - ang(near)) * reach >= 1.6 / rows:
+            kept.append(xb)
+    kept.sort()
+    out = []
+    for i, xb in enumerate(kept):
+        gaps = [abs(ang(xb) - ang(o)) for o in kept[max(0, i - 1):i + 2] if o != xb]
+        gap = min(gaps) if gaps else 1.0
+        reach = math.hypot(xb - sx, depth)
+        out.append((xb, clamp(0.8 / rows / max(gap * reach, 1e-6), 0.02, 0.95)))
+    return out
+
+
 def grid(pal):
-    """Outrun: a striped neon sun over wireframe mountains, a glowing grid
-    racing to the horizon, a lone car seen from behind - its boot lid
-    catching the light and two red tail lights - on the road."""
+    """Outrun: a striped neon sun over dark mountains, a clean neon grid
+    racing to a glowing horizon - cross lines as crisp eighth-block lines
+    snapped to the cells, the long lines in braille, all meeting under the
+    sun - a road with neon edges, and a lone car seen from behind, its tail
+    lights throwing a red glow on the road."""
     hz = 0.6
     sx, sy, sr = 1.25, 0.38, 0.24
-    mounts = ridge([(0.4, 0.4, 0.14), (1.7, 0.35, 0.16), (-0.6, 0.5, 0.12), (-2.0, 0.6, 0.16)], hz)
-    # the car is sized as a share of the picture so it reads at every size
-    half = 0.105
+    mounts = ridge([(0.4, 0.4, 0.14), (1.7, 0.35, 0.16), (-0.6, 0.5, 0.12), (-2.0, 0.6, 0.16),
+                    (-3.4, 0.5, 0.12), (-4.8, 0.65, 0.17), (-6.3, 0.5, 0.13)], hz)
+    spread = 0.2                                    # the long lines' spacing along the bottom
+    cy, half = 0.86, 0.155                          # the car, as a share of the picture
+    road = lambda x, t: abs(x - sx) < 0.035 + t * 0.6
+    rows_now = [28]                                  # set by texts(): the size being drawn
+    cache = {}
+
+    def cross(rows):
+        if rows not in cache:
+            cache[rows] = _floor_rows(rows, hz)
+        return cache[rows]
+
+    def longs(rows):
+        """The long lines across the whole floor: (x at the bottom, t
+        where each starts)."""
+        if ("long", rows) not in cache:
+            cache[("long", rows)] = _long_lines(rows, hz, sx, spread)
+        return cache[("long", rows)]
+
+    def crossed(x, b, rows):
+        """Whether a long line runs through the cell just above row edge
+        b at x (that cell is braille, so the cross line goes through it in
+        braille too)."""
+        cw = 0.5 / rows
+        x_left = 1.9 - max(round(1.9 / cw), art_combined.SPAN_COLS) * cw
+        xa = x_left + math.floor((x - x_left) / cw) * cw
+        t1, ta = (b / rows - hz) / (1 - hz), ((b - 1) / rows - hz) / (1 - hz)
+        for side in (-1, 1):                                # the road's edges
+            x0, x1 = sx + side * (0.035 + 0.6 * ta), sx + side * (0.035 + 0.6 * t1)
+            if max(x0, x1) >= xa and min(x0, x1) < xa + cw:
+                return True
+        for xb, start in longs(rows):
+            t0 = max(start, ta)
+            if t1 < t0:
+                continue
+            x0, x1 = sx + (xb - sx) * t0, sx + (xb - sx) * t1
+            if max(x0, x1) >= xa and min(x0, x1) < xa + cw:
+                return True
+        return False
 
     def car(x, y):
-        """(band, light) for the car seen from behind, or None.
-
-        Bands: 0 cabin, 1 body, 2 wheel, 4 flank line, 5 boot lid."""
-        dx, dy = x - sx, y - 0.862
-        if not (-half - 0.02 < dx < half + 0.02 and -0.055 < dy < 0.075):
+        """What part of the car is at (x, y), or None: "glass", "roof",
+        "lip", "deck", "lamp", "slat", "grille", "plate", "pipe", "bumper",
+        "tyre"."""
+        u, v = (x - sx) / half, (y - cy) / 0.08          # v -1 roof .. 1 road
+        if not (-1.0 <= u <= 1.0 and -1.05 <= v <= 1.0):
             return None
-        u, v = dx / half, dy / 0.06
-        wheel = 1.15 < v < 2.4 and abs(u) > 0.6
-        if wheel:
-            return 2, False
-        w = 0.86 if v < -0.8 else 0.9
-        if abs(u) > w:
+        if v > 0.6:
+            return "tyre" if 0.62 < abs(u) < 0.94 else None
+        if v < -0.45:                                       # the cabin, narrower
+            w = 0.62 + (v + 1.05) * 0.35
+            if abs(u) > w:
+                return None
+            return "roof" if v < -0.92 or abs(u) > w - 0.07 else "glass"
+        if abs(u) > 0.97:
             return None
-        # the tail lights: two bars, with a gap between them
-        if -0.55 < v < 0.35 and 0.36 < abs(u) < 0.74:
-            return 1, True
-        if v >= 1.2:
-            return 5, False                                  # the boot lid catches the light
-        if v < -0.75:
-            return 0, False                                  # the cabin
-        if -0.75 <= v < -0.35 and abs(u) < 0.58:
-            return 0, False                                  # the rear window stays dark
-        if abs(u) > 0.8:
-            return 4, False                                  # a line down the flank
-        return 1, False
+        if v < -0.36:
+            return "lip"                                    # the spoiler's edge catches the sun
+        if v < -0.2:
+            return "deck"
+        if v < 0.22:
+            if abs(u) > 0.42:
+                return "lamp"
+            return "slat" if math.sin(v * 22) > 0.2 else "grille"
+        if v < 0.48 and abs(u) < 0.2:
+            return "plate"
+        if 0.4 < v < 0.6 and 0.24 < abs(u) < 0.36:
+            return "pipe"
+        return "bumper"
 
     def field(x, y):
         if y < hz:
             d = math.hypot(x - sx, y - sy)
             top = mounts(x)
+            haze = math.exp(-((hz - y) / 0.035))         # the glow along the horizon
             if y >= top:
                 edge = y - top < 0.01
-                return (pal.rgb("a6") if edge else pal.path("x1 d1 -")((y - top) * 4)), 1.0, False, "mountain"
+                c = pal.rgb("a6") if edge else pal.path("x1 d1 -")((y - top) * 4)
+                return mix(c, pal.rgb("e5"), haze * 0.55), 1.0, False, "mountain"
             if d <= sr:
                 t = (y - sy + sr) / (2 * sr)
                 gap = t > 0.45 and math.sin(t * 60) > 1.6 - t * 1.8
                 if not gap:
                     return pal.path("w8 w6 a8 a6 e6")(t), 1.0, True, "sun"
             c = pal.path("- d1 x1 a4 e4")(clamp(y / hz))
-            return mix(c, pal.rgb("a6"), math.exp(-((d - sr) / 0.08) ** 2) * 0.5 * (d > sr)), 1.0, False, "sky"
+            c = mix(c, pal.rgb("a6"), math.exp(-((d - sr) / 0.08) ** 2) * 0.5 * (d > sr))
+            return mix(c, pal.rgb("e6"), haze * 0.5), 1.0, False, "sky"
         t = (y - hz) / (1 - hz)
-        u = (x - sx) / (t + 0.04)
-        line = abs(u - round(u * 2.5) / 2.5) < 0.012 / (t + 0.04) * 0.6 or abs(math.sin(1 / (t + 0.06) * 6)) < 0.12
-        road = abs(x - sx) < 0.05 + t * 0.6
-        c = pal.path("x1 d1 -")(t) if not road else pal.path("d1 -")(t * 0.7)
-        if line and not road:
-            c = pal.path("a8 a6 e6")(t)
-        if road and abs(x - sx) < 0.004 + t * 0.01 and math.sin(1 / (t + 0.05) * 12) > 0:
-            c = pal.rgb("w6")
-        if y > 0.76:
-            got = car(x, y)
-            if got:
-                band, light = got
-                if light:
-                    return pal.rgb("e6"), 1.0, True, "car"
-                if band == 0:                               # the cabin
-                    return pal.ground, 1.0, True, "car"
-                if band == 2:                               # the wheels
-                    return pal.rgb("d1"), 1.0, True, "car"
-                if band == 5:                               # the boot lid
-                    return pal.path("x1 d1")(0.75), 1.0, True, "car"
-                if band == 4:                               # the flank line
-                    return pal.path("d1 x1")(clamp((y - 0.862) * 12 + 0.4)), 1.0, True, "car"
-                return pal.path("d1 x1")(clamp(0.25 + (0.862 - y) * 6)), 1.0, True, "car"
-        return c, 1.0, False, "grid"
+        if 0.76 < y:
+            part = car(x, y)
+            if part:
+                u = (x - sx) / half
+                if part == "lamp":                      # two red light clusters, lit inside
+                    return pal.path("e9 e7 e6")(clamp(abs(abs(u) - 0.7) * 4)), 1.0, True, "car"
+                if part == "glass":                     # the rear window shows the sunset
+                    return pal.path("a5 x3 d1 -")(clamp((y - (cy - 0.08)) / 0.055 + u * 0.3)), 1.0, True, "car"
+                c = {"roof": "d2", "deck": "x2", "lip": "a6", "grille": "-", "slat": "e4", "plate": "t6",
+                     "pipe": "e8", "bumper": "d1", "tyre": "-"}.get(part, "d1")
+                return pal.rgb(c), 1.0, True, "car"
+        rows = rows_now[0]
+        near, _ = cross(rows)
+        base = pal.path("x1 d0 -")(clamp(t * 3))
+        glow = math.exp(-t / 0.035)                       # the horizon's glow on the floor
+        base = mix(base, pal.rgb("e5"), glow * 0.55)
+        on_road = road(x, t)
+        if on_road:
+            base = pal.path("x1 d0 -")(clamp(t * 1.6)) if t > 0.03 else base
+            z = 1 / max(t, 1e-3)
+            if abs(x - sx) < 0.004 + t * 0.012 and (z * 0.7) % 1.0 < 0.45:
+                base = pal.path("w4 w6")(t)                 # the centre line
+            # the car's tail lights on the road behind it
+            red = math.exp(-((x - sx) / 0.22) ** 2 - ((y - 0.965) / 0.045) ** 2)
+            base = mix(base, pal.rgb("e5"), red * 0.7)
+            if ((x - sx) / (half * 1.05)) ** 2 + ((y - cy - 0.085) / 0.014) ** 2 <= 1:
+                base = pal.ground                           # its shadow
+        # a cross line: the last sample row or two above a cell edge
+        row = y * rows
+        b = math.ceil(row)
+        if b in near and not on_road:
+            tt = (b / rows - hz) / (1 - hz)
+            thick = 2 if tt > 0.55 else 1
+            if b - row <= thick / 8 and not crossed(x, b, rows):
+                fade = clamp(1.2 - abs(x - sx) * 0.25)     # brightest under the sun
+                return pal.path("a3 a5 a6 a7")(tt * (0.5 + 0.5 * fade)), 1.0, False, "grid"
+        return base, 1.0, False, "grid"
+
+    def neon(x, y):
+        t = clamp((y - hz) / (1 - hz))
+        return pal.path("a4 a6 a7")(t)
+
+    def haze(x, y):
+        return pal.path("e5 a3 a4 a6")(clamp((y - hz) / (1 - hz) / 0.35))
+
+    def lines(rows):
+        rows_now[0] = rows
+        near, far = cross(rows)
+
+        def off_floor(x, y):
+            return road(x, (y - hz) / (1 - hz)) or (y > 0.76 and car(x, y) is not None)
+
+        out = []
+        # the long lines over the whole floor, each from where it's a cell
+        # clear of its neighbours
+        for xb, t0 in longs(rows):
+            out.append(([(sx + (xb - sx) * t0, hz + (1 - hz) * t0), (xb, 1.0)], neon, False, off_floor))
+        # the far cross lines, in braille, fading into the horizon's glow
+        for y in far:
+            out.append(([(-7.6, y), (2.2, y)], haze, False, off_floor))
+        # the near cross lines through the cells a long line crosses
+        for b in near:
+            out.append(([(-7.6, (b - 0.3) / rows), (2.2, (b - 0.3) / rows)], neon, False,
+                        lambda x, y, b=b: off_floor(x, y) or not crossed(x, b, rows)))
+        # the road's neon edges
+        for side in (-1, 1):
+            out.append(([(sx + side * 0.035, hz), (sx + side * 0.635, 1.0)], pal.rgb("e7"), False,
+                        lambda x, y: y > 0.76 and car(x, y) is not None))
+        return out
 
     def texts(rows, x_left, cw, unit):
+        rows_now[0] = rows
         return stars(field, rows, x_left, cw, unit, rows * 6, hz - 0.1, [pal.rgb("t9"), pal.rgb("a8")], 33)
 
-    return scene("synthwave", field, texts)
+    return scene("synthwave", field, texts, lines, inks={"grid": "axed", "car": "edatxw"})
 
 
 # ---------------------------------------------------------------- deep sea

@@ -84,7 +84,7 @@ def build_items(app):
               s, "a fixed number of words, as fast as you can"),
         _mode("3", "quote", lambda: s.quote_length, QUOTE_LENGTHS, "quote_length",
               lambda: TestSpec("quote", "words", 0, "quote"),
-              s, "type a real quote; choose built-in or online quotes in settings"),
+              s, "type a real quote; choose genre, built-in or online quotes in settings"),
         Item("4", "zen", lambda: TestSpec("zen", "zen", 0, "zen"),
              help="no target text, type whatever you like; enter finishes",
              section="gamemode"),

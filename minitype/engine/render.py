@@ -257,8 +257,9 @@ def block_lines(p, width):
     return view + [""] * (VIEW_LINES * per_line - len(view))
 
 
-def tape_line(p, width):
-    """One line that scrolls so the caret stays a third of the way in."""
+def tape_line(p, width, mode="on"):
+    """One line that scrolls so the caret stays a third of the way in (or
+    in the middle if mode is 'from middle')."""
     a = max(0, p.wi - 40)
     b = min(len(p.words), p.wi + 40)
     cells = p.span(a, b)
@@ -267,8 +268,18 @@ def tape_line(p, width):
     caret_off = p.offs[p.wi] + len(p.typed[p.wi]) if p.wi < len(p.words) else -1
     caret_at = next((k for k, cell in enumerate(cells) if cell[2] == caret_off),
                     len(cells))
-    start = max(0, caret_at - width // 3)
-    return rows(p, cells[start:start + width])
+    if mode == "from middle":
+        target = width // 2
+        if caret_at < target:
+            pad = target - caret_at
+            visible = [("", " ", -1)] * pad + cells[:width - pad]
+        else:
+            start = caret_at - target
+            visible = cells[start:start + width]
+    else:
+        start = max(0, caret_at - width // 3)
+        visible = cells[start:start + width]
+    return rows(p, visible)
 
 
 def draw(st, settings, header, words, typed, wi, width, footer, marks=(),
@@ -292,7 +303,8 @@ def draw(st, settings, header, words, typed, wi, width, footer, marks=(),
     if header:
         out += ["  " + st.dim + header + RESET, ""]
     focus = len(out)
-    text = tape_line(p, width) + [""] if settings.tape else block_lines(p, width)
+    tape_on = settings.tape not in (False, "off", None)
+    text = tape_line(p, width, settings.tape) + [""] if tape_on else block_lines(p, width)
     shifted = " " * (2 + p.shake(last_error))       # shake nudges just the words
     out += [shifted + line if line else "" for line in text]
     if below:

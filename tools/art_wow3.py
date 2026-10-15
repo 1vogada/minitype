@@ -507,107 +507,391 @@ def snowpeaks(pal):
 
 # ---------------------------------------------------------------- coral reef
 
+def _clown(cx, cy, s):
+    """A clownfish facing right, its body s long from middle to snout:
+    at(x, y) -> None or (part, light): part "body", "band", "fin", "eye",
+    "glint" or "line" (its dark outline), light 0..1 from above."""
+    def at(x, y):
+        u, v = (x - cx) / s, (y - cy) / s
+        if not (-1.55 < u < 1.08 and -0.95 < v < 0.85):
+            return None
+        light = clamp(0.62 - v * 0.75)
+        e = math.hypot(u / 1.0, v / 0.5)                     # the body, an ellipse
+        ped = -1.12 < u < -0.6 and abs(v) < 0.15 + (u + 1.12) * 0.32
+        if e <= 1 or ped:
+            rim = (1 - e) * 0.5 if e <= 1 else 0.0
+            if ped and e > 0.9:
+                rim = 0.15 + (u + 1.12) * 0.32 - abs(v)
+            # the eye, and a glint in it
+            de = math.hypot(u - 0.66, v + 0.13)
+            if de < 0.06 and u < 0.66 and v < -0.13:
+                return "glint", 1.0
+            if de < 0.11:
+                return "eye", 0.0
+            if de < 0.15:
+                return "ring", light
+            if e <= 1 and rim < 0.045:
+                return "line", 0.0
+            # three white bands, each outlined in black, following the body
+            for c, w in ((0.4 + 0.5 * v * v, 0.12), (-0.18 - 0.45 * v * v, 0.13), (-0.93, 0.08)):
+                d = abs(u - c)
+                if d < w:
+                    return "band", light
+                if d < w + 0.06:
+                    return "line", 0.0
+            # the pectoral fin, a darker orange paddle on its side
+            pf = math.hypot((u - 0.2) / 0.2, (v - 0.12) / 0.1)
+            if pf < 1:
+                return ("line", 0.0) if pf > 0.75 and u < 0.2 else ("fin", light * 0.6)
+            if 0.85 < u and abs(v) < 0.05 and u > 0.97:
+                return "line", 0.0                            # the mouth
+            return "body", light + 0.25 * clamp(0.6 - abs(v + 0.25) * 3)
+        # the tail: a rounded fan with a black margin
+        r, ang = math.hypot(u + 1.02, v), math.atan2(v, -(u + 1.02))
+        if u < -1.02 and abs(ang) < 0.95 and r < 0.47:
+            if r > 0.39:
+                return "line", 0.0
+            if r > 0.3:
+                return "band", light
+            return "fin", light * 0.8 + 0.15 * math.cos(ang * 12)
+        # the dorsal fin (a spiny lobe and a soft one), the anal and pelvic fins
+        top = -0.5 * math.sqrt(max(0.0, 1 - u * u))
+        fin = 0.0
+        if -0.8 < u < 0.42 and v < top:
+            if u > -0.12:
+                fin = 0.17 * math.sin(math.pi * (u + 0.12) / 0.54)
+            else:
+                fin = 0.3 * math.sin(math.pi * (u + 0.8) / 0.68) ** 0.7
+            d = top - v
+        elif v > -top and (-0.75 < u < -0.15 or 0.12 < u < 0.42):
+            fin = 0.24 * math.sin(math.pi * (u + 0.75) / 0.6) if u < 0 else 0.16 * math.sin(math.pi * (u - 0.12) / 0.3)
+            d = v + top
+        if fin > 0 and d < fin:
+            if d > fin - 0.06:
+                return "line", 0.0
+            if d > fin - 0.11:
+                return "band", light
+            return "fin", light * 0.8
+        return None
+    return at
+
+
+def _reef_head(x, y, floor):
+    """A small coral head on the far reef, one for every 0.3 of x: (hue,
+    light, kind) or None. Cheap, for the scenery that runs far left."""
+    k = math.floor(x / 0.3)
+    for kk in (k - 1, k, k + 1):
+        rnd = random.Random(kk * 7919 + 13)
+        cx = (kk + 0.5) * 0.3 + rnd.uniform(-0.1, 0.1)
+        w, h = rnd.uniform(0.05, 0.11), rnd.uniform(0.05, 0.13)
+        hue, kind = rnd.choice("wxaeg"), rnd.random()
+        base = floor(cx) + 0.01
+        dx = (x - cx) / w
+        if abs(dx) >= 1 or y > base or y < base - h - 0.02:
+            continue
+        if kind < 0.45:                                      # a dome
+            top = base - h * 0.7 * math.sqrt(1 - dx * dx)
+            if y >= top:
+                ridges = math.sin((x - cx) * 160 + math.sin((y - base) * 90) * 2) > 0.3
+                return hue, clamp(0.75 - (y - top) / (h * 0.7) - (0.25 if ridges else 0)), kind
+        else:                                                # a tuft of fingers
+            if abs(math.sin((x - cx) * 70 + kk)) > 0.4 and y >= base - h * (1 - dx * dx) * (0.75 + 0.25 * math.sin(x * 300)):
+                return hue, clamp(0.85 - (y - (base - h)) / h), kind
+    return None
+
+
 def reef(pal):
-    """Underwater: branching corals and a big round brain coral, fish,
-    light falling in shafts from the surface, bubbles rising."""
-    water = pal.path("g6 g4 g1 d1 -")
+    """A coral reef in sunlit shallows: a clownfish (orange, three white
+    bands outlined black, fins and an eye) nestled in a swaying anemone,
+    a translucent domed jellyfish trailing frilled arms and long
+    tentacles, a yellow brain coral, violet staghorn with cyan tips, a red
+    sea fan, tube corals, a school of little yellow fish, rippled sand
+    with caustics, light rays from the surface and bubbles rising."""
+    water = pal.path("g7 g6 g5 g4 g3 g2 d1 d0")
+
+    def floor(x):
+        return 0.88 + 0.02 * math.sin(x * 3.1) + 0.015 * noise(x * 4, 1.5, 2)
+
+    clown = _clown(1.05, 0.585, 0.165)
+
+    # the anemone: tentacles rising from its disc, swaying with the current
+    rnd = random.Random(21)
+    back_t, front_t = [], []
+    for k in range(26):
+        bx = 0.87 + 0.4 * (k + rnd.random() * 0.5) / 26
+        by = 0.85 + 0.015 * math.sin(k * 1.7)
+        ln = rnd.uniform(0.14, 0.28) * (1 - 0.3 * abs(bx - 1.07) / 0.2)
+        sway = 0.07 * math.sin(k * 2.3) + 0.03
+        lean = (bx - 1.07) * 1.6
+        pts = bezier((bx, by), (bx + lean * ln - sway, by - ln * 0.55),
+                     (bx + lean * ln * 1.6 + sway * 1.4, by - ln), 12)
+        (front_t if k % 3 == 1 and abs(bx - 1.05) < 0.17 else back_t).append((pts, 0.012, 0.009))
+    back_ten, front_ten = limbs(back_t), limbs(front_t)
+
+    # the jellyfish
+    jx, jy, jw, jh = 1.58, 0.2, 0.18, 0.14
+    arms = limbs([(bezier((jx + dx, jy + 0.03), (jx + dx * 2.5 + 0.06, jy + 0.18), (jx + dx - 0.05 + dx, jy + 0.36), 14),
+                   0.022, 0.006) for dx in (-0.05, -0.016, 0.018, 0.052)])
+    tentacles = []
+    for k in range(11):
+        u = -0.92 + 1.84 * k / 10
+        x0 = jx + u * jw
+        ln = 0.42 + 0.14 * math.sin(k * 2.1)
+        tentacles.append([(x0 + 0.03 * math.sin(t * 7 + k) * t - 0.08 * t * t, jy + 0.05 + 0.03 * (1 - u * u) + ln * t)
+                          for t in (j / 30 for j in range(31))])
+
+    # corals: staghorn (violet, cyan tips) and a small orange one
     branches = []
-    rnd = random.Random(4)
-    for bx, h in ((1.15, 0.38), (1.55, 0.3), (1.8, 0.42), (0.85, 0.25)):
-        def grow(x, y, ang, ln, w, depth):
-            ex, ey = x + math.cos(ang) * ln, y - math.sin(ang) * ln
-            branches.append(([(x, y), (ex, ey)], w, w * 0.7))
-            if depth:
-                for d in (-0.5, 0.45):
-                    grow(ex, ey, ang + d + rnd.uniform(-0.15, 0.15), ln * 0.72, w * 0.7, depth - 1)
-        grow(bx, 0.95, math.pi / 2, h * 0.45, 0.025, 3)
-    coral = strokes(branches)
-    brain = (1.38, 0.88, 0.14)
+
+    def grow(x, y, ang, ln, w, depth, rnd_):
+        ex, ey = x + math.cos(ang) * ln, y - math.sin(ang) * ln
+        branches.append(([(x, y), ((x + ex) / 2 + rnd_.uniform(-0.01, 0.01), (y + ey) / 2), (ex, ey)], w, w * 0.75))
+        if depth:
+            for d in (-0.42, 0.38) if depth % 2 else (-0.5, 0.1, 0.5):
+                grow(ex, ey, ang + d + rnd_.uniform(-0.2, 0.2), ln * 0.74, w * 0.78, depth - 1, rnd_)
+    r2 = random.Random(5)
+    grow(1.8, 0.93, math.pi / 2 + 0.1, 0.13, 0.021, 4, r2)
+    grow(1.88, 0.93, math.pi / 2 - 0.25, 0.1, 0.018, 3, r2)
+    stag = limbs(branches)
+    branches = []
+    grow(0.8, 0.92, math.pi / 2, 0.07, 0.016, 3, random.Random(9))
+    grow(1.32, 0.92, math.pi / 2 + 0.3, 0.05, 0.014, 3, random.Random(3))
+    orange = limbs(branches)
+    tubes = [(0.6, 0.11, 0.022, "w"), (0.645, 0.16, 0.026, "w"), (0.69, 0.09, 0.02, "w"), (1.64, 0.08, 0.02, "a"),
+             (1.68, 0.12, 0.022, "a"), (0.52, 0.07, 0.018, "w")]
+    brain = (1.47, 0.9, 0.15, 0.11)
+    fan = (0.6, 0.91, 0.2, 0.36)
+    brain_light = sphere_light(brain[0], brain[1], brain[2], -0.4, -0.75)
+    school = []
+    r3 = random.Random(17)
+    for cx0, cy0, n in ((0.3, 0.33, 15), (-2.1, 0.42, 12), (-4.6, 0.3, 10)):
+        for k in range(n):
+            a = k / n * 5.5
+            school.append((cx0 + math.cos(a) * 0.05 * (1 + a) * 0.9 + r3.uniform(-0.02, 0.02),
+                           cy0 + math.sin(a) * 0.022 * (1 + a) + r3.uniform(-0.01, 0.01), r3.uniform(0.85, 1.15)))
 
     def fish(x, y):
-        for fx_, fy_, s, flip in ((0.6, 0.45, 0.06, 1), (1.4, 0.3, 0.05, -1), (0.2, 0.62, 0.04, 1),
-                                  (-1.0, 0.4, 0.05, -1), (-2.0, 0.55, 0.05, 1)):
-            u, v = (x - fx_) / s * flip, (y - fy_) / s * 2
-            if u * u + v * v * 1.3 <= 1 or (-1.6 < u < -0.9 and abs(v) < (-0.9 - u) * 1.4):
-                stripe = abs(u - 0.2) < 0.15 or abs(u + 0.45) < 0.12
-                return stripe
+        for fx_, fy_, s in school:
+            u, v = (x - fx_) / (0.032 * s), (y - fy_) / (0.013 * s)
+            if -2 < u < 1.1 and abs(v) < 1.6:
+                if u * u + v * v <= 1:
+                    return "eye" if (u - 0.55) ** 2 + (v + 0.2) ** 2 < 0.05 else clamp(0.7 - v * 0.4)
+                if -1.7 < u < -0.8 and abs(v) < (-0.8 - u) * 1.3:
+                    return 0.35
         return None
 
-    # a clownfish: orange, three white bands, a fin top and bottom, an eye -
-    # big enough that the bands actually land on the grid
-    clown = (0.95, 0.3, 0.08, 1)
+    def butterfly(x, y):
+        """A yellow butterflyfish, a tall disc with a black eye bar, a
+        white band, a dark spot near its tail and a pointed snout."""
+        u, v = (x - 0.74) / 0.06, (y - 0.3) / 0.075
+        if not (-1.6 < u < 1.5 and abs(v) < 1.2):
+            return None
+        e = u * u + v * v
+        snout = 0.9 < u < 1.4 and abs(v - 0.08) < 0.18 - (u - 0.9) * 0.25
+        tail = -1.55 < u < -0.9 and abs(v) < 0.2 + (-0.9 - u) * 0.6
+        if not (e <= 1 or snout or tail):
+            return None
+        if e <= 1 and e > 0.85 or tail and u < -1.45:
+            return "d0"
+        if abs(u - 0.55 - v * 0.15) < 0.13:
+            return "d0" if abs(u - 0.55 - v * 0.15) < 0.09 else "t9"   # the eye bar
+        if (u + 0.45) ** 2 + (v + 0.2) ** 2 < 0.05:
+            return "d0"                                                  # the false eye
+        if abs(u + 0.1) < 0.1:
+            return "t9"
+        return "w8" if v < -0.3 else "w7" if v < 0.3 else "w5"
 
-    def clownfish(x, y):
-        fx_, fy_, s, flip = clown
-        u, v = (x - fx_) / s * flip, (y - fy_) / (s * 1.5)
-        body = u * u + (v * 1.1) ** 2 <= 1
-        tail = -1.8 < u < -0.9 and abs(v) < (u + 1.8) * 1.3
-        fin = abs(u) < 0.6 and 0.8 < abs(v) < 1.5
-        if not (body or tail or fin):
-            return None, False
-        band = abs(u + 0.52) < 0.16 or abs(u - 0.02) < 0.14 or abs(u - 0.62) < 0.13
-        eye = ((u - 0.5) * 1.9) ** 2 + ((v + 0.42) * 1.9) ** 2 < 0.07
-        edge = not (body and ((u - 0.02) ** 2 + (v * 1.05) ** 2 < 0.82)) or tail or fin
-        return band, (eye or edge)
+    def manta(x, y):
+        """A manta ray far off in the haze: 0..1 how much of it."""
+        u, v = (x + 0.45) / 0.22, (y - 0.17) / 0.22
+        if not (-1.1 < u < 1.1 and -0.6 < v < 1.4):
+            return 0.0
+        au = abs(u)
+        lead = -0.35 + 0.55 * au ** 1.4                       # the wings' swept leading edge
+        trail = 0.3 - 0.45 * au ** 0.8 + 0.15 * au ** 3      # and the trailing edge
+        horn = au < 0.22 and -0.5 < v < -0.3 and abs(au - 0.13) < 0.06
+        tail = au < 0.025 and 0.2 < v < 1.3
+        return 1.0 if (au < 1 and lead < v < trail) or horn or tail else 0.0
 
-    # a jellyfish: a striped bell with long trailing tentacles
-    jelly = (1.45, 0.2, 0.13)
+    def corals(x, y):
+        """(colour, focus) of the corals at (x, y), front to back, or None."""
+        foc = x > 0.55
+        for tx, th, tw, hue in tubes:
+            base = floor(tx) + 0.015
+            if abs(x - tx) < tw and base - th - tw * 0.6 < y < base:
+                nx = (x - tx) / tw
+                lip = base - th
+                if abs((y - lip) / (tw * 0.55)) ** 2 + nx * nx < 1:
+                    inner = abs((y - lip) / (tw * 0.35)) ** 2 + (nx / 0.7) ** 2 < 1
+                    return (pal.path(f"x0 {hue}2")(0.3) if inner else pal.rgb(hue + "8")), foc
+                if y > lip:
+                    return pal.path(f"{hue}1 {hue}3 {hue}5 {hue}7")(round_light(nx, 0, -0.7, 0)), foc
+        bx, by, rx, ry = brain
+        if ((x - bx) / rx) ** 2 + ((y - by) / ry) ** 2 <= 1 and y < floor(x) + 0.02:
+            light = brain_light(x, by + (y - by) * rx / ry)
+            groove = abs(math.sin((x - bx) * 48 + 2.5 * math.sin((y - by) * 45 + (x - bx) * 20))) < 0.5
+            return pal.path("g0 w1 w3 w5 w7 w8")(clamp(light * (0.35 if groove else 0.95))), foc
+        hit = stag(x, y)
+        if hit:
+            t, nx, ny, _ = hit
+            c = pal.path("a1 a3 a5 a6 a7 a8")(round_light(nx, ny) * 0.9 + 0.1 * t)
+            return (mix(c, pal.rgb("g8"), clamp((t - 0.7) * 5)) if t > 0.7 else c), foc
+        hit = orange(x, y)
+        if hit:
+            t, nx, ny, _ = hit
+            return pal.path("x1 x3 x5 x7 x9")(round_light(nx, ny) * 0.85 + 0.15 * t), foc
+        fx, fy, fw, fh = fan
+        dx, dy = (x - fx) / fw, (fy - y) / fh
+        r = math.hypot(dx, dy)
+        if dy > 0 and r < 1 - 0.08 * math.sin(math.atan2(dx, dy) * 9) ** 2 and abs(math.atan2(dx, dy)) < 1.05:
+            ang = math.atan2(dx, dy)
+            rib = abs(math.sin(ang * 11)) < 0.3 or abs(math.sin(r * 22 + ang * 2)) < 0.28 or r < 0.18
+            if rib:
+                return pal.path("e4 e6 e7 e8 a8")(clamp(1.05 - r * 0.6 + 0.15 * math.sin(ang * 5))), foc
+        return None
 
-    def jellyfish(x, y):
-        jx, jy, jr = jelly
-        u, v = (x - jx) / jr, (y - jy) / (jr * 1.7)
-        if u * u + v * v <= 1:
-            if v < -0.15 * (1 - u * u):
-                return False, False                     # the gap under the bell
-            rib = int((u + 1.4) * 3.1) % 2
-            return bool(rib), (abs(v) > 0.78 or abs(u) > 0.86)
-        if 1.0 < v < 2.6 and abs(u) < 0.5:
-            wobble = 0.12 * math.sin(v * 5 + jx)
-            if abs(abs(u) - 0.28) < 0.06 or abs(u - wobble) < 0.05:
-                return True, True
-        return None, False
+    def water_at(x, y):
+        c = water(clamp(y * 0.92 + 0.08 + (fbm(x * 4, y * 6, 1) - 0.5) * 0.08))
+        if y < -0.25:                                      # the surface, seen from under it
+            ripple = abs(math.sin(x * 23 + math.sin(x * 7.3 + y * 30) * 1.6 + y * 60))
+            glare = mix(pal.rgb("g8"), pal.rgb("t8"), clamp(1 - ripple * 3))
+            c = mix(c, glare, clamp((-0.25 - y) * 5))
+        elif y < 0.22:                                      # caustic shimmer near the top
+            net = abs(noise(x * 14, y * 26 + x * 3, 4) - 0.5)
+            c = mix(c, pal.rgb("g8"), clamp(0.12 - net) * 5 * clamp(1 - y / 0.22))
+        shaft = clamp(math.sin((x - y * 0.38) * 6.5 + 1.2 * math.sin(x * 1.3)) * 0.5 + 0.5) ** 9
+        c = mix(c, pal.rgb("t7"), shaft * 0.45 * clamp(1.05 - y))
+        # the far reef: hazy mounds on the horizon
+        far = 0.73 + 0.09 * fbm(x * 2.6, 0.5, 7) - 0.05 * math.sin(x * 1.4)
+        if y > far:
+            bumps = fbm(x * 16, y * 20, 8, 2)
+            c = mix(c, pal.path("d0 g2 d2 g3")(bumps), 0.5 + 0.25 * clamp((y - far) * 8))
+        return c
 
     def field(x, y):
-        bx, by, br = brain
-        if math.hypot(x - bx, (y - by) * 1.4) <= br and y < 0.97:
-            light = sphere_light(bx, by, br)(x, by + (y - by) * 1.4)
-            groove = math.sin((x - bx) * 90 + math.sin((y - by) * 60) * 2) > 0.5
-            return pal.path("x1 e4 a4 a6 w6")(clamp(light * 0.9 - (0.2 if groove else 0))), 1.0, True, "coral"
-        t = coral(x, y)
-        if t is not None:
-            return pal.path("e4 e6 a6 a8")(clamp(t * 0.8 + 0.2)), 1.0, True, "coral"
+        # the jellyfish, in front of the water it shows through
+        u, v = (x - jx) / jw, (y - jy) / jh
+        if u * u + v * v <= 1 and v <= 0.28 + 0.07 * abs(math.sin(u * 10)):
+            rr = math.sqrt(u * u + v * v)
+            tint = pal.path("e7 e6 e7 e8 e9 t9")(clamp(rr ** 2 * 0.9 + clamp(-v) * 0.3))
+            ang = math.atan2(v + 0.2, u)
+            lobe = 0.18 < math.hypot(u, (v + 0.2) * 1.3) < 0.48 and math.cos(ang * 4) > 0.2
+            a = 0.72 + 0.28 * rr ** 2
+            if lobe:
+                tint, a = pal.path("e9 e8 e7")(rr * 1.6), 0.8
+            elif abs(math.sin(ang * 8)) < 0.12 and rr > 0.45:
+                tint, a = pal.rgb("e8"), 0.75                 # radial canals
+            if v > 0.12:
+                tint, a = pal.path("e8 t9")(clamp((v - 0.12) * 5)), 0.9   # the frilled margin
+            if math.hypot(u + 0.38, v + 0.58) < 0.2:
+                tint, a = pal.rgb("t9"), 0.95                 # the shine on top
+            return mix(water_at(x, y), tint, a), 1.0, True, "jelly"
+        hit = arms(x, y)
+        if hit:
+            t, nx, ny, _ = hit
+            frill = math.sin(y * 300 + nx * 3) > 0.2
+            tint = pal.path("e9 e8 e7 x7")(clamp(t * 0.8 + (0.25 if frill else 0)))
+            return mix(water_at(x, y), tint, 0.9 - 0.3 * t), 1.0, True, "jelly"
+        # the clownfish and the anemone it lives in
+        hit = front_ten(x, y)
+        if hit:
+            t, nx, ny, k = hit
+            c = pal.path("x2 e4 e6 e7 e8" if k % 2 else "x2 x4 e5 e6 e7")(clamp(round_light(nx, ny) * 0.6 + t * 0.5))
+            if t > 0.84:
+                c = pal.path("a8 t9")(clamp((t - 0.84) * 8))
+            return c, 1.0, True, "anemone"
+        f = clown(x, y)
+        if f:
+            part, light = f
+            if part in ("line", "eye"):
+                return pal.ground, 1.0, True, "fish"
+            if part == "glint":
+                return pal.rgb("t9"), 1.0, True, "fish"
+            if part == "band":
+                return pal.path("d6 t5 t7 t9")(clamp(light + 0.2)), 1.0, True, "fish"
+            if part == "fin":
+                return pal.path("a2 a4 a5 a6")(clamp(light)), 1.0, True, "fish"
+            if part == "ring":
+                return pal.rgb("a8"), 1.0, True, "fish"
+            return pal.path("a3 a5 a6 a7 a8")(clamp(light)), 1.0, True, "fish"
+        hit = back_ten(x, y)
+        if hit:
+            t, nx, ny, k = hit
+            c = pal.path("x0 x2 x4 e5 e6" if k % 2 else "x0 x3 e4 e6 e7")(clamp(round_light(nx, ny) * 0.5 + t * 0.55))
+            if t > 0.84:
+                c = pal.path("e7 a8")(clamp((t - 0.84) * 8))
+            return c, 1.0, True, "anemone"
+        if 0.88 < x < 1.25 and 0.83 < y < floor(x) + 0.02:     # the anemone's column
+            stripe = math.sin(x * 160) > 0.3
+            return pal.path("x1 x3 x5")(clamp(0.8 - (y - 0.83) * 12 - (0.3 if stripe else 0))), 1.0, True, "anemone"
+        hit = corals(x, y)
+        if hit:
+            return hit[0], 1.0, hit[1], "coral"
+        b = butterfly(x, y)
+        if b:
+            return pal.rgb(b), 1.0, False, "school"
         f = fish(x, y)
         if f is not None:
-            return (pal.rgb("t8") if f else pal.rgb("w6")), 1.0, x > 0.4, "fish"
-        band, dark = clownfish(x, y)
-        if band or dark:
-            if dark:
-                return pal.rgb("d1"), 1.0, True, "fish"
-            return (pal.rgb("w9") if band else pal.rgb("e6")), 1.0, True, "fish"
-        jband, jedge = jellyfish(x, y)
-        if jband or jedge:
-            if jedge:
-                return pal.rgb("a8"), 1.0, True, "jelly"
-            # the bell is a jelly: only its ribs and rim take colour, the
-            # rest is water seen through it
-            return pal.path("a4 a6 w6")(clamp(0.35 + (jelly[1] - y) * 3)), 0.34, True, "jelly"
-        if y > 0.93:
-            return pal.path("w4 x1 -")(clamp((y - 0.93) * 12 + noise(x * 50, 3) * 0.3)), 1.0, False, "sand"
-        shaft = clamp(math.sin((x + y * 0.35) * 7) * 0.5 + 0.5) ** 8 * (1 - y)
-        c = water(clamp(y * 0.95 + fbm(x * 5, y * 8) * 0.1))
-        return mix(c, pal.rgb("t6"), shaft * 0.5), 1.0, False, "water"
+            if f == "eye":
+                return pal.rgb("d0"), 1.0, False, "school"
+            return pal.path("w3 w5 w7 w8 t9")(f), 1.0, False, "school"
+        fl = floor(x)
+        u, v = (x - 1.27) / 0.075, (y - 0.94) / 0.042          # a starfish on the sand
+        if u * u + v * v < 1.1:
+            ang = math.atan2(v, u) + 0.3
+            arm = 0.32 + 0.68 * abs(math.cos(ang * 2.5)) ** 4
+            if math.hypot(u, v) < arm:
+                dots = math.sin(x * 400) * math.sin(y * 500) > 0.6
+                return pal.path("e3 e5 e7 a8")(clamp(0.85 - math.hypot(u, v) * 0.5 - (0.3 if dots else 0))), 1.0, True, "coral"
+        if y > fl:
+            # rippled sand, lit by caustics, darker in the far distance
+            q = fbm(x * 3, y * 9, 6, 2)
+            ripple = math.sin(y * 110 + q * 7 + x * 3) * 0.5 + 0.5
+            net = abs(noise(x * 20, y * 40, 2) - 0.5) < 0.06
+            c = pal.path("d1 d3 t2 t3 t4")(clamp(0.45 + ripple * 0.3 - (y - fl) * 2.5 + (0.2 if net else 0)))
+            if ripple > 0.75:
+                c = mix(c, pal.rgb("w6"), 0.35)
+            return c, 1.0, False, "sand"
+        if x < 0.4:
+            head = _reef_head(x, y, floor)
+            if head:
+                hue, light, kind = head
+                c = pal.path(f"{hue}1 {hue}3 {hue}5 {hue}7")(light)
+                return mix(c, water_at(x, y), 0.25), 1.0, False, "coral"
+        c = water_at(x, y)
+        if manta(x, y):
+            c = mix(c, pal.rgb("d1"), 0.45)
+        return c, 1.0, False, "water"
+
+    def coral_hidden(x, y):
+        return y > 0.5 and field(x, y)[3] in ("coral", "anemone", "fish")
+
+    def lines(rows):
+        col = pal.path("t9 e9 e8 a8 e7 x7")
+        return [(pts, lambda x, y: col(clamp((y - jy) / 0.55)), True, coral_hidden) for pts in tentacles]
 
     def texts(rows, x_left, cw, unit):
         rnd2 = random.Random(8)
         out = []
-        for _ in range(rows * 2):
-            x, y = rnd2.uniform(-3, 1.9), rnd2.uniform(0.05, 0.85)
+        # bubbles rising from the anemone and the brain coral, smaller as they go
+        for bx, by in ((1.12, 0.5), (1.43, 0.78), (0.62, 0.74)):
+            y = by
+            for k in range(9):
+                y -= rnd2.uniform(0.04, 0.09)
+                x = bx + 0.02 * math.sin(k * 1.9)
+                if y > 0.02 and field(x, y)[3] == "water":
+                    out.append((int((x - x_left) / cw), int(y / unit), "oo°°·."[min(5, k // 2)],
+                                pal.rgb("t9" if k < 4 else "g8"), False))
+        for _ in range(rows * 3):
+            x, y = rnd2.uniform(-3.2, 1.9), rnd2.uniform(0.04, 0.8)
             if field(x, y)[3] == "water":
-                out.append((int((x - x_left) / cw), int(y / unit), rnd2.choice("o°.·"), pal.rgb("t8"), False))
+                out.append((int((x - x_left) / cw), int(y / unit), rnd2.choice("··.'"),
+                            pal.rgb(rnd2.choice(("g8", "t8", "d8"))), False))
         return out
 
-    return scene("coral reef", field, texts,
-                 inks={"water": "gdt", "coral": "eawx", "fish": "eaxwd", "jelly": "awxe"})
+    return scene("coral reef", field, texts, lines,
+                 inks={"water": "gdt", "sand": "dtw", "coral": "wxaegd", "fish": "atd", "anemone": "ext",
+                       "jelly": "xetagd", "school": "wtd"})
 
 
 # ---------------------------------------------------------------- volcanic
@@ -864,7 +1148,7 @@ def mountains(pal):
                 c = pal.path(col)(clamp((y - ly) * 4 - (streak - 0.5) * 0.25 * (1 - k * 0.5)))
                 haze = clamp((y - 0.58) * 6) * 0.45
                 return mix(mix(c, pal.rgb("a6"), haze), pal.rgb("a6"), mist), False, "range"
-        return sky(clamp((y / 0.66) ** 1.3)), False, "sky"
+        return sky(clamp(y / 0.66) ** 1.3), False, "sky"   # clamped first: y < 0 above the picture
 
     def field(x, y):
         if y >= shore:
@@ -918,57 +1202,208 @@ def mountains(pal):
 
 # ---------------------------------------------------------------- gruvbox
 
+def _shelf_item(x, y, shelf):
+    """What stands on the wall shelf at (x, y): (kind, light) or None. One
+    item every 0.07 of x, chosen by a hash, so the shelf runs on as far
+    left as the picture is drawn."""
+    k = math.floor(x / 0.07)
+    rnd = random.Random(k * 104729 + 7)
+    kind = rnd.choice("bbbbbjjpgc ")
+    x0 = k * 0.07
+    u = (x - x0) / 0.07                                     # 0..1 across its slot
+    if kind == "b":                                         # a book, a few to a slot
+        n = rnd.choice((2, 3))
+        j = min(n - 1, int(u * n))
+        h = 0.07 + 0.08 * random.Random(k * 31 + j).random()
+        if y > shelf - h and (u * n) % 1.0 > 0.08:
+            band = abs(y - (shelf - h * 0.75)) < 0.008
+            return ("book%d" % ((k + j) % 3), 0.3 if band else 0.0)
+    elif kind == "j":                                       # a jar with a lid
+        if 0.15 < u < 0.85:
+            if y > shelf - 0.09 and abs(u - 0.5) < 0.35:
+                return ("jar", clamp(0.5 - abs(u - 0.32) * 3))
+            if shelf - 0.11 < y <= shelf - 0.09 and abs(u - 0.5) < 0.25:
+                return ("lid", 0.0)
+    elif kind == "p":                                       # a little potted plant
+        if y > shelf - 0.05 and abs(u - 0.5) < 0.25:
+            return ("pot", clamp(0.5 - (u - 0.3)))
+        for a in (-0.6, -0.2, 0.25, 0.65):
+            lx, ly = 0.5 + math.sin(a) * 0.5, shelf - 0.06 - math.cos(a) * 0.05
+            if ((u - lx) / 0.22) ** 2 + ((y - ly) / 0.025) ** 2 < 1:
+                return ("leaf", clamp(0.6 - a * 0.4))
+    elif kind == "c":                                       # a candle, lit
+        if abs(u - 0.5) < 0.16 and y > shelf - 0.06:
+            return ("candle", clamp(0.9 - abs(u - 0.38) * 4))
+        if ((u - 0.5) / 0.09) ** 2 + ((y - (shelf - 0.075)) / 0.014) ** 2 < 1:
+            return ("flame", 1.0)
+    return None
+
+
+def _bokeh(x, y, row_y, gap, r, seed):
+    """Out-of-focus lights along a sagging string: (strength 0..1, hue) of
+    the disc at (x, y), brightest at its rim, or (0, None)."""
+    k = math.floor(x / gap)
+    best = (0.0, None)
+    for kk in (k - 1, k, k + 1):
+        rnd = random.Random(kk * 7907 + seed)
+        cx = (kk + 0.5) * gap + rnd.uniform(-0.3, 0.3) * gap
+        cy = row_y + 0.05 * math.sin(cx * 2.3 + seed) + rnd.uniform(-0.03, 0.03)
+        rr = r * rnd.uniform(0.7, 1.3)
+        d = math.hypot((x - cx) / rr, (y - cy) / rr)
+        if d < 1:
+            s = (0.55 + 0.45 * d ** 4) * clamp((1 - d) * 6) * rnd.uniform(0.6, 1.0)
+            if s > best[0]:
+                best = (s, rnd.choice(("a7", "a6", "t6", "e7", "a7", "w8", "t7")))
+    return best
+
+
 def coffee(pal):
-    """A mug of coffee steaming on a wooden table in warm light, beans
-    scattered, a window glow behind."""
-    cx, top_y, bot_y, rw = 1.3, 0.38, 0.82, 0.2
-    steam = [bezier((cx + dx, top_y - 0.03), (cx + dx + 0.1, top_y - 0.2), (cx + dx - 0.05, 0.05), 24)
-             for dx in (-0.08, 0.0, 0.08)]
+    """A cream mug of coffee on a wooden table in a cosy room at night: the
+    mug round and lit from the left, a glossy rim, crema swirling on the
+    coffee, a handle with depth, steam curling up translucent; behind it,
+    fairy lights blurred to bokeh, a lamp's warm glow and a shelf of books,
+    jars, a plant and a candle in silhouette; the table's planks and grain,
+    the mug's shadow and its reflection in the varnish, coffee beans."""
+    cx, rx, top_y, bot_y, ry = 1.32, 0.2, 0.41, 0.85, 0.05
+    table_y, shelf = 0.8, 0.5
+    hx, hy = cx + rx + 0.02, 0.6                           # the handle's middle
+    body = pal.path("x0 t0 t1 t3 t5 t6 t8 t9")
+    wood = pal.path("x0 w0 w1 w2 w3 a4")
+    beans = [(0.86, 0.9, 0.3), (0.93, 0.93, -0.5), (1.7, 0.95, 0.8), (1.78, 0.9, 0.1), (0.62, 0.95, -0.2),
+             (1.62, 0.92, -0.9)]
+
+    def glow(x, y):
+        """The lamp's warm light, off to the upper left."""
+        return math.exp(-((x - 0.25) / 0.85) ** 2 - ((y - 0.05) / 0.6) ** 2)
+
+    def wall(x, y):
+        g = glow(x, y)
+        c = pal.path("- x0 w0 w1 w2")(clamp(g * 0.8 + 0.08 * fbm(x * 3, y * 3, 2)))
+        # bokeh: two strings of fairy lights blurred out of focus, dimmer
+        # behind the mug so it stays the hero
+        hush = 1 - 0.75 * math.exp(-((x - cx) / 0.32) ** 2 - ((y - 0.45) / 0.35) ** 2)
+        for row_y, gap, r, seed, k in ((0.16, 0.13, 0.045, 1, 0.85), (-0.28, 0.17, 0.06, 2, 0.6),
+                                       (0.36, 0.23, 0.08, 3, 0.35)):
+            s, hue = _bokeh(x, y, row_y, gap, r, seed)
+            if s:
+                c = mix(c, pal.rgb(hue), s * k * hush)
+        if y < shelf + 0.03 and x < 0.98:
+            if y > shelf:                                   # the shelf board, lit along its top
+                return pal.path("w2 w1 x0")(clamp((y - shelf) / 0.03)), "wall"
+            item = _shelf_item(x, y, shelf)
+            if item and x < 0.95:
+                kind, light = item
+                if kind == "flame":
+                    return pal.rgb("w8"), "wall"
+                base = {"book0": "x1", "book1": "w0", "book2": "e0", "jar": "w1", "lid": "x0",
+                        "pot": "w1", "leaf": "g1", "candle": "t2"}[kind]
+                rim = pal.rgb(base[0] + str(min(9, int(base[1]) + 2)))
+                return mix(mix(pal.rgb(base), pal.ground, 0.55), rim, light * 0.6 + 0.25 * g), "wall"
+        # the candle's own small glow on the wall
+        for k in range(math.floor(x / 0.07) - 2, math.floor(x / 0.07) + 3):
+            if random.Random(k * 104729 + 7).choice("bbbbbjjpgc ") == "c" and x < 0.98:
+                fx = (k + 0.5) * 0.07
+                c = mix(c, pal.rgb("a6"), 0.35 * math.exp(-((x - fx) / 0.07) ** 2 - ((y - shelf + 0.08) / 0.07) ** 2))
+        return c, "wall"
+
+    def steam(x, y):
+        """0..1 how much steam there is at (x, y)."""
+        h = top_y - y
+        if h < 0.0:
+            return 0.0
+        total = 0.0
+        for off, ph, f, a in ((-0.06, 0.0, 8.5, 0.22), (0.05, 2.6, 7.0, 0.18)):
+            xc = cx + off + a * h * math.sin(h * f + ph) + 0.12 * h * h
+            w = 0.014 + 0.035 * h
+            total += math.exp(-((x - xc) / w) ** 2) * clamp(h * 8) * math.exp(-h * 2.6)
+        curl = 0.7 + 0.3 * math.sin(y * 45 - x * 20)
+        return clamp(total * curl)
 
     def mug(x, y):
-        if top_y <= y <= bot_y:
-            w = rw * (1 - (y - top_y) * 0.12)
-            if abs(x - cx) <= w:
-                return (x - cx) / w
-        # the handle
-        hx, hy = cx + rw + 0.02, (top_y + bot_y) / 2 - 0.02
-        d = math.hypot((x - hx) / 0.09, (y - hy) / 0.16)
-        if 0.6 <= d <= 1 and x > cx + rw - 0.02:
-            return 0.9
+        """(colour, tag) of the mug at (x, y), or None."""
+        n = (x - cx) / rx
+        if abs(n) <= 1:
+            e = math.sqrt(1 - n * n)
+            if abs(y - top_y) <= ry * e:                      # the mouth: rim, inner wall, coffee
+                inner = (n / 0.88) ** 2 + ((y - top_y) / (ry * 0.72)) ** 2
+                if inner > 1:
+                    lit = clamp(1.0 - (n + 0.6) * 0.5 + (0.2 if y < top_y else 0))
+                    return body(lit), "mug"
+                cy_ = top_y + ry * 0.25                          # the coffee sits a little down
+                ce = ((n / 0.86) ** 2 + ((y - cy_) / (ry * 0.62)) ** 2)
+                if ce <= 1:
+                    swirl = math.sin(math.atan2((y - cy_) / 0.6, n * rx) * 3 + math.sqrt(ce) * 9)
+                    crema = clamp(ce * 1.3 - 0.2) * 0.8 + 0.2 * swirl
+                    return pal.path("x0 w0 w1 w2 t2 t4 t6")(clamp(0.2 + crema * 0.6 - n * 0.15)), "coffee"
+                return body(clamp(0.2 + n * 0.35)), "mug"            # the inner wall at the back
+            bottom = bot_y + ry * e
+            if top_y < y <= bottom:
+                lam = clamp(0.42 - 0.5 * n + 0.25 * e)
+                spec = math.exp(-((n + 0.5) / 0.1) ** 2) * 0.3
+                bounce = clamp((n - 0.8) * 5) * 0.3 * clamp((y - 0.6) * 5)   # warm light off the table
+                ao = clamp((y - (bot_y - 0.05)) * 10) * 0.25          # darker where it meets the table
+                lip = math.exp(-((y - top_y - ry * e - 0.012) / 0.012) ** 2) * 0.2
+                light = clamp(lam * 0.85 + spec - ao - lip + 0.05)
+                band = abs(y - 0.6 - ry * e * 0.6) < 0.025 or abs(y - 0.645 - ry * e * 0.6) < 0.008
+                if band:
+                    return mix(pal.path("w0 w2 a4 a5 a6 a7")(light), pal.rgb("a5"), bounce), "mug"
+                return mix(body(light), pal.rgb("a6"), bounce), "mug"
+        # the handle: a tube bent into a loop, lit from the upper left
+        if x > cx + rx * 0.9:
+            u, v = (x - hx) / 0.1, (y - hy) / 0.15
+            r = math.hypot(u, v)
+            s = (r - 0.72) / 0.28                                  # -1 inside edge .. 1 outside
+            if abs(s) <= 1 and u > -0.3:
+                cu, cv = u / (r or 1), v / (r or 1)
+                dot = -(0.6 * cu + 0.6 * cv) * s
+                light = clamp(0.4 + 0.45 * dot + 0.2 * (1 - s * s) - 0.15 * clamp(u))
+                return body(light), "mug"
         return None
 
     def field(x, y):
         m = mug(x, y)
-        if m is not None:
-            if y < top_y + 0.035 and abs(x - cx) < rw * 0.9:
-                return pal.path("x1 x4")(0.4 + (x - cx) * 2), 1.0, True, "coffee"   # the coffee
-            light = clamp(0.75 - m * 0.45 + (0.3 if -0.6 < m < -0.35 else 0))
-            return pal.path("x1 x4 a4 a6 w8")(light), 1.0, True, "mug"
-        if y > 0.8:
-            plank = math.sin(y * 120) > 0.92
-            grain = fbm(x * 4, y * 40, 2)
-            c = pal.path("- x1 a4 x4")(clamp(grain * 0.7 + (0.2 if not plank else -0.2)))
-            shadow = math.exp(-((x - cx - 0.15) / 0.3) ** 2 - ((y - 0.84) / 0.03) ** 2)
-            return mix(c, pal.ground, shadow * 0.7), 1.0, False, "table"
-        # no window (the owner wanted just the mug): the light it threw is
-        # still on the wall, warm and soft against the darkening room
-        glow = math.exp(-((x - 0.05) / 0.95) ** 2 - ((y - 0.42) / 0.55) ** 2)
-        c = pal.path("- d1 x1 a4")(clamp(glow * 0.85))
-        return c, 1.0, False, "wall"
+        st = steam(x, y)
+        if m:
+            c, tag = m
+            if st and y < top_y + ry:
+                c = mix(c, pal.rgb("t7"), st * 0.4)
+            return c, 1.0, True, tag
+        if y > table_y:
+            t = (y - table_y) / (1 - table_y)                  # 0 at the back, 1 at the front
+            seam = min(abs(t - s) for s in (0.2, 0.47, 0.8)) < 0.022
+            grain = math.sin(y * 330 + 7 * fbm(x * 1.6, y * 7, 4) + x * 3) * 0.5 + 0.5
+            knot = math.exp(-((x + 0.7) / 0.05) ** 2 - ((y - 0.9) / 0.02) ** 2)
+            light = 0.35 + 0.35 * glow(x, 0.5) + 0.2 * t + grain * 0.25 - knot * 0.4
+            if seam:
+                light -= 0.35
+            if y > 0.975:
+                light = 0.25 - (y - 0.975) * 6                  # the table's front edge, in shadow
+            c = wood(clamp(light))
+            n = (x - cx) / rx
+            # the mug's reflection in the varnish, and its shadow away from the lamp
+            if abs(n) < 1:
+                e = math.sqrt(1 - n * n)
+                d = y - (bot_y + ry * e)
+                if 0 < d < 0.08:
+                    lam = clamp(-0.62 * n + 0.78 * e)
+                    c = mix(c, body(lam * 0.7), 0.3 * (1 - d / 0.08))
+            shadow = math.exp(-((x - cx - 0.2) / 0.3) ** 2 - ((y - bot_y - 0.02) / 0.035) ** 2)
+            c = mix(c, pal.ground, 0.65 * shadow)
+            for bx, by, a in beans:
+                u = ((x - bx) * math.cos(a) + (y - by) * 2 * math.sin(a)) / 0.024
+                v = (-(x - bx) * math.sin(a) + (y - by) * 2 * math.cos(a)) / 0.016
+                if u * u + v * v < 1:
+                    crease = abs(v - 0.15 * math.sin(u * 3)) < 0.18
+                    return pal.path("x0 w0 w1 w3")(clamp(0.7 - v * 0.4 - (0.6 if crease else 0))), 1.0, False, "table"
+            return c, 1.0, False, "table"
+        c, tag = wall(x, y)
+        if y > table_y - 0.012:
+            c = mix(c, pal.ground, 0.5)                        # the table's back edge
+        if st:
+            c = mix(c, pal.path("t4 t7 t9")(st), st * 0.6)
+        return c, 1.0, False, tag
 
-    def lines(rows):
-        return [(pts, pal.rgb("t6"), False, None) for pts in steam]
-
-    def texts(rows, x_left, cw, unit):
-        rnd = random.Random(1)
-        out = []
-        for _ in range(9):
-            x, y = rnd.uniform(0.7, 1.85), rnd.uniform(0.86, 0.96)
-            if mug(x, y) is None:
-                out.append((int((x - x_left) / cw), int(y / unit), "0", pal.rgb("x4"), False))
-        return out
-
-    return scene("gruvbox", field, texts, lines, inks={"mug": "xaw", "wall": "dxa", "table": "xa"})
+    return scene("gruvbox", field, inks={"mug": "txwa", "coffee": "wta", "wall": "xwaegtd", "table": "xwa"})
 
 
 # ---------------------------------------------------------------- solarized

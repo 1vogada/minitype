@@ -7,10 +7,29 @@
 | blocks | `tools/make_art.py` (`artgen.render_blocks`) from `tools/art_scenes.py` | `art_detailed.py` BLOCKS | quadrant blocks + braille |
 | detailed | `tools/make_art.py` (`artgen.render`) | `art_detailed.py` DETAILED | shaded ASCII |
 | combined | `tools/make_art.py` via `tools/art_combined.py` | `art_detailed.py` COMBINED | only `palm` (vaporwave) so far; others fall back to blocks |
+| upscaled | `tools/make_art_upscaled.py` from the same `tools/art_wow*.py` scenes | `minitype/terminal/art_upscaled.py` | the revamp scenes at 44 / 36 rows, then the revamp sizes |
 | og | hand-written | `art_large.py`, `art.py` ART | fallback for every style |
 
-`art.resolve(name, style)` picks the pieces; `Picture.wider()` grows spanning
-scenery leftwards on wide screens (column quilting, `art._grow`).
+`art.resolve(name, style)` picks the pieces.
+
+## Growing a picture to fill a big window (`tools/art_extend.py`)
+Every wow picture is stored with **more of its scene**: the same field
+drawn on to the left (out to `WIDE` columns, 260 for revamp, 320 for
+upscaled) and above it (`TALLER`, half its height), cell by cell exactly
+like the picture (`art_combined.draw` draws any window of cells, in the
+picture's own grid - negative rows are above it), so the picture itself
+is byte for byte unchanged and the seam is invisible. A scene's text only
+exists where its picture is, so in the extension it is carried on from the
+picture's own (its top band's stars repeated upwards, each row's text
+leftwards, shifted at random, only on to cells of the same kind).
+`Picture.wider()` uses the drawn columns first and only then quilts
+(`art._grow`); `Picture.taller()` uses the drawn rows first (each column
+the one above it on the canvas, via `_cols`, even where it was quilted)
+and only then the synthesised filler (`art._filler`). The extension costs
+about 2.5x the build time (`make_revamp.py -j4` builds four at a time) but
+little space (mostly continuous sky; about 8 KB a picture).
+Fields must be defined everywhere (negative y, far-left x): clamp
+gradients rather than index lists by position.
 
 ## Combined (vaporwave) - how it was done
 File: `tools/art_combined.py`. A scene is a **colour field**, not shapes:

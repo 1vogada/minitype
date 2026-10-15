@@ -447,6 +447,7 @@ class Piece(NamedTuple):
     span: bool = False
     back_parts: tuple = None
     back_tones: tuple = None
+    ext: tuple = None       # the scene drawn on beyond it: (left, up, top, side), see _Ext
 
 
 def _decode(lead, codes, width):
@@ -458,7 +459,7 @@ def _decode(lead, codes, width):
 
 
 def _unpack(span, size):
-    width, rows, keep = size
+    width, rows, keep = size[:3]
     lines, parts, tones, bparts, btones = [], [], [], [], []
     for row in rows:
         lead, text, codes = row[:3]
@@ -471,7 +472,11 @@ def _unpack(span, size):
             bparts.append(p)
             btones.append(t)
     back = (tuple(bparts), tuple(btones)) if bparts else (None, None)
-    return Piece(tuple(lines), tuple(parts), tuple(tones), tuple(keep), span, *back)
+    ext = None
+    if len(size) > 3 and size[3]:
+        left, up, top, side = size[3]
+        ext = (left, up, _unpack(False, top), _unpack(False, side))
+    return Piece(tuple(lines), tuple(parts), tuple(tones), tuple(keep), span, *back, ext)
 
 
 def _load(packed):
@@ -519,9 +524,9 @@ def combined(name):
 
 @lru_cache(maxsize=None)
 def upscaled(name):
-    """A picture's upscaled sizes (the same scene drawn at braille
-    resolution), biggest first; [] for the pictures that don't have one, in
-    which case the theme falls back to its revamp picture."""
+    """A picture's upscaled sizes (the same hand-drawn scene as its revamp
+    picture, drawn bigger for big windows), biggest first; [] for one that
+    has none."""
     if name not in _UPSCALED:
         return []
     span, sizes = _load(_UPSCALED[name])
@@ -541,15 +546,15 @@ def resolve(value, style="blocks"):
     """A theme's "art" value as a list of pieces, biggest first. A name
     gives the picture's sizes in the style (revamp, upscaled, blocks,
     detailed or combined; none for og; a picture with no combined version is
-    drawn in blocks, and one with no upscaled version falls back to its
-    revamp picture)
+    drawn in blocks, and upscaled is its big sizes and then its revamp
+    ones, so a window too small for the big ones still gets the picture)
     and then the OG ones, large and coloured, then small; a list of lines
     is a single piece in the accent colour. None for anything else
     (including "none")."""
     if isinstance(value, str) and value in ART:
         pieces = list({"blocks": blocks, "detailed": detailed,
                        "combined": lambda n: combined(n) or blocks(n),
-                       "upscaled": lambda n: upscaled(n) or revamp(n),
+                       "upscaled": lambda n: upscaled(n) + revamp(n),
                        "revamp": revamp}
                       .get(style, lambda n: [])(value))
         if value in LARGE:
@@ -593,22 +598,14 @@ class Picture:
         self.lines, self.keep, self.span = piece.lines, piece.keep, piece.span
         self.width = max(map(len, piece.lines), default=0)
         self.height = len(piece.lines)
-        self._codes = []
-        backs = (zip(piece.back_parts, piece.back_tones) if piece.back_parts
-                 else ((None, None) for _ in piece.parts))
-        for parts, tones, (bparts, btones) in zip(piece.parts, piece.tones, backs):
-            row = []
-            for k, (p, t) in enumerate(zip(parts, tones)):
-                part = PART_LETTERS.get(p)
-                code = palette.get((part, t)) or palette.get(part, "")
-                if bparts and bparts[k] != " ":
-                    back = PART_LETTERS[bparts[k]]
-                    code += palette.get(("bg", back, btones[k])) or palette.get(("bg", back), "")
-                row.append(code)
-            self._codes.append(row)
+        self._codes = _codes_of(piece, palette)
         self._reset = reset
         self._wider = {}
         self.back = bool(piece.back_parts)        # it has background colours
+        # the scene drawn on beyond the picture, and which column of that
+        # canvas (its left columns, then the picture's) each column is
+        self._ext = piece.ext and _Ext(piece.ext, palette)
+        self._cols = None
 
     def faded(self, mode, top=50, side=20, radius=50, start=100, start_top=100,
               angle=0, curve=3):
@@ -642,51 +639,93 @@ class Picture:
 
     def wider(self, width):
         """The picture `width` columns wide, for a spanning picture on a
-        screen wider than it was drawn at: its scenery grows on to the left
-        (see _grow). Anything else, or a width it already fits, gives the
-        picture itself back."""
+        screen wider than it was drawn at: first the scene itself, drawn on
+        to the left of it when it was made (see _Ext), and past that its
+        scenery grown on from its own columns (see _grow). Anything else,
+        or a width it already fits, gives the picture itself back."""
         if not self.span or width <= self.width:
             return self
         if width not in self._wider:
-            order = _grow(self, width - self.width)
-            if order is None:
-                return self
             if len(self._wider) > 8:          # a window being dragged wider
                 self._wider.clear()
-            pic = object.__new__(Picture)
-            pic.__dict__.update(self.__dict__)        # everything it knows (back, ...)
-            pic.__dict__.update(_faded={}, _taller={})
-            pic.span, pic.height, pic.width = True, self.height, width
-            pic.lines = tuple("".join(line[c] for c in order) + line for line in self.lines)
-            pic._codes = [[codes[c] for c in order] + codes for codes in self._codes]
-            pic.keep = tuple(k + len(order) for k in self.keep)
-            pic._reset, pic._wider = self._reset, {}
+            pic, need, ext = self, width - self.width, self._ext
+            if ext and ext.left and self._cols is None:
+                real = min(need, ext.left)
+                lines, codes = ext.side()
+                pic = pic._joined([l[-real:] for l in lines], [c[-real:] for c in codes],
+                                  list(range(ext.left - real, ext.left + self.width)))
+                need -= real
+            order = _grow(pic, need) if need > 0 else None
+            if order is not None:
+                cols = pic._canvas_cols()
+                pic = pic._joined(["".join(line[c] for c in order) for line in pic.lines],
+                                  [[codes[c] for c in order] for codes in pic._codes],
+                                  [cols[c] for c in order] + cols)
+            if pic is self:
+                return self
             self._wider[width] = pic
         return self._wider[width]
 
+    def _canvas_cols(self):
+        """The canvas column (see _Ext) of each of the picture's columns."""
+        if self._cols is not None:
+            return self._cols
+        left = self._ext.left if self._ext else 0
+        return list(range(left, left + self.width))
+
+    def _joined(self, lines, codes, cols):
+        """The picture with columns put on its left: `lines` and `codes`
+        one row each; `cols` the canvas column of every column after."""
+        n = len(lines[0]) if lines else 0
+        pic = object.__new__(Picture)
+        pic.__dict__.update(self.__dict__)        # everything it knows (back, ...)
+        pic.__dict__.update(_faded={}, _taller={}, _wider={}, _cols=cols)
+        pic.lines = tuple(a + b for a, b in zip(lines, self.lines))
+        pic._codes = [list(a) + b for a, b in zip(codes, self._codes)]
+        pic.width = self.width + n
+        pic.keep = tuple(k + n for k in self.keep)
+        return pic
+
+    def _raised(self, lines, codes):
+        """The picture with rows put on top of it: scenery, no subject."""
+        k = len(lines)
+        pic = object.__new__(Picture)
+        pic.__dict__.update(self.__dict__)
+        pic.__dict__.update(_faded={}, _taller={}, _wider={})
+        pic.lines = tuple(lines) + tuple(self.lines)
+        pic._codes = [list(c) for c in codes] + list(self._codes)
+        pic.height = self.height + k
+        pic.keep = (self.width,) * k + tuple(self.keep)
+        pic.extra = self.extra + k
+        return pic
+
     def taller(self, n):
-        """The picture with n rows of filler on top: its sky carried on up
-        (each column in the colour along its top edge) with the odd star or
-        speck from its top rows sprinkled in, so it doesn't stop on a
-        straight line and a fade has room to dissolve into. The filler is
-        scenery only (no subject), and `extra` says how many rows it is.
-        Only for pictures with backgrounds; anything else, or n <= 0,
-        gives the picture itself back."""
+        """The picture with n rows more on top, so it doesn't stop on a
+        straight line and a fade has room to dissolve into: first the
+        scene itself, drawn on above it when it was made (see _Ext; each
+        column the one above it on that canvas, even where the picture was
+        grown sideways), then filler - its sky carried on up (each column
+        in the colour along its top edge) with the odd star or speck from
+        its top rows sprinkled in. It is scenery only (no subject), and
+        `extra` says how many rows it is. Only for pictures with
+        backgrounds; anything else, or n <= 0, gives the picture back."""
         if n <= 0 or not self.back:
             return self
         cache = self.__dict__.setdefault("_taller", {})
         if n not in cache:
             if len(cache) > 8:
                 cache.clear()
-            lines, codes = _filler(self, n)
-            pic = object.__new__(Picture)
-            pic.__dict__.update(self.__dict__)
-            pic.__dict__.update(_faded={}, _taller={}, _wider={})
-            pic.lines = tuple(lines) + tuple(self.lines)
-            pic._codes = codes + list(self._codes)
-            pic.height = self.height + n
-            pic.keep = (self.width,) * n + tuple(self.keep)
-            pic.extra = self.extra + n
+            pic, more, ext = self, n, self._ext
+            if ext and ext.up:
+                real = min(n, ext.up)
+                lines, codes = ext.top()
+                cols = self._canvas_cols()
+                above = range(ext.up - real, ext.up)
+                pic = pic._raised(["".join(lines[i][c] for c in cols) for i in above],
+                                  [[codes[i][c] for c in cols] for i in above])
+                more -= real
+            if more > 0:
+                pic = pic._raised(*_filler(pic, more))
             cache[n] = pic
         return cache[n]
 
@@ -705,6 +744,48 @@ class Picture:
                 out.append(self._reset + cur)
             out.append(ch)
         return "".join(out).rstrip() + self._reset
+
+
+def _codes_of(piece, palette):
+    """The escape code of every cell of a piece, a list per row."""
+    out = []
+    backs = (zip(piece.back_parts, piece.back_tones) if piece.back_parts
+             else ((None, None) for _ in piece.parts))
+    for parts, tones, (bparts, btones) in zip(piece.parts, piece.tones, backs):
+        row = []
+        for k, (p, t) in enumerate(zip(parts, tones)):
+            part = PART_LETTERS.get(p)
+            code = palette.get((part, t)) or palette.get(part, "")
+            if bparts and bparts[k] != " ":
+                back = PART_LETTERS[bparts[k]]
+                code += palette.get(("bg", back, btones[k])) or palette.get(("bg", back), "")
+            row.append(code)
+        out.append(row)
+    return out
+
+
+class _Ext:
+    """A picture's scene drawn on beyond it when the picture was made
+    (tools/art_extend.py): `left` columns to its left and `up` rows above.
+    Together with the picture they make a canvas: its columns are the
+    `left` ones, then the picture's. `top` is the rows above (the canvas
+    wide), `side` the columns to the left (the picture tall); each is
+    painted the first time it's wanted."""
+
+    def __init__(self, ext, palette):
+        self.left, self.up, self._top, self._side = ext
+        self._palette, self._painted = palette, {}
+
+    def _paint(self, which, piece):
+        if which not in self._painted:
+            self._painted[which] = (piece.lines, _codes_of(piece, self._palette))
+        return self._painted[which]
+
+    def top(self):
+        return self._paint("top", self._top)
+
+    def side(self):
+        return self._paint("side", self._side)
 
 
 def _grow(pic, n):

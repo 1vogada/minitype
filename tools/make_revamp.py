@@ -11,6 +11,7 @@ cut into the scenery left of it, never into it.
 
     python tools/make_revamp.py              all of them
     python tools/make_revamp.py moon cat     just these (the rest are kept)
+    python tools/make_revamp.py -j4 ...      four at a time
     python tools/make_revamp.py --show moon  print them, composed
 """
 
@@ -21,6 +22,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path[:0] = [HERE, os.path.join(HERE, "..")]
 
 import art_combined                               # noqa: E402
+import art_extend                                 # noqa: E402
 import art_wow                                    # noqa: E402
 import artgen                                     # noqa: E402
 import artgen_ascii                               # noqa: E402
@@ -154,11 +156,20 @@ def build_wow(name):
     make = art_wow.WOW[name]
     pal = art_combined.Palette(make(art_combined.Palette("default")).theme)
     sc = make(pal)
-    sizes = []
-    for rows in sc.sizes:
-        lines, parts, tones, bparts, btones, keep = art_combined.render(sc, rows, pal)
-        sizes.append(pack(lines, parts, tones, keep, bparts, btones))
-    return squeeze([sc.span, sizes])
+    return squeeze([sc.span, [packed(sc, rows, pal) for rows in sc.sizes]])
+
+
+def packed(sc, rows, pal, wide=art_extend.WIDE):
+    """One size of a scene, packed, with the scene drawn on beyond it
+    (tools/art_extend.py, out to `wide` columns) for the app to fill a big
+    window with."""
+    (lines, parts, tones, bparts, btones, keep), ext = art_extend.render_ext(sc, rows, pal, wide)
+    size = pack(lines, parts, tones, keep, bparts, btones)
+    if ext:
+        left, up, top, side = ext
+        grid = lambda g: pack(g[0], g[1], g[2], [], g[3], g[4])
+        size.append([left, up, grid(top), grid(side)])
+    return size
 
 
 def load():
@@ -195,11 +206,21 @@ def main(args):
             print(f"===== {name} ({len(lines)} rows)")
             print("\n".join(l[-width:].rstrip() for l in lines))
         return
+    jobs = 1
+    if args and args[0].startswith("-j"):
+        jobs, args = int(args[0][2:] or 4), args[1:]
     names = args or list(PICTURES)
     data = {} if not args else load()
-    for name in names:
-        data[name] = build(name)
-        print("built", name)
+    if jobs > 1:
+        from concurrent.futures import ProcessPoolExecutor
+        with ProcessPoolExecutor(jobs) as pool:
+            for name, built in zip(names, pool.map(build, names)):
+                data[name] = built
+                print("built", name, flush=True)
+    else:
+        for name in names:
+            data[name] = build(name)
+            print("built", name, flush=True)
     write(data)
 
 
