@@ -184,9 +184,13 @@ The art work left is listed, with the owner's own notes, in
    Beside menu text the art now comes up to one straight edge two columns
    past the widest text line (it used to stop at the picture's own box,
    leaving a step). The **upscaled** style is now the same hand-drawn
-   scenes drawn bigger (44 and 36 rows, `tools/make_art_upscaled.py`), then
-   the revamp sizes - more detail on a big screen, never a stretched
-   picture. Scene fields must be defined everywhere now (negative y above
+   scenes in **truecolour** (`tools/art_truecolor.py`): every cell its
+   exact two colours, the scene sampled with anti-aliasing, so skies are
+   smooth instead of banded/grainy - at every revamp size plus 44 and 36
+   rows for big windows (`tools/make_art_upscaled.py`, ~40 min with -j4;
+   a size is marked truecolour in the data and `art._unpack_tc` reads it,
+   colours 3 characters each). A flat truecolour cell is a full block, not
+   a blank with a background: `Picture.row` trims blanks off a row's end. Scene fields must be defined everywhere now (negative y above
    the picture, far-left x): the extension guards against a scene that
    fails out there, but clamp before powers (`clamp(y / h) ** k`).
    Builds: `make_revamp.py -j4` / `make_art_upscaled.py -j4` (four at a

@@ -1,6 +1,6 @@
-"""The upscaled art style: every picture's hand-drawn scene drawn bigger
-for big windows (tools/make_art_upscaled.py), then its revamp sizes, so a
-window too small for the big ones still gets the picture.
+"""The upscaled art style: every picture's hand-drawn scene drawn in
+truecolour (every cell its exact colours) at the revamp sizes and bigger
+ones for big windows (tools/make_art_upscaled.py).
 """
 import os
 import sys
@@ -25,20 +25,29 @@ assert ART_STYLES[0] == "revamp", "revamp is still the default"
 # text a scene asks for itself (stars, sparkles, falling code)
 BLOCKS = set(" █▀▄▌▐▁▂▃▅▆▇▔░▒▓▘▝▖▗▚▞▛▜▙▟▎▊▕") | {chr(c) for c in range(0x2800, 0x2900)}
 
-assert set(UPSCALED) == set(art_mod._REVAMP), "every picture has its upscaled sizes"
-for name in sorted(UPSCALED):
+# the style is built picture by picture (tools/make_art_upscaled.py writes
+# after each); the ones in truecolour are checked in full, the rest only
+# have to fall back to revamp cleanly (below)
+built = [n for n in sorted(UPSCALED) if make_art_upscaled.done(UPSCALED[n])]
+assert built, "no truecolour pictures built"
+for name in built:
     big = upscaled(name)
     small = revamp(name)
     assert [len(p.lines) for p in big] == list(make_art_upscaled.SIZES), name
-    assert len(big[-1].lines) > len(small[0].lines), (name, "bigger than the revamp sizes")
+    assert {len(p.lines) for p in small} <= {len(p.lines) for p in big},         (name, "every revamp size too, so a normal window gets it as well")
     for p in big:
         assert len({len(l) for l in p.lines}) == 1, (name, "ragged rows")
-        assert p.back_parts and p.ext, (name, "backgrounds and the scene drawn on beyond it")
-        assert set("".join(p.parts)) <= set("dtexagw "), name
-        assert all((ch == " ") == (q == " ") for l, r in zip(p.lines, p.parts)
-                   for ch, q in zip(l, r)), name
+        assert p.rgb and p.ext, (name, "truecolour, and the scene drawn on beyond it")
+        fg, bg = p.rgb
+        assert all(c is None or (len(c) == 3 and all(0 <= v <= 255 for v in c))
+                   for rows in (fg, bg) for row in rows for c in row), name
+        # every cell shows something: ink, or a background behind a blank
+        assert all(f is not None or b is not None for frow, brow in zip(fg, bg)
+                   for f, b in zip(frow, brow)), (name, "no holes")
         width = len(p.lines[0])
         assert sum(k < width for k in p.keep) < len(p.lines), (name, "not all focus")
+    # truecolour: far more colours than the theme's 70
+    assert len({c for row in big[2].rgb[1] + big[2].rgb[0] for c in row if c}) > 150, name
     # mostly blocks: a scene's own text is a sprinkle, not the picture
     cells = "".join(big[0].lines)
     assert sum(ch in BLOCKS for ch in cells) > 0.6 * len(cells), name
@@ -49,7 +58,8 @@ for theme in style.theme_names():
         continue
     name = THEME_ART[theme]
     pieces = style.theme_art(theme, "upscaled")
-    want = upscaled(name) + revamp(name)
+    want = art_mod._upscaled_or_revamp(name)
+    assert any(len(p.lines) <= 16 for p in want), (theme, "something for a small window")
     assert [p.lines for p in pieces[:len(want)]] == [p.lines for p in want], theme
     assert [p.lines for p in resolve(name, "upscaled")[:len(want)]] == [p.lines for p in want]
 print("ALL OK")

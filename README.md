@@ -170,10 +170,11 @@ Skipping pages:
   top, or the sections as buttons down the left (settings → interface → sidebar
   tabs)
 - art styles (settings → art → art style): **revamp** (the default: the
-  scenes described below), **upscaled** (the same hand-drawn scenes drawn
-  bigger - 44 and 36 rows - for big windows, so a big screen gets more
-  detail instead of a small picture filled out; a smaller window gets the
-  revamp sizes), **blocks**, **detailed**, **og** and **combined**
+  scenes described below), **upscaled** (the same hand-drawn scenes in
+  truecolour: every cell its exact colours instead of the theme's 70, so
+  skies are smooth gradients, edges are anti-aliased and shading shows -
+  at every size, plus 44 and 36 rows for big windows), **blocks**,
+  **detailed**, **og** and **combined**
 - 45 themes (settings → theme → theme; a sample line under the row shows
   each one as you flip through):
   - plain: default, ocean, forest, sunset, dracula, nord, gruvbox,

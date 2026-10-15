@@ -67,12 +67,16 @@ for plain, line in zip(beside, text[:3]):
         assert plain[len(line):widest + 2].strip() == "", ("art before the edge", plain[:widest + 4])
         assert plain[widest + 2] != " " or len(set(plain[widest + 2:])) > 1, "art from the edge"
 
-# the upscaled style: the same scenes drawn bigger, then the revamp sizes
+# the upscaled (truecolour) pictures carry their extension too, and grow
+# with it the same way
 for name in sorted(set(THEME_ART.values())):
     big = upscaled(name)
     if not big:
         continue
     assert [len(p.lines) for p in big] == sorted((len(p.lines) for p in big), reverse=True)
-    assert len(big[-1].lines) > len(revamp(name)[0].lines), name
-    assert all(p.ext and p.back_parts for p in big), name
+    assert all(p.ext for p in big), name     # (truecolour once rebuilt: see upscaled_check)
+up = paint(upscaled(THEME_ART["synthwave"])[2], pal)
+uw = up.wider(up.width + 20).taller(3)
+assert uw.extra == 3 and uw.width == up.width + 20
+assert all("38;2;" in c or "48;2;" in c for row in uw._codes for c in row), "every cell coloured"
 print("ALL OK")

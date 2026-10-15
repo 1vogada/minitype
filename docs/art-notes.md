@@ -7,7 +7,7 @@
 | blocks | `tools/make_art.py` (`artgen.render_blocks`) from `tools/art_scenes.py` | `art_detailed.py` BLOCKS | quadrant blocks + braille |
 | detailed | `tools/make_art.py` (`artgen.render`) | `art_detailed.py` DETAILED | shaded ASCII |
 | combined | `tools/make_art.py` via `tools/art_combined.py` | `art_detailed.py` COMBINED | only `palm` (vaporwave) so far; others fall back to blocks |
-| upscaled | `tools/make_art_upscaled.py` from the same `tools/art_wow*.py` scenes | `minitype/terminal/art_upscaled.py` | the revamp scenes at 44 / 36 rows, then the revamp sizes |
+| upscaled | `tools/make_art_upscaled.py` (`tools/art_truecolor.py`) from the same `tools/art_wow*.py` scenes | `minitype/terminal/art_upscaled.py` | truecolour: every cell its exact two colours (anti-aliased samples, best glyph split), at 44 / 36 / 28 / 22 / 16 rows |
 | og | hand-written | `art_large.py`, `art.py` ART | fallback for every style |
 
 `art.resolve(name, style)` picks the pieces.

@@ -25,18 +25,27 @@ TALLER = 0.5          # rows drawn above a picture: this share of its height
 WIDE = 260            # columns a picture is drawn out to, with the extension
 
 
-def render_ext(scene, rows, pal, wide=WIDE, taller=TALLER):
-    """The picture `rows` tall (as art_combined.render gives it) and its
-    extension: (picture, ext). ext is None for a picture that doesn't
-    span, else (left, up, top, side): `left` columns and `up` rows more,
-    `top` the rows above it (left + its width wide) and `side` the columns
-    left of it (its height tall), each as (chars, parts, tones, back
-    parts, back tones) lists of rows."""
+def render_ext(scene, rows, pal, wide=WIDE, taller=TALLER, truecolour=False):
+    """The picture `rows` tall (as art_combined.render gives it, or with
+    `truecolour` as art_truecolor.render does) and its extension:
+    (picture, ext). ext is None for a picture that doesn't span, else
+    (left, up, top, side): `left` columns and `up` rows more, `top` the
+    rows above it (left + its width wide) and `side` the columns left of it
+    (its height tall), each as lists of rows: (chars, parts, tones, back
+    parts, back tones), or in truecolour (chars, foreground, background)."""
     pal = pal or ac.Palette(scene.theme)
     unit, cw, cols, x_left = ac.geometry(scene, rows)
     texts = {(r, c): (ch, rgb, foc) for c, r, ch, rgb, foc in scene.texts(rows, x_left, cw, unit)
              if 0 <= r < rows and 0 <= c < cols}
-    picture = ac._trim(scene, *ac.draw(scene, rows, pal, range(rows), range(cols), texts)[:6])
+    if truecolour:
+        import art_truecolor as tc
+        lines, fg, bg, focus = tc.draw(scene, rows, pal, range(rows), range(cols), texts)
+        keep = tuple(next((c for c in range(cols) if focus[r][c]), cols) for r in range(rows))
+        picture = (lines, fg, bg, keep)
+        draw = lambda sc, rr, cc, tx: tc.draw(sc, rows, pal, rr, cc, tx)[:3]
+    else:
+        picture = ac._trim(scene, *ac.draw(scene, rows, pal, range(rows), range(cols), texts)[:6])
+        draw = lambda sc, rr, cc, tx: _joined(ac.draw(sc, rows, pal, rr, cc, tx)[:5])
     if not scene.span:
         return picture, None
     lines = picture[0]
@@ -73,9 +82,9 @@ def render_ext(scene, rows, pal, wide=WIDE, taller=TALLER):
     seed = sum(map(ord, scene.theme)) * 7919 + rows
     top_texts = _carry_up(texts, kind, first, rows, width, top_rows, top_cols, seed)
     side_texts = _carry_left(texts, kind, first, width, side_rows, side_cols, seed + 1)
-    top = ac.draw(scene, rows, pal, top_rows, top_cols, top_texts)[:5]
-    side = ac.draw(scene, rows, pal, side_rows, side_cols, side_texts)[:5]
-    return picture, (left, up, _joined(top), _joined(side))
+    top = draw(scene, top_rows, top_cols, top_texts)
+    side = draw(scene, side_rows, side_cols, side_texts)
+    return picture, (left, up, top, side)
 
 
 def _joined(grid):

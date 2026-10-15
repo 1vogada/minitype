@@ -448,6 +448,7 @@ class Piece(NamedTuple):
     back_parts: tuple = None
     back_tones: tuple = None
     ext: tuple = None       # the scene drawn on beyond it: (left, up, top, side), see _Ext
+    rgb: tuple = None       # truecolour pieces: (colours, back colours), an (r, g, b) or None a cell
 
 
 def _decode(lead, codes, width):
@@ -458,7 +459,39 @@ def _decode(lead, codes, width):
     return (" " * lead + parts).ljust(width), (" " * lead + tones).ljust(width)
 
 
+_ALPHA = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz+/"
+_LEVEL = {ch: round(i * 255 / 63) for i, ch in enumerate(_ALPHA)}
+
+
+def _colours(codes):
+    """A row of truecolour codes (three characters a colour, "!!!" none)."""
+    return tuple(None if codes[i] == "!" else
+                 (_LEVEL[codes[i]], _LEVEL[codes[i + 1]], _LEVEL[codes[i + 2]])
+                 for i in range(0, len(codes), 3))
+
+
+def _unpack_tc(span, size):
+    """A truecolour size (tools/make_art_upscaled.py): every cell its own
+    colours. Its parts and tones only say where there is ink and
+    background (for code that asks), the colours are in `rgb`."""
+    width, rows, keep = size[:3]
+    lines = tuple(text.ljust(width) for text, _, _ in rows)
+    fg = tuple(_colours(f) for _, f, _ in rows)
+    bg = tuple(_colours(b) for _, _, b in rows)
+    parts = tuple("".join(" " if c is None else "t" for c in row) for row in fg)
+    backs = tuple("".join(" " if c is None else "t" for c in row) for row in bg)
+    tones = tuple("".join(" " if c == " " else "5" for c in row) for row in parts)
+    btones = tuple("".join(" " if c == " " else "5" for c in row) for row in backs)
+    ext = None
+    if len(size) > 3 and size[3]:
+        left, up, top, side = size[3]
+        ext = (left, up, _unpack_tc(False, top), _unpack_tc(False, side))
+    return Piece(lines, parts, tones, tuple(keep), span, backs, btones, ext, (fg, bg))
+
+
 def _unpack(span, size):
+    if len(size) > 4 and size[4] == 1:
+        return _unpack_tc(span, size)
     width, rows, keep = size[:3]
     lines, parts, tones, bparts, btones = [], [], [], [], []
     for row in rows:
@@ -525,12 +558,21 @@ def combined(name):
 @lru_cache(maxsize=None)
 def upscaled(name):
     """A picture's upscaled sizes (the same hand-drawn scene as its revamp
-    picture, drawn bigger for big windows), biggest first; [] for one that
-    has none."""
+    picture, in truecolour, at its sizes and bigger ones for big windows),
+    biggest first; [] for one that has none."""
     if name not in _UPSCALED:
         return []
     span, sizes = _load(_UPSCALED[name])
     return [_unpack(span, size) for size in sizes]
+
+
+def _upscaled_or_revamp(name):
+    """A picture's upscaled sizes, and under its smallest one the revamp
+    sizes smaller still - so a window too small for every upscaled size
+    (or a picture not rebuilt yet) still gets one."""
+    up = upscaled(name)
+    least = min((len(p.lines) for p in up), default=10 ** 6)
+    return up + [p for p in revamp(name) if len(p.lines) < least]
 
 
 def _og(lines, colours):
@@ -546,15 +588,15 @@ def resolve(value, style="blocks"):
     """A theme's "art" value as a list of pieces, biggest first. A name
     gives the picture's sizes in the style (revamp, upscaled, blocks,
     detailed or combined; none for og; a picture with no combined version is
-    drawn in blocks, and upscaled is its big sizes and then its revamp
-    ones, so a window too small for the big ones still gets the picture)
+    drawn in blocks, and one with no upscaled version falls back to its
+    revamp picture)
     and then the OG ones, large and coloured, then small; a list of lines
     is a single piece in the accent colour. None for anything else
     (including "none")."""
     if isinstance(value, str) and value in ART:
         pieces = list({"blocks": blocks, "detailed": detailed,
                        "combined": lambda n: combined(n) or blocks(n),
-                       "upscaled": lambda n: upscaled(n) + revamp(n),
+                       "upscaled": _upscaled_or_revamp,
                        "revamp": revamp}
                       .get(style, lambda n: [])(value))
         if value in LARGE:
@@ -747,7 +789,12 @@ class Picture:
 
 
 def _codes_of(piece, palette):
-    """The escape code of every cell of a piece, a list per row."""
+    """The escape code of every cell of a piece, a list per row: from the
+    palette, or a truecolour piece's own colours."""
+    if piece.rgb:
+        from .style import _code
+        return [[(_code(f, 38) if f else "") + (_code(b, 48) if b else "")
+                 for f, b in zip(fg, bg)] for fg, bg in zip(*piece.rgb)]
     out = []
     backs = (zip(piece.back_parts, piece.back_tones) if piece.back_parts
              else ((None, None) for _ in piece.parts))
