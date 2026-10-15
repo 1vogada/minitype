@@ -792,39 +792,95 @@ def leaf(pal):
 
 # ---------------------------------------------------------------- desert
 
+def _tube(points, radius):
+    """A limb of a plant as a tube along a path: (x, y) -> None outside,
+    else (across, 0 at the axis to 1 at the skin, signed: < 0 on the left of
+    the path's direction; the unit normal (nx, ny) pointing out from the
+    axis). Rounded where it ends."""
+    xs, ys = [p[0] for p in points], [p[1] for p in points]
+    box = (min(xs) - radius, max(xs) + radius, min(ys) - radius, max(ys) + radius)
+    segs = list(zip(points, points[1:]))
+
+    def at(x, y):
+        if not (box[0] <= x <= box[1] and box[2] <= y <= box[3]):
+            return None
+        best = None
+        for (ax, ay), (bx, by) in segs:
+            dx, dy = bx - ax, by - ay
+            ln = dx * dx + dy * dy
+            t = clamp(((x - ax) * dx + (y - ay) * dy) / ln) if ln else 0.0
+            px, py = x - (ax + dx * t), y - (ay + dy * t)
+            d = math.hypot(px, py)
+            if best is None or d < best[0]:
+                side = 1 if dx * py - dy * px > 0 else -1
+                best = (d, px, py, side)
+        d, px, py, side = best
+        if d > radius:
+            return None
+        n = (px / d, py / d) if d else (0.0, 0.0)
+        return side * d / radius, n
+    return at
+
+
+def _curve(p0, p1, p2, n=10):
+    """Points along a quadratic bezier."""
+    return [((1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * p1[0] + t * t * p2[0],
+             (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * p1[1] + t * t * p2[1])
+            for t in (k / n for k in range(n + 1))]
+
+
 def cactus(pal):
-    """A tall saguaro at golden hour: ribbed and lit from the setting
-    sun, mesas on the horizon, dunes rippling away."""
+    """A tall saguaro at golden hour: a ribbed trunk and two arms that
+    curve out and up, shaded round as tubes and lit from the low sun on the
+    left (a warm rim on that side, the far side in cool shade, never
+    black), blossoms on its crown, spines catching the light; it stands in
+    a little mound of sand and throws a long shadow away from the sun.
+    Mesas on the horizon, dunes rippling away."""
     hz = 0.7
     sx, sy, sr = 0.55, 0.62, 0.09
     sky = pal.path("x1 e4 a4 a6")
     mesas = [(-0.1, 0.42, 0.13), (0.95, 0.3, 0.08), (-1.3, 0.5, 0.16), (-2.4, 0.35, 0.1)]
-    arms = [  # (x of the arm's foot on the trunk, height it leaves, side, reach, rise)
-        (1.36, 0.58, -1, 0.15, 0.24), (1.36, 0.44, 1, 0.13, 0.28)]
-    tx, tw, top = 1.36, 0.068, 0.08
+    tx, tw, top, foot = 1.36, 0.068, 0.08, 0.92
+    aw = tw * 0.72
+    limbs = [_tube([(tx, foot), (tx, top + tw)], tw)]
+    for fy, side, reach, rise in ((0.58, -1, 0.15, 0.24), (0.44, 1, 0.13, 0.28)):
+        ax = tx + side * reach
+        elbow = _curve((tx, fy), (ax, fy + 0.012), (ax, fy - 0.07))
+        limbs.append(_tube(elbow + [(ax, fy - rise + aw)], aw))
+    crown = [(tx - 0.03, top + 0.005), (tx + 0.02, top - 0.002), (tx - 0.07, 0.38),
+             (tx + 0.13 - 0.02, 0.165)]
+    # the light: low, from the sun on the left, a little towards us
+    lx, ly, lz = -0.86, -0.12, 0.5
+    flesh = pal.path("g0 g1 g2 g4 g6 w6 w8")
 
-    def saguaro(x, y):
-        """(distance across, 0..1 from its left edge) if inside, else None."""
-        if y >= top and abs(x - tx) <= tw * (1 if y > top + tw else math.sqrt(max(0.0, 1 - ((top + tw - y) / tw) ** 2))):
-            return (x - tx + tw) / (2 * tw)
-        for fx, fy, side, reach, rise in arms:
-            ax = fx + side * reach
-            w = tw * 0.75
-            # elbow: out sideways, then up
-            if fy - w <= y <= fy + w and min(fx, ax) <= x <= max(fx, ax):
-                return 0.5 + 0.3 * side
-            ytop = fy - rise
-            if ytop <= y <= fy and abs(x - ax) <= w * (1 if y > ytop + w else
-                                                      math.sqrt(max(0.0, 1 - ((ytop + w - y) / w) ** 2))):
-                return (x - ax + w) / (2 * w)
-        return None
+    def plant(x, y):
+        """(colour) of the saguaro at (x, y), or None."""
+        for limb in limbs:
+            got = limb(x, y)
+            if got:
+                break
+        else:
+            return None
+        u, (nx, ny) = got
+        depth = math.sqrt(max(0.0, 1 - u * u))          # how much it faces us
+        k = abs(u)
+        lit = clamp((nx * lx + ny * ly) * k + depth * lz)
+        theta = math.asin(max(-1.0, min(1.0, u)))
+        rib = math.cos(theta * 5)                       # ribs run along the limb, a few cells wide
+        b = 0.08 + 0.9 * lit ** 1.3                     # never black: sky light in the shade
+        b *= 0.74 + 0.26 * rib
+        c = flesh(clamp(b))
+        if k > 0.78 and nx * lx + ny * ly > 0.3:         # the sun catching its edge
+            c = mix(c, pal.rgb("w7"), (k - 0.78) / 0.22 * 0.6)
+        return c
 
     def field(x, y):
-        s = saguaro(x, y)
-        if s is not None and y < 0.95:
-            rib = 0.5 + 0.5 * math.cos(s * math.pi * 7)
-            light = clamp(1.0 - s * 1.1) * 0.75 + rib * 0.25
-            return pal.path("- g1 g4 g6 w6")(light), 1.0, True, "cactus"
+        for bx, by in crown:
+            if (x - bx) ** 2 + ((y - by) * 0.6) ** 2 < 0.012 ** 2:
+                return pal.rgb("w9"), 1.0, True, "cactus"
+        c = plant(x, y)
+        if c is not None:
+            return c, 1.0, True, "cactus"
         if y < hz:
             for mx, w, h in mesas:
                 up = (y - (hz - h)) / h                 # 0 at the top, 1 at the foot
@@ -839,20 +895,27 @@ def cactus(pal):
             return c, 1.0, False, "sky"
         t = (y - hz) / (1 - hz)
         ripple = math.sin(x * 40 + math.sin(x * 3 + y * 20) * 2 + y * 90)
-        c = pal.path("a6 a4 x4 x1 -")(clamp(t * 0.9 + ripple * 0.06))
+        # the little mound it stands in: sand heaped round its foot
+        mound = math.exp(-((x - tx) / 0.11) ** 2 - ((y - foot) / 0.025) ** 2)
+        c = pal.path("a6 a4 x4 x1 -")(clamp(t * 0.9 + ripple * 0.06 - mound * 0.25))
         if ripple > 0.75 and t > 0.1:
             c = mix(c, pal.rgb("w8"), 0.35)
-        shadow = 0.95 > y > 0.9 and tx - 0.6 < x < tx and abs(y - 0.92 + (tx - x) * 0.04) < 0.02
-        if shadow:
-            c = mix(c, pal.ground, 0.6)
+        # its long shadow, away from the sun, softening as it goes
+        along = x - tx
+        if along > -tw:
+            sy0 = foot + 0.012 + along * 0.025          # a low sun: long and flat
+            width = 0.014 + along * 0.012
+            strength = math.exp(-((y - sy0) / width) ** 4) * clamp(1.05 - along / 0.75) * 0.85
+            c = mix(c, pal.path("x1 -")(0.45), clamp(strength))
+        c = mix(c, pal.rgb("x1"), math.exp(-((x - tx) / 0.05) ** 2 - ((y - foot) / 0.012) ** 2) * 0.5)
         return c, 1.0, False, "sand"
 
     def texts(rows, x_left, cw, unit):
         out = stars(field, rows, x_left, cw, unit, rows * 2, 0.25, [pal.rgb("t8")], 6, chars="..·")
         rnd = random.Random(3)
-        for _ in range(rows):                      # spines on the lit side
-            y = rnd.uniform(top + 0.05, 0.9)
-            x = tx - tw * rnd.uniform(0.9, 1.05)
+        for _ in range(rows):                      # spines catching the light on the sunny side
+            y = rnd.uniform(top + 0.05, 0.92)
+            x = tx - tw * rnd.uniform(0.86, 0.98)
             out.append((int((x - x_left) / cw), int(y / unit), rnd.choice("'`,"), pal.rgb("w8"), True))
         return out
 
