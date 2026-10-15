@@ -12,6 +12,15 @@ Eight items below are done - **amber**, **party**, **pine**, **autumn**,
 The notes are left as they were, so what was asked for is still readable.
 Rebuilt with `python tools/make_revamp.py`; 8 of the 40 pictures changed.
 
+## Touch-ups, 2026-10-12 / 15
+The eight from the first 2026-10-09 pass were touched up again:
+**party**, **bubbly** (the owner's "remove the green" - none left at any
+size), **synthwave**, **amber**, **coral reef**, **gruvbox**, **pine** and
+**autumn**. Soft spots: the synthwave floor is fine braille hatching at
+16 rows; the reef's starfish and fish school are tiny at small sizes;
+gruvbox's bokeh turns blocky at 16 rows; pine's boulders read a little
+like pillows; the autumn wood is busy, so the leaf leads on brightness.
+
 ## Done in the second 2026-10-09 pass
 The other twelve - every item that was left - are done too, so everything
 in this list is now `[x]`: the redesigns **solarized** (a sunrise over a

@@ -167,10 +167,12 @@ The art work left is listed, with the owner's own notes, in
    removed on 2026-10-15; see 9.
 7. 2026-10-09/12: every item in docs/ART-TODO.md done (12 pictures by four
    worktree agents, reviewed and merged), then touch-ups started on the
-   first-pass eight; only **party** landed before the agents hit the usage
-   limit. Still to touch up: bubbly (owner: "remove the green, a bit more
-   fidelity"), synthwave (noisy grid floor), amber (glitchy floor strip),
-   coral reef, gruvbox, pine, autumn.
+   first-pass eight: **party** on 10-12, and on 10-15 the other seven -
+   bubbly (no green anywhere, iridescent rims), synthwave (a clean neon
+   grid up to the horizon, a bigger car), amber (a polished wood surface),
+   coral reef (a real clownfish, anemone, jellyfish, corals), gruvbox (a
+   cosy cafe mug), pine (layered pines, moonlit lake) and autumn (a crisp
+   maple leaf in a dense autumn wood).
 8. Help box: a **help border** setting, and corner boxes keep clear of the
    text panel and the key hints' panel.
 9. 2026-10-15: **the art fills a big window with its own scene.** Every wow
