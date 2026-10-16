@@ -133,7 +133,7 @@ def play(app, presses, clock):
 a = App()
 assert a.settings.esc_pause
 rows = {it.label: it for it in sm.arrange(sm.build_items(a))}
-assert rows["pause on esc"].section == "typing screen" and rows["pause on esc"].value() == "on"
+assert rows["pause on esc"].section == "typing" and rows["pause on esc"].value() == "on"
 # esc mid-test: paused, the minute away doesn't count, enter resumes
 res, frames = play(a, list("alpha ") + [keys.ESC, 60.0, keys.ENTER] + list("beta gamma delta"), [1000.0])
 assert any("Paused - resume?" in f for f in frames)

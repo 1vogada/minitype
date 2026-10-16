@@ -33,12 +33,14 @@ from ..util import cycle, step_number
 from .book_menu import edit_book_filter, filter_label
 from .key_editor import key_editor
 from .anywhere import warn
-from .menu import Item, Menu, title_lines
+from .menu import Item, title_lines
+from .settings_tree import TREE, UI_TAB, arrange, build_tree   # noqa: F401  (TREE, UI_TAB: for tests)
+from .tree_menu import TreeMenu
 from .preview import theme_sample
 from .screen import menu_loop
 from .theme_creator import theme_creator
 
-HINTS = "type to search   #tag   tab / [ ] section   esc back"
+HINTS = "type to search   #tag   tab / [ ] section   enter opens ›   esc back"
 BACK = object()     # returned from the key handler to leave the menu
 ENTRY = {"name": None, "text": ""}   # a number being typed into a setting
 NOT_SEARCHABLE = ("[", "]")   # these switch sections instead
@@ -112,7 +114,9 @@ def _then(item, after):
     return item
 
 
-def build_items(app):
+def raw_items(app):
+    """Every settings row, grouped by what it touches (see TREE for where
+    each one shows)."""
     s = app.settings
     b = Builder(s)
 
@@ -596,104 +600,12 @@ def build_items(app):
                help="forget all key errors and bad words",
                tags=("clear", "data", "mistakes", "forget")),
     ]
-    return arrange(items)
+    return items
 
 
-# Where every setting goes, section by section, in order, keyed by where
-# it's built (section, label) - and its new name, if it has one. Rows are
-# built grouped by what they touch; this lays them out by what you're
-# looking for.
-LAYOUT = [
-    ("rules", [("test", "difficulty"), ("test", "stop on error"), ("test", "backspace"),
-               ("test", "corrected letters"), ("test", "indicate typos"), ("test", "blind")]),
-    ("challenges", [("challenges", "min speed"), ("challenges", "min accuracy"),
-                    ("challenges", "memory"), ("challenges", "funbox")]),
-    ("text", [("words", "word list"), ("test", "punctuation"), ("test", "all lowercase"),
-              ("test", "apostrophes visible"),
-              ("test", "numbers"), ("words", "quotes from"), ("words", "quote genre"), ("words", "book page"),
-              ("words", "book filter"), ("words", "bulgarian books"),
-              ("words", "shlokavitsa style")]),
-    ("drills", [("drills", "bad keys"), ("drills", "bad key %"), ("drills", "edit keys"),
-                ("drills", "bad words"), ("drills", "bad word %")]),
-    ("theme", [("look", "theme"), ("look", "theme creator"), ("look", "theme background"),
-               ("look", "accent letters"), ("look", "lighter text"), ("look", "lighter untyped"), ("look", "gradients"), ("look", "gradient flow"),
-               ("look", "heat"), ("look", "bold / italic")]),
-    ("art", [("look", "theme art", "show art"), ("fun", "art style"),
-             ("look", "picture"), ("look", "picture colours"),
-             ("fun", "art colours", "art shading"), ("look", "text panel"),
-             ("look", "art behind text"), ("look", "text contrast"), ("look", "bold text"),
-             ("look", "see-through")]),
-    ("art fade", [("look", "fade on", "fade (all pictures)"), ("look", "art fade", "fade"), ("look", "fade top"),
-                  ("look", "fade start top"), ("look", "fade side"),
-                  ("look", "fade start"), ("look", "fade angle"),
-                  ("look", "fade round"), ("look", "fade curve")]),
-    ("effects", [("fun", "bounce"), ("fun", "shake"), ("fun", "pop"), ("fun", "fade"),
-                 ("fun", "caret effect"), ("fun", "glitch"), ("fun", "effect speed"),
-                 ("fun", "flow direction")]),
-    ("typing screen", [("test", "pause on esc"), ("look", "caret"), ("look", "word gap"), ("look", "tape"),
-                       ("look", "ghost"), ("look", "pace caret"),
-                       ("header", "timer", "show timer"), ("header", "progress", "show progress"),
-                       ("header", "live wpm", "show live wpm"), ("header", "combo", "show combo"),
-                       ("look", "keyboard", "on-screen keyboard"),
-                       ("look", "layout", "keyboard layout"), ("look", "lowkey"),
-                       ("look", "sound")]),
-    ("interface", [("look", "ui style"), ("look", "sidebar tabs"), ("look", "border"),
-                   ("look", "key hints"), ("look", "help box"),
-                   ("look", "help border")]),
-    ("results", [("results", "speed chart"), ("results", "key heatmap"),
-                 ("results", "personal best"), ("results", "worst keys"),
-                 ("results", "session keys"), ("results", "bad words"), ("results", "session")]),
-    ("progress", [("progress", "daily goal"), ("progress", "save to disk"), ("progress", "reset")]),
-]
-
-
-# Every switch for how the app looks, gathered in one "ui" tab (they stay in
-# their own tabs too): (section, label) after LAYOUT.
-UI_TAB = [("interface", "ui style"), ("interface", "sidebar tabs"), ("interface", "border"),
-          ("interface", "key hints"), ("interface", "help box"), ("interface", "help border"),
-          ("theme", "theme background"), ("art", "show art"),
-          ("art", "art behind text"), ("art", "text panel"), ("art", "text contrast"),
-          ("art", "bold text"), ("art", "see-through"), ("theme", "lighter text"), ("theme", "lighter untyped"), ("art fade", "fade (all pictures)"),
-          ("typing screen", "show timer"), ("typing screen", "show progress"),
-          ("typing screen", "show live wpm"), ("typing screen", "show combo"),
-          ("typing screen", "on-screen keyboard"), ("typing screen", "lowkey")]
-
-
-def _with_ui_tab(items):
-    """The rows with copies of the UI_TAB ones as a "ui" tab, just before
-    the interface tab. A copy acts on the same setting as its original."""
-    import copy
-    by_key = {(it.section, it.label): it for it in items}
-    tab = []
-    for key in UI_TAB:
-        it = by_key.get(key)
-        if it is not None:
-            dup = copy.copy(it)
-            dup.tags, dup.section = tuple(it.tags) + ("ui",), "ui"
-            tab.append(dup)
-    at = next((i for i, it in enumerate(items) if it.section == "interface"), len(items))
-    return items[:at] + tab + items[at:]
-
-
-def arrange(items):
-    """The rows laid out by LAYOUT: their sections, order and names, with
-    the ui tab (see UI_TAB) added. The old section stays a tag, so #look
-    and the like still find them; a row LAYOUT doesn't know goes at the
-    end of its own section."""
-    by_key = {(it.section, it.label): it for it in items}
-    out, placed = [], set()
-    for section, rows in LAYOUT:
-        for spec in rows:
-            it = by_key.get(spec[:2])
-            if it is None:
-                continue
-            placed.add(id(it))
-            it.tags = tuple(it.tags) + (it.section, it.label)
-            it.section = section
-            if len(spec) > 2:
-                it.label = spec[2]
-            out.append(it)
-    return _with_ui_tab(out + [it for it in items if id(it) not in placed])
+def build_items(app):
+    """Every setting, flat, in TREE's order."""
+    return arrange(raw_items(app))
 
 
 def parse_number(name, text):
@@ -778,8 +690,16 @@ def search_bar(st, menu):
             f"   {st.dim}{n} match{'es' if n != 1 else ''}{RESET}", ""]
 
 
+def breadcrumb(st, menu):
+    """Where you are, once you're inside a page: settings › art › fade."""
+    path = menu.path()
+    if len(path) < 2:
+        return []
+    return [f"  {st.dim}{' › '.join(['settings'] + path)}{RESET}", ""]
+
+
 def draw(app, st, menu):
-    lines = title_lines(app, st, "settings") + search_bar(st, menu)
+    lines = title_lines(app, st, "settings") + search_bar(st, menu) + breadcrumb(st, menu)
     body, focus = menu.render(st, label_width=15)
     focus += len(lines)
     lines += body
@@ -789,7 +709,7 @@ def draw(app, st, menu):
 
 
 def settings_menu(app):
-    menu = Menu(build_items(app), app.cursors, "settings")
+    menu = TreeMenu(build_tree(raw_items(app)), app.cursors, "settings")
     ENTRY.update(name=None, text="")
 
     def extra(key):

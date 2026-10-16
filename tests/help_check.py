@@ -28,12 +28,25 @@ def run(style, presses):
     return frame
 
 
-from minitype.ui.settings_menu import build_items
+from minitype.ui.settings_menu import build_items, build_tree, raw_items
 HELP, FIRST = {}, {}
 for _it in build_items(App()):
     HELP.setdefault(_it.label, _it.help_text())
-    # two rows can share a label ("fade" in effects and in art fade): either help counts
+    # two rows can share a label ("fade" in effects and in art's fade page): either help counts
     FIRST.setdefault(_it.label, set()).add(_it.help_text().split()[0])
+
+
+def _pages(page):
+    for c in page.children:
+        if hasattr(c, "children"):
+            yield c
+            yield from _pages(c)
+
+
+for _top in build_tree(raw_items(App())):        # rows that open a page show its help too
+    for _p in _pages(_top):
+        HELP.setdefault(_p.name, _p.help)
+        FIRST.setdefault(_p.name, set()).add(_p.help.split()[0])
 
 
 def check_inline(frame):

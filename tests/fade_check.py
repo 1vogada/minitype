@@ -67,11 +67,12 @@ s.apply({"art_fade": "corner", "fade_top": 50, "fade_side": 30, "fade_round": 50
 assert (s.art_fade, s.fade_top, s.fade_side, s.fade_round) == ("corner", 50, 30, 50)
 s = Settings(); s.apply({"art_fade": "x", "fade_top": 140, "fade_round": -5})
 assert (s.art_fade, s.fade_top, s.fade_round) == ("edges", 50, 50), "out of range falls back"
-items = sm.arrange(sm.build_items(App()))
-rows = {it.label: it for it in items if it.section == "art fade"}
-assert list(rows) == ["fade (all pictures)", "fade", "fade top", "fade start top", "fade side", "fade start",
-                      "fade angle", "fade round", "fade curve"], list(rows)
-assert not any(it.section == "art" and "fade" in it.label for it in items), "fade has its own tab"
+pages = {p.name: p for p in sm.build_tree(sm.raw_items(App()))}
+fade = next(c for c in pages["art"].children if getattr(c, "name", "") == "fade")
+rows = {it.label: it for it in fade.leaves()}
+assert list(rows) == ["fade (all pictures)", "fade", "fade round", "fade curve", "fade top",
+                      "fade start top", "fade side", "fade start", "fade angle"], list(rows)
+assert [c.name for c in fade.children if hasattr(c, "children")] == ["top edge", "side edge"],     "the art's fade is a page of its own, with a page for each edge"
 assert rows["fade start"].value() == "100%" and rows["fade start top"].value() == "100%"
 assert rows["fade angle"].value() == "0°" and rows["fade curve"].value() == "3"
 assert rows["fade top"].value() == "50%" and rows["fade round"].value() == "50%"

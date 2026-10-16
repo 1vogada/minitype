@@ -16,11 +16,15 @@ agent's memory don't travel, so this section is the memory.
    one, so it can be stopped and resumed). Then `python tests/run_all.py`,
    commit `minitype/terminal/art_upscaled.py` and push. It takes about 2
    hours on 4 cores. The owner meant to run it on their workstation.
-2. **A new settings menu.** The owner asked for one; the design isn't
-   started. Ask them what they have in mind before building. Their
-   attempt to answer the last design question was interrupted, so it's
-   still open. Today the settings screen has 87 rows in 12 sections
-   (`minitype/ui/settings_menu.py`: `build_items`, `LAYOUT`, `UI_TAB`).
+2. **Settings menu: cascading pages (done 2026-10-16).** The owner wanted
+   it like Serious Sam Fusion / BFE's options (menus inside menus), keeping
+   the side tabs, and easy to extend. `minitype/ui/tree_menu.py` (Page,
+   TreeMenu: a Menu over pages; each top page remembers how deep you are;
+   rows ending in › open a page; esc / left go up) and
+   `minitype/ui/settings_tree.py` (TREE: the whole grouping in one table;
+   unplaced rows land in an "other" tab). Rows are still built in
+   `settings_menu.raw_items`. The owner may want the grouping tuned -
+   that's an edit to TREE only. `tests/tree_menu_check.py` covers it.
 3. Optional soft spots, listed in `docs/ART-TODO.md`.
 
 **What the owner wants, and how they work:**
@@ -94,8 +98,9 @@ agent's memory don't travel, so this section is the memory.
   `wider()` growth on wide screens).
 - `minitype/terminal/style.py` themes, palettes (`art_palette`), Styles.
 - `minitype/ui/` screens: `main_menu.py` (tabs: gamemode, practice,
-  gallery, settings, profile, quit), `settings_menu.py` (rows built by
-  section, then laid out by `LAYOUT`/`arrange`), `gallery.py`,
+  gallery, settings, profile, quit), `settings_menu.py` (rows built in
+  `raw_items`), `settings_tree.py` (TREE: which page each row is on),
+  `tree_menu.py` (cascading pages), `gallery.py`,
   `anywhere.py` (ctrl-o settings + Resume? dialog), `menu.py` (Menu, Item,
   Hints; `tab=True` items are section buttons that act), `screen.py`
   (menu_loop, ` and ~ theme keys).

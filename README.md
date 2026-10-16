@@ -70,12 +70,18 @@ minitype
   values.
 - **during a test**: esc pauses it (the clock stops; the box asks
   "Paused - resume?": enter or esc resumes, No leaves); with nothing typed
-  yet, or with settings → typing screen → pause on esc off, esc goes
+  yet, or with settings → typing → pause on esc off, esc goes
   straight to the menu. Tab restarts, ctrl-backspace deletes a word; in
   zen mode enter finishes
-- **settings** are in sections: rules, challenges, text, drills, theme,
-  art, art fade, effects, typing screen, interface, results, progress. Old section
-  names still work as search tags (#look, #fun, #header, #words)
+- **settings** are pages inside pages, like a game's options menu: the
+  tabs (typing, text, theme, art, effects, typing screen, ui, interface,
+  results, progress) hold settings and further pages - a row ending in ›
+  opens one (enter or right), esc or left goes back up a level, and the
+  path shows under the title (settings › art › fade › top edge). Search
+  finds a setting at any depth; old section names and page names work as
+  search tags (#look, #fun, #fade). The layout is one table,
+  `minitype/ui/settings_tree.py`: adding a setting is a row and its place
+  there
 - **anywhere**: ctrl-q wipes the screen and exits; ctrl-o opens the
   settings. In the middle of a test it's paused (the clock stops), and
   coming back a box asks "Resume?": yes carries on where you were, no
@@ -225,7 +231,7 @@ Skipping pages:
   picture's own gradient. The picture is still placed by its own height -
   what's above it never decides whether it fits - and the fade dissolves
   through it first
-- **art fade** (settings → art fade, `d` in the gallery): the art dissolves into
+- **art fade** (settings → art → fade, `d` in the gallery): the art dissolves into
   the screen instead of stopping on a straight line - dithered, its colour
   thinning through ▓ ▒ ░ on an exponential curve: light dithering for most
   of the way, thickening faster and faster, almost nothing left at the very
@@ -269,7 +275,7 @@ Skipping pages:
 - **ui tab** (settings → ui): every switch for how the app looks in one
   place (layout, border, hints, art, text over the art, see-through, fade,
   the typing screen's counters); they're in their own tabs too
-- **fade (all pictures)** (settings → art fade): turns the fade off
+- **fade (all pictures)** (settings → art → fade): turns the fade off
   everywhere at once; each picture keeps its own fade settings
 - **text panel** (settings → art, off by default, `p` in the gallery):
   the art full size over the whole screen and the text in a see-through

@@ -46,7 +46,7 @@ in_ui = {it.label for it in items if it.section == "ui"}
 assert {"text contrast", "bold text", "see-through", "fade (all pictures)", "text panel",
         "art behind text", "ui style", "border"} <= in_ui, in_ui
 assert where["text contrast"] == "art" and where["bold text"] == "art"
-assert where["fade (all pictures)"] == "art fade"
+assert where["fade (all pictures)"] == "art"
 
 # ---------------------------------------------------------------- on screen
 W, H = 120, 30

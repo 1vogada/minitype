@@ -79,8 +79,8 @@ assert "search  #stats " in f and "[" not in f.split("\n")[3] and "]" not in f.s
 assert app.settings.res_chart is False, "] ] moved to results, enter toggled its first row"
 f, app = run(typing("#stats") + ["]", "[", keys.ENTER], style="tabs")
 assert app.settings.show_timer is False, "[ came back to header"
-f, app = run(["]", keys.ENTER], style="list")
-assert app.settings.min_wpm == 20, "] jumps to challenges in list style too"
+f, app = run(["]", "]", keys.ENTER], style="list")
+assert app.settings.theme != App().settings.theme, "] ] jumps to the theme tab in list style too"
 f, app = run([keys.SHIFT_TAB, keys.ENTER], style="tabs")
 assert app.settings.daily_goal == 5, "shift-tab wraps back to progress"
 # tag plus words: both must hold

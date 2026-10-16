@@ -187,24 +187,24 @@ for style in ("list", "sidebar", "tabs"):
         SIZE[:] = [w, 30]
         with feed([keys.DOWN, keys.ESC]):
             assert mm.main_menu(app) == "quit"
-        with feed([keys.DOWN, keys.RIGHT, keys.ESC]):
+        with feed([keys.DOWN, keys.RIGHT] + [keys.ESC] * 4):   # right may open a page: esc climbs out
             sm.settings_menu(app)
         with feed([keys.ESC]):
             lm.learn_menu(app)
     SIZE[:] = [100, 30]
-    with feed([keys.ESC]):
+    with feed([keys.ESC] * 4):
         sm.settings_menu(app)
     print(f"--- {style} ---")
     print(last_text())
 SIZE[:] = [80, 24]
 app.settings.ui_style = "tabs"
 menu = Menu(sm.build_items(app), {}, "s", style="tabs")
-assert menu.selected.section == "rules"
-menu.handle("]"); assert menu.selected.section == "challenges"
+assert menu.selected.section == "typing"
+menu.handle("]"); assert menu.selected.section == "text"
 for _ in range(10):
     menu.handle(keys.DOWN)
-assert menu.selected.section == "challenges"
-menu.handle(keys.PGUP); assert menu.selected.section == "rules"
+assert menu.selected.section == "text"
+menu.handle(keys.PGUP); assert menu.selected.section == "typing"
 app.settings.ui_style = "list"
 # main menu: right changes time, enter starts it; hotkeys start modes
 app.cursors.clear()
