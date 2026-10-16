@@ -394,10 +394,15 @@ Both live in the app folder, next to this README, and git ignores them
   Only written once you switch on settings → progress → save to disk;
   switching it off deletes the file.
 
-A new install (no settings saved yet) starts with the owner's own setup
-(`STARTER` in `minitype/settings.py`: summit, no art, the sidebar with side
-tabs, ...); set `MINITYPE_FACTORY=1` to start from the plain built-in
-defaults instead.
+**Welcome screen.** The first time (no settings saved yet) - and after
+settings → progress → reset settings - minitype says welcome and offers two
+setups to start from, both the owner's own: **clean** (quiet and
+monochrome, no pictures) and **art** (a picture behind everything, colours
+that flow and heat up as you type). Moving between them shows each one live
+on the screen; enter starts with it. Everything can be changed later. The
+setups are `SETUPS` in `minitype/settings.py` (add one there and it's
+offered too); set `MINITYPE_FACTORY=1` to start from the plain built-in
+defaults instead, with no welcome screen.
 
 Set `MINITYPE_DIR` to keep them somewhere else. If the app folder isn't
 writable they go to `%LOCALAPPDATA%\minitype`. A save from an older version

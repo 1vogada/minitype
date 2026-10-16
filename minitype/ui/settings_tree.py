@@ -117,8 +117,9 @@ TREE = [
             ("results", "personal best"), ("results", "worst keys"),
             ("results", "session keys"), ("results", "bad words"), ("results", "session")]),
     ]),
-    ("progress", "your goal, and what's kept on disk", [
-        ("progress", "daily goal"), ("progress", "save to disk"), ("progress", "reset")]),
+    ("progress", "your goal, what's kept on disk, and starting over", [
+        ("progress", "daily goal"), ("progress", "save to disk"), ("progress", "reset"),
+        ("progress", "reset settings")]),
 ]
 
 

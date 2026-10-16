@@ -24,10 +24,14 @@ agent's memory don't travel, so this section is the memory.
    `minitype/ui/settings_tree.py` (TREE: the whole grouping in one table;
    unplaced rows land in an "other" tab). Tabs: gameplay, words, typing
    screen, theme, effects, art, interface, results, progress, ui (all look
-   switches, last). A new install starts from the owner's settings
-   (`settings.STARTER`, applied by `App.load` when nothing is saved; the
-   `Settings` defaults stay the baseline the tests use, and
-   `MINITYPE_FACTORY=1` starts from it). Sidebar with tabs on the left is
+   switches, last). A new install gets the welcome screen
+   (`ui/welcome.py`, from `app.main` when `App.load` finds nothing saved -
+   `app.first_run` - and from settings → progress → reset settings): pick
+   one of `settings.SETUPS` ("clean", "art": both the owner's own), shown
+   live as you move, applied with `App.use_setup` (everything back to
+   default, then the setup; bookmarks kept). The `Settings` defaults stay
+   the baseline the tests use; `MINITYPE_FACTORY=1` starts from it with no
+   welcome screen. Sidebar with tabs on the left is
    the default layout
    (`Settings.ui_style` / `sidebar_tabs`); tests that check another layout
    set it themselves. Rows are still built in

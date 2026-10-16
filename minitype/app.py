@@ -8,6 +8,7 @@ from .terminal.style import RESET
 from .ui.anywhere import open_settings
 from .ui.main_menu import main_menu
 from .ui.results import show_results
+from .ui.welcome import welcome
 
 
 def main():
@@ -19,6 +20,8 @@ def main():
     keys.on_settings_key(lambda: open_settings(app))      # ctrl-o, from anywhere
     try:
         app.load()
+        if app.first_run:                 # nothing saved yet: pick a setup
+            welcome(app)
         console.clear()
         console.present(["", f"  {app.styles().dim}loading "
                              f"{app.settings.word_source}...{RESET}"])

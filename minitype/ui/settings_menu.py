@@ -599,6 +599,11 @@ def raw_items(app):
                lambda: f"{len(app.stats.missed)} bad words remembered",
                help="forget all key errors and bad words",
                tags=("clear", "data", "mistakes", "forget")),
+        b.item("reset settings", lambda: reset_settings(app),
+               help="every setting back to the start: the welcome screen "
+                    "comes up to pick a setup again (your history, bests and "
+                    "book bookmarks are kept). Asks first",
+               tags=("reset", "defaults", "setup", "welcome", "wizard", "factory")),
     ]
     return items
 
@@ -688,6 +693,19 @@ def search_bar(st, menu):
     n = len(menu.visible())
     return [f"  {st.dim}search{RESET}  {menu.query}{INV} {RESET}"
             f"   {st.dim}{n} match{'es' if n != 1 else ''}{RESET}", ""]
+
+
+def reset_settings(app):
+    """Ask, then start the settings over from the welcome screen."""
+    from .welcome import welcome
+    st = app.styles()
+    console.present(title_lines(app, st, "settings")
+                    + [f"  {st.dim}reset every setting and pick a setup again? y/n{RESET}"])
+    key = keys.read_key()
+    while key == keys.RESIZE:
+        key = keys.read_key()
+    if key == "y":
+        welcome(app)
 
 
 def breadcrumb(st, menu):

@@ -64,15 +64,17 @@ for _t in _style.theme_names():
                for i, x in enumerate(_rgbs) for y in _rgbs[i + 1:]), (_t, _rgbs)
 
 # ---------------------------------------------------------------- a new install
-from minitype.settings import STARTER, Settings                 # noqa: E402
+from minitype.settings import SETUPS, Settings                  # noqa: E402
 os.environ["MINITYPE_DIR"] = tempfile.mkdtemp()               # nothing saved yet
 fresh = App()
 fresh.load()
-for _k, _v in STARTER.items():
+assert fresh.first_run, "nothing saved: the welcome screen comes up"
+for _k, _v in SETUPS["clean"].items():   # until it does, the first setup
     assert getattr(fresh.settings, _k) == _v, (_k, getattr(fresh.settings, _k), _v)
 os.environ["MINITYPE_FACTORY"] = "1"                          # the baseline instead
 base = App()
 base.load()
 assert base.settings.theme == Settings().theme and base.settings.art == Settings().art
+assert not base.first_run, "no welcome screen for the factory baseline"
 del os.environ["MINITYPE_FACTORY"]
 print("ALL OK")

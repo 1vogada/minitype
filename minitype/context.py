@@ -2,7 +2,7 @@ import os
 from . import storage
 from .history import History
 from .learn.progress import LearnProgress
-from .settings import FADE_FIELDS, STARTER, Settings
+from .settings import FADE_FIELDS, SETUPS, Settings
 from .stats import SessionStats
 from .terminal import console
 from .terminal.art import THEME_ART
@@ -47,6 +47,7 @@ class App:
         self.current_test = None  # (test, redraw) while a test runs, for ctrl-o
         self.fade_picture = None  # the picture the fade settings are showing
         self._styled = (None,)    # styles()'s last build, see there
+        self.first_run = False    # nothing was saved: the welcome screen picks a setup
 
     def styles(self, custom=None, art=None):
         """The current theme's colours, with every effect and fun-modifier
@@ -171,13 +172,27 @@ class App:
         self.save_settings()
         storage.write(self.to_dict())
 
+    def use_setup(self, name):
+        """Start the settings over from one of SETUPS (the welcome screen):
+        every setting back to its default, then the setup's own. What is
+        yours rather than a preference - book bookmarks - is kept. The
+        settings object stays the same one (the word generator holds it)."""
+        from dataclasses import fields
+        keep = {"book_marks": self.settings.book_marks}
+        fresh = Settings()
+        for f in fields(Settings):
+            setattr(self.settings, f.name, getattr(fresh, f.name))
+        self.settings.apply(dict(SETUPS[name], **keep))
+
     def load(self):
         s = storage.read_settings()
         d = storage.read() or {}
         if s is None:
             s = dict(d.get("settings") or {}, key_state=d.get("key_state"))
             if not d.get("settings") and not os.environ.get("MINITYPE_FACTORY"):
-                s = dict(STARTER, **{k: v for k, v in s.items() if v is not None})   # a new install
+                # a new install: the first setup until the welcome screen asks
+                s = dict(SETUPS[next(iter(SETUPS))], **{k: v for k, v in s.items() if v is not None})
+                self.first_run = True
         self.settings.apply(s)
         ks = s.get("key_state")
         if isinstance(ks, dict):
