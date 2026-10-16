@@ -18,12 +18,14 @@ def run(style, presses):
     app.settings.art = "off"             # help is plain lines (with art it's boxed: help_box_check)
     app.settings.ui_style = style
     app.settings.sidebar_tabs = "off"
-    seq = iter(presses + [keys.ESC])
+    seq = iter(presses + [keys.ESC] * 6)       # inside a page esc climbs out first
+    mine = []
     with mock.patch.object(keys, "read_key", lambda panic=True, resize=True: next(seq)), \
-            mock.patch.object(console, "write", out.append), \
+            mock.patch.object(console, "write", lambda s: (out.append(s), mine.append(s))), \
             mock.patch.object(console, "flush", lambda: None):
         sm.settings_menu(app)
-    frame = strip(out[-1].split("\x1b[H")[-1])
+    frames = [o for o in mine if o.startswith("\x1b[H")]
+    frame = strip(frames[len(presses)].split("\x1b[H")[-1])   # just after the presses
     print(f"===== {style}, {SIZE[0]}x{SIZE[1]} =====")
     print(frame)
     return frame
@@ -81,7 +83,7 @@ for n in range(0, 45, 4):
 
 # narrow: sidebar falls back to list with inline help, long help wraps
 SIZE[:] = [30, 12]
-f = run("sidebar", [keys.DOWN] * 2)
+f = run("sidebar", [keys.DOWN, keys.ENTER, keys.DOWN])     # gameplay › rules › backspace
 rows = f.split("\n")
 sel = next(i for i, r in enumerate(rows) if r.startswith(" > "))
 assert "normal:" in rows[sel + 1] and all(len(r) <= 29 for r in rows), rows

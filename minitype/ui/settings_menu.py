@@ -691,11 +691,18 @@ def search_bar(st, menu):
 
 
 def breadcrumb(st, menu):
-    """Where you are, once you're inside a page: settings › art › fade."""
+    """Where you are, once you're inside a page: settings › art › fade.
+    Pages can go as deep as they like; when the path is wider than the
+    screen it keeps the innermost pages and shortens the start to …"""
     path = menu.path()
     if len(path) < 2:
         return []
-    return [f"  {st.dim}{' › '.join(['settings'] + path)}{RESET}", ""]
+    parts = ["settings"] + path
+    room = console.size()[0] - 6
+    while len(" › ".join(parts)) > room and len(parts) > (3 if parts[1] == "…" else 2):
+        parts = parts[:1] + ["…"] + parts[(3 if parts[1] == "…" else 2):]   # always keeps the page you're on
+    text = " › ".join(parts)
+    return [f"  {st.dim}{text[-room:] if len(text) > room else text}{RESET}", ""]
 
 
 def draw(app, st, menu):

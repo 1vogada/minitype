@@ -6,6 +6,8 @@ import os
 import re
 import tempfile
 
+strip = lambda s: re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", s)
+
 os.environ["MINITYPE_DIR"] = tempfile.mkdtemp()
 from unittest import mock                                    # noqa: E402
 from minitype.terminal import console, keys                  # noqa: E402
@@ -51,6 +53,41 @@ assert m2.back_out() and m2.path() == ["one"] and not m2.on_sections
 assert m2.back_out() and m2.on_sections
 assert not m2.back_out()
 
+# ---------------------------------------------------------------- as deep as you like
+leaf = Item("", "bottom", lambda: None, lambda: "v", back=lambda: None)
+page = Page("level 50", [leaf])
+for k in range(49, 0, -1):
+    page = Page(f"level {k}", [Item("", f"row {k}", lambda: None, lambda: "v", back=lambda: None), page])
+dm = TreeMenu([page], {}, "deep")
+for k in range(1, 50):
+    dm.handle(keys.DOWN); dm.handle(keys.ENTER)          # down to the page row, open it
+assert dm.selected.label == "bottom" and len(dm.path()) == 50, len(dm.path())
+dm.set_query("bottom"); assert [dm.items[i].label for i in dm.visible()] == ["bottom"], "search reaches it"
+dm.set_query("")
+for k in range(49):
+    assert dm.back_out()
+assert dm.path() == ["level 1"] and not dm.back_out(), "esc climbs all the way back"
+# the path line keeps the page you're on, shortening the start
+console.term_size = lambda: (60, 30)
+from minitype.terminal.style import Styles
+for k in range(30):
+    dm.handle(keys.DOWN); dm.handle(keys.ENTER)
+line = strip(sm.breadcrumb(Styles("mono"), dm)[0]).strip()
+assert line.startswith("settings › … ›") and line.endswith(f"level {len(dm.path())}") \
+    and len(dm.path()) > 20 and len(line) <= 60, line
+
+# ---------------------------------------------------------------- a page with a switch
+state = {"on": False}
+flip = lambda: state.update(on=not state["on"])
+sw = Item("", "keyboard", flip, lambda: "on" if state["on"] else "off", back=flip)
+kb = Page("keyboard", [sw, Item("", "layout", lambda: None, lambda: "qwerty")], "the keyboard", main=sw)
+km = TreeMenu([Page("hud", [kb])], {}, "kb")
+assert km.selected.label == "keyboard" and km.selected.value() == "off  ›"
+km.handle(keys.RIGHT); assert state["on"] and km.path() == ["hud"], "right: the switch, not the page"
+km.handle(keys.LEFT); assert not state["on"] and km.path() == ["hud"], "left: the switch back"
+km.handle(keys.ENTER); assert km.path() == ["hud", "keyboard"], "enter opens the rest"
+assert [it.label for it in km.items] == ["keyboard", "layout"]
+
 # ---------------------------------------------------------------- the settings tree
 app = App()
 tree = sm.build_tree(sm.raw_items(app))
@@ -70,7 +107,6 @@ fade_top = next(it for it in sm.build_items(app) if it.label == "fade top")
 assert {"art", "fade", "top edge"} <= set(fade_top.tags)
 
 # ---------------------------------------------------------------- on screen
-strip = lambda s: re.sub(r"\x1b\[[0-9;?]*[A-Za-z]", "", s)
 
 
 def frames(presses, w=110, h=30):
@@ -88,13 +124,13 @@ def frames(presses, w=110, h=30):
 
 
 art = [keys.DOWN] * 5 + [keys.RIGHT]                      # the art tab, into its rows
-f = frames(art + [keys.DOWN] * 6 + [keys.ENTER] + [keys.DOWN] * 4 + [keys.ENTER])
+f = frames(art + [keys.DOWN] * 3 + [keys.ENTER] + [keys.DOWN] * 4 + [keys.ENTER])
 # frame k is the screen after the k-th key (frame 0 before any)
 crumb = lambda frame: next((l.strip(" │") for l in frame.split("\n") if "settings ›" in l), "")
 n = len(art)                                              # frames after reaching art's rows
-assert crumb(f[n + 7]).startswith("settings › art › fade") and "top edge" not in crumb(f[n + 7]), f[n + 7]
-assert "fade (all pictures)" in f[n + 7] and "top edge" in f[n + 7], "fade's rows, and its pages"
-assert crumb(f[n + 12]).startswith("settings › art › fade › top edge") and "fade start top" in f[n + 12], f[n + 12]
-assert crumb(f[n + 13]).startswith("settings › art › fade") and "top edge" not in crumb(f[n + 13]), "esc: up to fade"
-assert crumb(f[n + 14]) == "" and "art and text" in f[n + 14], "esc esc: back on art's own page"
+assert crumb(f[n + 4]).startswith("settings › art › fade") and "top edge" not in crumb(f[n + 4]), f[n + 4]
+assert "fade (all pictures)" in f[n + 4] and "top edge" in f[n + 4], "fade's rows, and its pages"
+assert crumb(f[n + 9]).startswith("settings › art › fade › top edge") and "fade start top" in f[n + 9], f[n + 9]
+assert crumb(f[n + 10]).startswith("settings › art › fade") and "top edge" not in crumb(f[n + 10]), "esc: up to fade"
+assert crumb(f[n + 11]) == "" and "art and text" in f[n + 11], "esc esc: back on art's own page"
 print("ALL OK")

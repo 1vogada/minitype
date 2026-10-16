@@ -13,6 +13,10 @@ right opens it, esc (or left, on a row with no value to step) goes back up
 one level - then out to the tabs, then out of the screen, as before. A
 search looks through every setting at every depth.
 
+A page can have a `main` setting - one of its rows - as a game menu's HUD
+element does ("keyboard: on ›"): its row shows that setting's value, left
+and right change it right there, and enter opens the page with the rest.
+
 Building one: TreeMenu([Page("typing", [row, row, Page("drills", [...])]),
 ...]). To add a setting, make its row and put it in a page; to regroup,
 move it - nothing else knows where a row lives.
@@ -26,10 +30,11 @@ SUB_MARK = "›"
 
 class Page:
     """A page of rows: Items, and Pages of their own. `help` shows on the
-    row that opens it."""
+    row that opens it; `main`, one of its rows, makes that row a switch as
+    well (see the module notes)."""
 
-    def __init__(self, name, children=(), help=""):
-        self.name, self.children, self.help = name, list(children), help
+    def __init__(self, name, children=(), help="", main=None):
+        self.name, self.children, self.help, self.main = name, list(children), help, main
 
     def leaves(self):
         """Every setting under this page, at any depth, in order."""
@@ -75,9 +80,17 @@ class TreeMenu(Menu):
             def open_page():
                 self.trail[top].append(page)
                 self._refresh(first_of=top)
-            item = Item("", page.name, open_page, lambda: SUB_MARK,
-                        help=page.help or f"{page.count()} settings", section=top,
-                        tags=("page",))
+            main = page.main
+            if main is not None:              # a switch that opens its page
+                item = Item("", page.name, main.action,
+                            lambda: f"{main.value()}  {SUB_MARK}", back=main.back,
+                            help=(page.help or main.help_text()) + ". Left and right "
+                                 "change it, enter opens the rest",
+                            section=top, enter=open_page, tags=("page",))
+            else:
+                item = Item("", page.name, open_page, lambda: SUB_MARK,
+                            help=page.help or f"{page.count()} settings", section=top,
+                            tags=("page",))
             item.page = page
             self._openers[key] = item
         return self._openers[key]

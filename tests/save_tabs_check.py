@@ -39,7 +39,7 @@ console.size = lambda: tuple(SIZE)
 console.present = lambda *a, **k: None
 app = App()
 app.settings.ui_style = "list"                # one column: down, right changes the row
-seq = iter([keys.DOWN, keys.RIGHT])           # stop on error: off -> letter
+seq = iter([keys.DOWN, keys.ENTER, keys.RIGHT])   # into gameplay › rules; stop on error: off -> letter
 
 
 def stop_after(*a, **k):
