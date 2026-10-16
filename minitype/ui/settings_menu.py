@@ -563,7 +563,7 @@ def raw_items(app):
                tags=("live", "hud", "stats")),
         b.flag("live wpm", "show_wpm", "your speed so far",
                tags=("speed", "live", "hud", "stats")),
-        b.flag("combo", "show_combo", "correct keys in a row",
+        b.flag("combo", "show_combo", "correct keys in a row (hidden while you race a ghost)",
                tags=("streak", "live", "hud", "stats")),
     ]
     b.section = "results"

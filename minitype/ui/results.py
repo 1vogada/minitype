@@ -85,7 +85,10 @@ def heatmap_lines(app, st, r):
         colors[c] = (st.good or st.ok) if rate == 0 else \
             st.warn if rate < 0.1 else st.bad
     lines = keyboard.render(st, app.settings.layout, None, colors)
-    return ["", f"  {st.dim}keys: clean, some misses, many misses{RESET}"] + lines[:-1]
+    # the key to the colours: each word in the colour it stands for
+    legend = (f"  {st.dim}keys:{RESET} {st.good or st.ok}clean{RESET}{st.dim},{RESET} "
+              f"{st.warn}some misses{RESET}{st.dim},{RESET} {st.bad}many misses{RESET}")
+    return ["", legend] + lines[:-1]
 
 
 def detail_lines(app, st, r):
@@ -99,8 +102,9 @@ def detail_lines(app, st, r):
         lines += ["", f"  {dim}worst keys   {txt}{RESET}"]
     flagged = stats.bad_keys()
     if s.res_session_keys and flagged:
-        txt = "  ".join(f"{c}x{stats.errors.get(c, 0)}" for c in flagged)
-        lines.append(f"  {dim}session keys {txt}{RESET}")
+        most = sorted(flagged, key=lambda c: -stats.errors.get(c, 0))     # most missed first
+        txt = "; ".join(f"{c} - {stats.errors.get(c, 0)}" for c in most)
+        lines.append(f"  {dim}session keys: {txt}{RESET}")
     if s.res_bad_words and stats.missed:
         worst = sorted(stats.missed.items(), key=lambda kv: -kv[1])[:5]
         txt = "  ".join(f"{w}x{n}" for w, n in worst)

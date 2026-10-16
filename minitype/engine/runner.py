@@ -175,9 +175,10 @@ class TypingTest:
                 parts.append(f"{self.wi}/{len(self.words)}")
             if s.show_wpm:
                 parts.append(f"{self.score(el)[0]:.0f} wpm")
-            if s.show_combo and self.combo > 4:
-                parts.append(f"x{self.combo}")
-            if s.ghost and self.app.stats.ghost:
+            racing = s.ghost and self.app.stats.ghost       # a ghost replaying your last run
+            if s.show_combo and self.combo > 4 and not racing:
+                parts.append(f"x{self.combo}")             # (hidden while you race it)
+            if racing:
                 marks.add(self.app.stats.ghost_chars(el))
             if s.pace:
                 marks.add(int(s.pace * 5 / 60 * el))
