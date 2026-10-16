@@ -70,12 +70,13 @@ minitype
   values.
 - **during a test**: esc pauses it (the clock stops; the box asks
   "Paused - resume?": enter or esc resumes, No leaves); with nothing typed
-  yet, or with settings → typing → pause on esc off, esc goes
+  yet, or with settings → gameplay → pause on esc off, esc goes
   straight to the menu. Tab restarts, ctrl-backspace deletes a word; in
   zen mode enter finishes
 - **settings** are pages inside pages, like a game's options menu: the
-  tabs (typing, text, theme, art, effects, typing screen, ui, interface,
-  results, progress) hold settings and further pages - a row ending in ›
+  tabs (gameplay, words, typing screen, theme, effects, art, interface,
+  results, progress, and ui: every look switch in one place) hold
+  settings and further pages - a row ending in ›
   opens one (enter or right), esc or left goes back up a level, and the
   path shows under the title (settings › art › fade › top edge). Search
   finds a setting at any depth; old section names and page names work as
@@ -116,8 +117,8 @@ accented letters become their ASCII forms, markdown-style formatting and
 divider lines are dropped, line breaks become spaces, and a Project
 Gutenberg licence header and footer are cut off.
 
-To strip more out, set a **filter** (in the book list, or settings → text
-→ book filter): the symbols you type there are removed from every book,
+To strip more out, set a **filter** (in the book list, or settings → words
+→ books → book filter): the symbols you type there are removed from every book,
 for example `,.;:!?"'`. Type `punct` for all punctuation. Quotes and
 dashes are already plain `"` `'` `-` by then, so filtering those catches
 the curly ones too.
@@ -136,8 +137,8 @@ picks how they're typed:
 Converting doesn't change the number of words, so your page is the same in
 both modes.
 
-Each book is split into pages (50 words by default; settings → text →
-book page). Finishing a page moves your bookmark on, and bookmarks are
+Each book is split into pages (50 words by default; settings → words →
+books → book page). Finishing a page moves your bookmark on, and bookmarks are
 kept in `settings.json`.
 
 Skipping pages:
@@ -174,7 +175,7 @@ Skipping pages:
 - three menu styles: **list**, **sidebar** (details beside the menu) and
   **tabs** (one section at a time). The sidebar can also show a tab bar on
   top, or the sections as buttons down the left (settings → interface → sidebar
-  tabs)
+  tabs). The default is the sidebar with its tabs down the left
 - art styles (settings → art → art style): **revamp** (the default: the
   scenes described below), **upscaled** (the same hand-drawn scenes in
   truecolour: every cell its exact colours instead of the theme's 70, so

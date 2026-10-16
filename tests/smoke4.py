@@ -199,12 +199,12 @@ for style in ("list", "sidebar", "tabs"):
 SIZE[:] = [80, 24]
 app.settings.ui_style = "tabs"
 menu = Menu(sm.build_items(app), {}, "s", style="tabs")
-assert menu.selected.section == "typing"
-menu.handle("]"); assert menu.selected.section == "text"
+assert menu.selected.section == "gameplay"
+menu.handle("]"); assert menu.selected.section == "words"
 for _ in range(10):
     menu.handle(keys.DOWN)
-assert menu.selected.section == "text"
-menu.handle(keys.PGUP); assert menu.selected.section == "typing"
+assert menu.selected.section == "words"
+menu.handle(keys.PGUP); assert menu.selected.section == "gameplay"
 app.settings.ui_style = "list"
 # main menu: right changes time, enter starts it; hotkeys start modes
 app.cursors.clear()

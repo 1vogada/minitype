@@ -56,6 +56,7 @@ def frame(**kw):
     console.term_size = lambda: (W, H)
     console._last_size = (W, H)
     a = App()
+    a.settings.ui_style, a.settings.sidebar_tabs = "list", "off"
     a.settings.theme, a.settings.art_behind, a.settings.art_fade = "sunset", True, "off"
     for k, v in kw.items():
         setattr(a.settings, k, v)

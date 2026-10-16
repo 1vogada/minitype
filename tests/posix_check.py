@@ -116,6 +116,7 @@ with mock.patch.object(px, "_read_byte", lambda: bytes([buf.pop(0)])), \
         mock.patch.object(px, "ready", lambda timeout=0: bool(buf) or bool(px._pending)), \
         mock.patch.object(screen, "keys", keys), mock.patch.object(mm, "keys", keys, create=True):
     app = App()
+    app.settings.ui_style, app.settings.sidebar_tabs = "list", "off"
     spec = mm.main_menu(app)
 assert spec.kind == "zen", spec
 importlib.reload(keys)

@@ -126,10 +126,14 @@ assert e.bounce == "wild" and e.caret_fx == "off"
 s.fun_bounce = s.fun_caret = "theme"
 
 # ---------------------------------------------------------------- settings rows
-rows_ = {it.label: it for it in sm.build_items(app)}
-for label in ("bounce", "shake", "pop", "fade", "caret effect", "glitch",
+rows_ = {}
+for _it in sm.build_items(app):
+    rows_.setdefault(_it.label, _it)       # effects' own "fade" comes before art's
+for label in ("bounce", "shake", "pop", "fade", "glitch",
               "effect speed", "flow direction"):
     assert rows_[label].section == "effects" and rows_[label].preview, label
+assert rows_["caret effect"].section == "typing screen" and rows_["caret effect"].preview, \
+    "the caret effect sits with the caret"
 assert rows_["effect speed"].value() == "1x"
 rows_["effect speed"].action(); assert s.effect_speed == 1.5
 assert rows_["theme creator"].section == "theme"

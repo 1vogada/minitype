@@ -56,6 +56,7 @@ def help_frame(where, w=100, h=24):
     console.term_size = lambda: (w, h)
     console._last_size = (w, h)
     a = App()
+    a.settings.ui_style, a.settings.sidebar_tabs = "list", "off"
     a.settings.theme, a.settings.help_position = "forest", where
     out = []
     seq = iter([keys.ESC] * 3)
@@ -101,6 +102,7 @@ def settings_frame(where, w=110, h=26, **extra):
     console.term_size = lambda: (w, h)
     console._last_size = (w, h)
     a = App()
+    a.settings.ui_style, a.settings.sidebar_tabs = "list", "off"
     a.settings.theme, a.settings.help_position = "summit", where
     for k, v in extra.items():
         setattr(a.settings, k, v)

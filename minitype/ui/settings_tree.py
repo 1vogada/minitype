@@ -17,10 +17,11 @@ from .tree_menu import Page
 # To add a setting, build its row in raw_items and put its key here; a row
 # this doesn't place still shows, in an "other" tab, so nothing is lost.
 TREE = [
-    ("typing", "how a test plays: its rules, challenges and drills", [
+    ("gameplay", "how a test plays: its rules, mistakes, challenges and drills", [
         ("test", "difficulty"), ("test", "stop on error"), ("test", "backspace"),
-        ("test", "corrected letters"), ("test", "indicate typos"), ("test", "blind"),
         ("test", "pause on esc"),
+        ("mistakes", "how mistakes show, and typing blind", [
+            ("test", "corrected letters"), ("test", "indicate typos"), ("test", "blind")]),
         ("challenges", "a minimum speed or accuracy, typing from memory, the funbox", [
             ("challenges", "min speed"), ("challenges", "min accuracy"),
             ("challenges", "memory"), ("challenges", "funbox")]),
@@ -28,7 +29,7 @@ TREE = [
             ("drills", "bad keys"), ("drills", "bad key %"), ("drills", "edit keys"),
             ("drills", "bad words"), ("drills", "bad word %")]),
     ]),
-    ("text", "what you type: the word list, quotes and books", [
+    ("words", "what you type: the word list, quotes and books", [
         ("words", "word list"), ("test", "numbers"), ("test", "all lowercase"),
         ("punctuation", "punctuation and apostrophes in the words", [
             ("test", "punctuation"), ("test", "apostrophes visible")]),
@@ -38,14 +39,29 @@ TREE = [
             ("words", "book page"), ("words", "book filter"),
             ("words", "bulgarian books"), ("words", "shlokavitsa style")]),
     ]),
+    ("typing screen", "what you see and hear while you type", [
+        ("caret", "the caret, its effect, and the carets you race", [
+            ("look", "caret"), ("fun", "caret effect"), ("look", "pace caret"), ("look", "ghost")]),
+        ("words line", "how the words are laid out", [
+            ("look", "word gap"), ("look", "tape")]),
+        ("header", "the timer and counters over the words", [
+            ("header", "timer", "show timer"), ("header", "progress", "show progress"),
+            ("header", "live wpm", "show live wpm"), ("header", "combo", "show combo")]),
+        ("keyboard", "the on-screen keyboard", [
+            ("look", "keyboard", "on-screen keyboard"), ("look", "layout", "keyboard layout")]),
+        ("look", "sound"),
+    ]),
     ("theme", "the colours: the theme, its background and the text", [
         ("look", "theme"), ("look", "theme creator"), ("look", "theme background"),
         ("look", "accent letters"),
-        ("text colour", "how light the text is, gradients, heat and bold", [
-            ("look", "lighter text"), ("look", "lighter untyped"),
-            ("look", "gradients"), ("look", "gradient flow"),
-            ("look", "heat"), ("look", "bold / italic")]),
+        ("text colour", "how light the text is, and bold or italic", [
+            ("look", "lighter text"), ("look", "lighter untyped"), ("look", "bold / italic")]),
+        ("gradients", "colour running through the words, and heating up with a combo", [
+            ("look", "gradients"), ("look", "gradient flow"), ("look", "heat")]),
     ]),
+    ("effects", "letters bouncing, shaking, popping and more - only looks, never the words", [
+        ("fun", "bounce"), ("fun", "shake"), ("fun", "pop"), ("fun", "fade"),
+        ("fun", "glitch"), ("fun", "effect speed"), ("fun", "flow direction")]),
     ("art", "the corner pictures", [
         ("look", "theme art", "show art"), ("fun", "art style"),
         ("look", "picture"), ("look", "picture colours"),
@@ -62,24 +78,8 @@ TREE = [
                 ("look", "fade side"), ("look", "fade start"), ("look", "fade angle")]),
         ]),
     ]),
-    ("effects", "letters bouncing, shaking, popping and more", [
-        ("fun", "bounce"), ("fun", "shake"), ("fun", "pop"), ("fun", "fade"),
-        ("fun", "caret effect"), ("fun", "glitch"), ("fun", "effect speed"),
-        ("fun", "flow direction")]),
-    ("typing screen", "what shows while you type", [
-        ("caret", "the caret, and the carets you race", [
-            ("look", "caret"), ("look", "pace caret"), ("look", "ghost")]),
-        ("words line", "how the words are laid out", [
-            ("look", "word gap"), ("look", "tape")]),
-        ("header", "the timer and counters over the words", [
-            ("header", "timer", "show timer"), ("header", "progress", "show progress"),
-            ("header", "live wpm", "show live wpm"), ("header", "combo", "show combo")]),
-        ("keyboard", "the on-screen keyboard", [
-            ("look", "keyboard", "on-screen keyboard"), ("look", "layout", "keyboard layout")]),
-        ("look", "lowkey"), ("look", "sound"),
-    ]),
-    ("interface", "menus: their style, border and help", [
-        ("look", "ui style"), ("look", "sidebar tabs"), ("look", "border"),
+    ("interface", "menus: their layout, border, help, and hiding it all", [
+        ("look", "ui style"), ("look", "sidebar tabs"), ("look", "border"), ("look", "lowkey"),
         ("help", "the key hints and the help box", [
             ("look", "key hints"), ("look", "help box"), ("look", "help border")]),
     ]),
@@ -93,7 +93,7 @@ TREE = [
 
 
 # Every switch for how the app looks, gathered in one "ui" tab (they stay in
-# their own pages too), by where they're built, just before the interface tab.
+# their own pages too), by where they're built: a quick-access tab at the end.
 UI_TAB = [("look", "ui style"), ("look", "sidebar tabs"), ("look", "border"),
           ("look", "key hints"), ("look", "help box"), ("look", "help border"),
           ("look", "theme background"), ("look", "theme art"),
@@ -115,7 +115,7 @@ def build_tree(items):
     """The rows as TREE's pages (see tree_menu.Page), each row renamed as
     TREE says and tagged with its old section, its label and every page it
     sits in, so #look, #fade and the like still find it. The ui tab goes
-    just before interface; rows TREE doesn't place go in an "other" tab."""
+    at the end; rows TREE doesn't place go in an "other" tab after it."""
     import copy
     items = [it for it in items if not getattr(it, "ui_copy", False)]
     by_key = {_origin(it): it for it in items}
@@ -145,8 +145,7 @@ def build_tree(items):
             dup.tags = tuple(it.tags) + ("ui",)
             dup.ui_copy = True            # placed already; arranging again skips it
             ui.append(dup)
-    at = next((i for i, p in enumerate(pages) if p.name == "interface"), len(pages))
-    pages.insert(at, Page("ui", ui, "every switch for how the app looks, in one place"))
+    pages.append(Page("ui", ui, "every switch for how the app looks, in one place"))
     rest = [it for it in items if id(it) not in placed]
     if rest:
         pages.append(Page("other", rest, "settings not filed anywhere else yet"))

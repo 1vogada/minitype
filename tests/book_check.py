@@ -53,6 +53,7 @@ assert books.source_words("old") == ["cafe", '"quoted"', "words"]
 
 # ---------------------------------------------------------------- pages and bookmarks
 app = App()
+app.settings.ui_style, app.settings.sidebar_tabs = "list", "off"   # the layout this checks
 app.settings.book_page = 50
 assert books.page_count(len(books.source_words("Moby")), 50) == 3
 s = books.page_spec(app, "Moby")

@@ -38,6 +38,7 @@ SIZE = [80, 24]
 console.size = lambda: tuple(SIZE)
 console.present = lambda *a, **k: None
 app = App()
+app.settings.ui_style = "list"                # one column: down, right changes the row
 seq = iter([keys.DOWN, keys.RIGHT])           # stop on error: off -> letter
 
 
@@ -91,25 +92,25 @@ for style, tabs in (("list", "off"), ("sidebar", "off"), ("sidebar", "top"),
                     ("sidebar", "left"), ("tabs", "off")):
     m = Menu(items, {}, "s", style=style)
     m.sidebar_tabs = tabs
-    assert m.selected.section == "typing"
-    m.handle(keys.TAB); assert m.selected.section == "text", (style, tabs)
-    m.handle("]"); assert m.selected.section == "theme"
-    m.handle(keys.PGDN); assert m.selected.section == "art"
-    m.handle(keys.SHIFT_TAB); assert m.selected.section == "theme"
-    m.handle("["); m.handle(keys.PGUP); assert m.selected.section == "typing"
-    m.handle(keys.SHIFT_TAB); assert m.selected.section == "progress", "wraps"
+    assert m.selected.section == "gameplay"
+    m.handle(keys.TAB); assert m.selected.section == "words", (style, tabs)
+    m.handle("]"); assert m.selected.section == "typing screen"
+    m.handle(keys.PGDN); assert m.selected.section == "theme"
+    m.handle(keys.SHIFT_TAB); assert m.selected.section == "typing screen"
+    m.handle("["); m.handle(keys.PGUP); assert m.selected.section == "gameplay"
+    m.handle(keys.SHIFT_TAB); assert m.selected.section == "ui", "wraps"
     paged = style == "tabs" or tabs != "off"
-    m.handle(keys.TAB)                          # back to typing
+    m.handle(keys.TAB)                          # back to gameplay
     if tabs == "left":
         m.handle(keys.ENTER)                    # starts on the buttons: into the rows
-    for _ in range(20):                         # more than typing has
+    for _ in range(20):                         # more than gameplay has
         m.handle(keys.DOWN)
-    assert (m.selected.section == "typing") == paged, (style, tabs, m.selected.section)
+    assert (m.selected.section == "gameplay") == paged, (style, tabs, m.selected.section)
 # left/right still change values; on the "edit keys" row (no back) they switch tabs when paged
 m = Menu(items, {}, "s", style="sidebar"); m.sidebar_tabs = "left"
 before = app.settings.difficulty
 m.handle(keys.RIGHT); assert app.settings.difficulty == before, "right on the buttons: into the rows"
-m.handle(keys.RIGHT); assert app.settings.difficulty != before and m.selected.section == "typing"
+m.handle(keys.RIGHT); assert app.settings.difficulty != before and m.selected.section == "gameplay"
 # Tab on results (horizontal) still restarts, it's not a section key there
 r = Menu([__import__("minitype.ui.menu", fromlist=["Item"]).Item(keys.TAB, "restart", lambda: "R")],
          horizontal=True)
@@ -144,11 +145,11 @@ for tabs in ("top", "left"):
     assert lines[focus].lstrip().startswith(">") or "> " in lines[focus] or ">" in lines[focus], lines[focus]
     assert "all lowercase" in lines[focus], lines[focus]
     if tabs == "top":
-        assert "text" in lines[3] and "all lowercase" in "\n".join(lines)
+        assert "words" in lines[3] and "all lowercase" in "\n".join(lines)
         assert "difficulty" not in "\n".join(lines), "one section at a time"
         assert "| all lowercase" in lines[focus], "panel level with the selection"
     else:
-        assert any(l.startswith("   typing") for l in lines)
+        assert any(l.startswith("   gameplay") for l in lines)
         assert "difficulty" not in "\n".join(lines)
         assert "every word in lower case" in lines[focus + 1], lines[focus + 1]
 

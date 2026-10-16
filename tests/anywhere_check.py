@@ -100,7 +100,7 @@ assert b.settings.theme == names[-1], b.settings.theme      # default, back twic
 c = App()
 items = {it.label: it for it in sm.build_items(c)}
 row = items["all lowercase"]
-assert row.section == "text" and row.value() == "off"
+assert row.section == "words" and row.value() == "off"
 row.action(); assert c.settings.lowercase and "lower" in c.settings.flags()
 t = TypingTest(c, TestSpec("c", "words", 3, "custom", ("Hello", "WORLD", "MiXeD")))
 assert t.words == ["hello", "world", "mixed"], t.words

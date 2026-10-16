@@ -17,6 +17,7 @@ def run(style, presses):
     app.settings.border = "off"          # rows are parsed by their first columns
     app.settings.art = "off"             # help is plain lines (with art it's boxed: help_box_check)
     app.settings.ui_style = style
+    app.settings.sidebar_tabs = "off"
     seq = iter(presses + [keys.ESC])
     with mock.patch.object(keys, "read_key", lambda panic=True, resize=True: next(seq)), \
             mock.patch.object(console, "write", out.append), \
@@ -70,7 +71,7 @@ for t in range(8):
 f = run("sidebar", [keys.DOWN] * 20)
 rows = f.split("\n")
 sel = next(i for i, r in enumerate(rows) if r.startswith(" > "))
-label = next(l for l in HELP if f" {l}  " in rows[sel])
+label = max((l for l in HELP if f" {l}  " in rows[sel]), key=len)   # "theme background", not "theme"
 assert rows[sel].rstrip().endswith(f"| {label}"), rows[sel]
 assert HELP[label].split()[0] in "\n".join(rows[sel:sel + 6])
 for n in range(0, 45, 4):

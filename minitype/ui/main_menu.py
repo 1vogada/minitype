@@ -121,7 +121,7 @@ def build_items(app):
                   + (f". Your word list ({app.bank.source}, {len(app.bank.words)} words) "
                      "is small: few real words fit the letters you have, so lessons "
                      "lean on made-up ones that can look like typos. Pick a bigger "
-                     "one in settings -> text -> word list"
+                     "one in settings -> words -> word list"
                      if _small_list(app) else ""),
              section="practice"),
         Item("0", "slow words", slow_drill,

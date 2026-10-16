@@ -184,8 +184,8 @@ class Settings:
     effect_speed: float = 1.0    # how fast gradients and modifiers move
     flow_direction: str = "forward"
     lowkey: str = "off"          # minimal: just the words. disguised: looks like a plain prompt
-    ui_style: str = "list"       # how menus are laid out
-    sidebar_tabs: str = "off"    # sidebar style: tab bar on top, or section buttons on the left
+    ui_style: str = "sidebar"    # how menus are laid out
+    sidebar_tabs: str = "left"   # sidebar style: tab bar on top, or section buttons on the left
     tape: str = "off"            # off / on (from left) / from middle
     caret: str = "underline"     # underline: the letter to type is underlined. block: inverted
     word_gap: str = "blank"      # between words: blank, dots or underline

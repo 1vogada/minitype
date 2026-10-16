@@ -52,6 +52,7 @@ with open(os.path.join(d, "Книга.txt"), "wb") as f:
 with open(os.path.join(d, "English.txt"), "w", encoding="utf-8") as f:
     f.write("plain english words " * 20)
 app = App()
+app.settings.ui_style, app.settings.sidebar_tabs = "list", "off"   # the layout this checks
 assert books.is_bulgarian("Книга") and not books.is_bulgarian("English")
 cyr = books.words(app, "Книга")
 assert cyr[:3] == ["Това", "е", "кратък"]

@@ -55,8 +55,8 @@ assert not m2.back_out()
 app = App()
 tree = sm.build_tree(sm.raw_items(app))
 tops = [p.name for p in tree]
-assert tops == ["typing", "text", "theme", "art", "effects", "typing screen", "ui",
-                "interface", "results", "progress"], tops
+assert tops == ["gameplay", "words", "typing screen", "theme", "effects", "art",
+                "interface", "results", "progress", "ui"], tops
 assert "other" not in tops, "every row is placed"
 raw = sm.raw_items(app)
 leaves = [it for p in sm.build_tree(raw) if p.name != "ui" for it in p.leaves()]
@@ -87,13 +87,14 @@ def frames(presses, w=110, h=30):
     return [strip(o) for o in out if o.startswith("\x1b[H")]
 
 
-art = [keys.DOWN] * 3 + [keys.RIGHT]                      # the art tab, into its rows
+art = [keys.DOWN] * 5 + [keys.RIGHT]                      # the art tab, into its rows
 f = frames(art + [keys.DOWN] * 6 + [keys.ENTER] + [keys.DOWN] * 4 + [keys.ENTER])
 # frame k is the screen after the k-th key (frame 0 before any)
 crumb = lambda frame: next((l.strip(" │") for l in frame.split("\n") if "settings ›" in l), "")
-assert crumb(f[11]).startswith("settings › art › fade") and "top edge" not in crumb(f[11]), f[11]
-assert "fade (all pictures)" in f[11] and "top edge" in f[11], "fade's rows, and its pages"
-assert crumb(f[16]).startswith("settings › art › fade › top edge") and "fade start top" in f[16], f[16]
-assert crumb(f[17]).startswith("settings › art › fade") and "top edge" not in crumb(f[17]), "esc: up to fade"
-assert crumb(f[18]) == "" and "art and text" in f[18], "esc esc: back on art's own page"
+n = len(art)                                              # frames after reaching art's rows
+assert crumb(f[n + 7]).startswith("settings › art › fade") and "top edge" not in crumb(f[n + 7]), f[n + 7]
+assert "fade (all pictures)" in f[n + 7] and "top edge" in f[n + 7], "fade's rows, and its pages"
+assert crumb(f[n + 12]).startswith("settings › art › fade › top edge") and "fade start top" in f[n + 12], f[n + 12]
+assert crumb(f[n + 13]).startswith("settings › art › fade") and "top edge" not in crumb(f[n + 13]), "esc: up to fade"
+assert crumb(f[n + 14]) == "" and "art and text" in f[n + 14], "esc esc: back on art's own page"
 print("ALL OK")

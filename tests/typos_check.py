@@ -100,7 +100,7 @@ s = Settings(); s.apply({"keep_errors": True}); assert s.corrected == "marked"
 s = Settings(); s.apply({"keep_errors": True, "corrected": "red"}); assert s.corrected == "red"
 s = Settings(); s.apply({"typos": "sideways"}); assert s.typos == "off"
 rows_ = {it.label: it for it in sm.build_items(App())}
-assert rows_["corrected letters"].section == "typing" and rows_["corrected letters"].preview
+assert rows_["corrected letters"].section == "gameplay" and rows_["corrected letters"].preview
 assert rows_["indicate typos"].value() == "off" and rows_["indicate typos"].preview
 # the preview shows a fixed and a live mistake
 app = App()
