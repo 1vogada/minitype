@@ -98,6 +98,58 @@ def _clean_fade(entry):
     return {k: getattr(s, k) for k in FADE_FIELDS if k in entry and entry[k] == getattr(s, k)}
 
 
+
+# What a new install starts with (App.load, when there are no saved settings
+# yet): the owner's own settings. The Settings defaults below stay the
+# baseline the features are built and tested against; MINITYPE_FACTORY=1
+# starts from that baseline instead.
+STARTER = {
+    'lowercase': True,
+    'word_amount': 10,
+    'weak_pct': 40,
+    'bad_words_pct': 40,
+    'word_source': 'online 200',
+    'quote_length': 'short',
+    'quote_source': 'online',
+    'code_lang': 'javascript',
+    'book_script': 'shlokavitsa',
+    'shlokavitsa_style': 'letters',
+    'book_filter': 'punct',
+    'theme': 'summit',
+    'border': 'off',
+    'art': 'off',
+    'art_style': 'upscaled',
+    'art_behind': True,
+    'art_panel': True,
+    'text_contrast': 'nudge',
+    'text_bold': True,
+    'help_position': 'bottom left',
+    'help_border': 'off',
+    'fade_on': False,
+    'art_recolour': 'own',
+    'theme_background': 'off',
+    'theme_gradient': False,
+    'theme_flow': False,
+    'theme_heat': False,
+    'fun_bounce': 'off',
+    'fun_shake': 'off',
+    'fun_pop': 'off',
+    'fun_fade': 'off',
+    'fun_glitch': 'off',
+    'keyboard': 'off',
+    'res_worst_keys': False,
+    'res_bad_words': False,
+    'fades': {
+        'island': {'art_fade': 'edges', 'fade_top': 50, 'fade_side': 90, 'fade_round': 0, 'fade_start': 60, 'fade_start_top': 20, 'fade_angle': 76, 'fade_curve': 0},
+        'pines': {'art_fade': 'off', 'fade_top': 50, 'fade_side': 20, 'fade_round': 50, 'fade_start': 100, 'fade_start_top': 100, 'fade_angle': 0, 'fade_curve': 3},
+        'sunset': {'art_fade': 'edges', 'fade_top': 0, 'fade_side': 0, 'fade_round': 50, 'fade_start': 100, 'fade_start_top': 30, 'fade_angle': 60, 'fade_curve': 3},
+        'stones': {'art_fade': 'edges', 'fade_top': 20, 'fade_side': 90, 'fade_round': 50, 'fade_start': 40, 'fade_start_top': 10, 'fade_angle': 60, 'fade_curve': 3},
+        'flowers': {'art_fade': 'off', 'fade_top': 50, 'fade_side': 20, 'fade_round': 50, 'fade_start': 100, 'fade_start_top': 100, 'fade_angle': 0, 'fade_curve': 3},
+        'lollipop': {'art_fade': 'edges', 'fade_top': 0, 'fade_side': 0, 'fade_round': 50, 'fade_start': 100, 'fade_start_top': 100, 'fade_angle': 0, 'fade_curve': 3},
+        'moon': {'art_fade': 'edges', 'fade_top': 0, 'fade_side': 20, 'fade_round': 50, 'fade_start': 100, 'fade_start_top': 100, 'fade_angle': 0, 'fade_curve': 3},
+    },
+}
+
 @dataclass
 class Settings:
     # ---- the test

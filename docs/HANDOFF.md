@@ -24,7 +24,11 @@ agent's memory don't travel, so this section is the memory.
    `minitype/ui/settings_tree.py` (TREE: the whole grouping in one table;
    unplaced rows land in an "other" tab). Tabs: gameplay, words, typing
    screen, theme, effects, art, interface, results, progress, ui (all look
-   switches, last). Sidebar with tabs on the left is the default layout
+   switches, last). A new install starts from the owner's settings
+   (`settings.STARTER`, applied by `App.load` when nothing is saved; the
+   `Settings` defaults stay the baseline the tests use, and
+   `MINITYPE_FACTORY=1` starts from it). Sidebar with tabs on the left is
+   the default layout
    (`Settings.ui_style` / `sidebar_tabs`); tests that check another layout
    set it themselves. Rows are still built in
    `settings_menu.raw_items`. The owner may want the grouping tuned -

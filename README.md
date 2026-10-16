@@ -394,6 +394,11 @@ Both live in the app folder, next to this README, and git ignores them
   Only written once you switch on settings → progress → save to disk;
   switching it off deletes the file.
 
+A new install (no settings saved yet) starts with the owner's own setup
+(`STARTER` in `minitype/settings.py`: summit, no art, the sidebar with side
+tabs, ...); set `MINITYPE_FACTORY=1` to start from the plain built-in
+defaults instead.
+
 Set `MINITYPE_DIR` to keep them somewhere else. If the app folder isn't
 writable they go to `%LOCALAPPDATA%\minitype`. A save from an older version
 in `%LOCALAPPDATA%\minitype` is moved into the app folder automatically.

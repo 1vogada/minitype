@@ -71,10 +71,30 @@ def chart_lines(app, st, r):
             f"  {st.bad}{marks.rstrip()}{RESET}" if marks.strip() else ""]
 
 
+# the heatmap's own colours, for a theme whose three don't tell apart
+HEAT_FALLBACK = ((95, 215, 95), (255, 175, 0), (255, 95, 95))   # clean, some misses, many
+HEAT_APART = 90           # how far apart (rgb distance) any two must be to use the theme's
+
+
+def heat_colours(st):
+    """(clean, some misses, many misses) escape codes: the theme's good,
+    warn and bad when they are clearly different colours, else a plain
+    green, amber and red (a grey theme's good and warn can be two near
+    identical greys, and the middle band of the heatmap disappears)."""
+    from ..terminal.style import _code, rgb_of_code
+    theme = (st.good or st.ok, st.warn, st.bad)
+    rgbs = [rgb_of_code(c or "") for c in theme]
+    if all(rgbs) and all(sum((a - b) ** 2 for a, b in zip(x, y)) ** 0.5 >= HEAT_APART
+                         for i, x in enumerate(rgbs) for y in rgbs[i + 1:]):
+        return theme
+    return tuple(_code(c, 38) for c in HEAT_FALLBACK)
+
+
 def heatmap_lines(app, st, r):
     """The keyboard with each key coloured by how often it was missed."""
     if not app.settings.res_heatmap or not r.presses:
         return []
+    clean, some, many = heat_colours(st)
     colors = {}
     keyset = set("".join(LAYOUTS.get(app.settings.layout, LAYOUTS["qwerty"])))
     for c, n in r.presses.items():
@@ -82,12 +102,11 @@ def heatmap_lines(app, st, r):
         if c not in keyset:
             continue
         rate = r.misses.get(c, 0) / n
-        colors[c] = (st.good or st.ok) if rate == 0 else \
-            st.warn if rate < 0.1 else st.bad
+        colors[c] = clean if rate == 0 else some if rate < 0.1 else many
     lines = keyboard.render(st, app.settings.layout, None, colors)
     # the key to the colours: each word in the colour it stands for
-    legend = (f"  {st.dim}keys:{RESET} {st.good or st.ok}clean{RESET}{st.dim},{RESET} "
-              f"{st.warn}some misses{RESET}{st.dim},{RESET} {st.bad}many misses{RESET}")
+    legend = (f"  {st.dim}keys:{RESET} {clean}clean{RESET}{st.dim},{RESET} "
+              f"{some}some misses{RESET}{st.dim},{RESET} {many}many misses{RESET}")
     return ["", legend] + lines[:-1]
 
 

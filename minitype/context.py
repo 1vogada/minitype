@@ -1,7 +1,8 @@
+import os
 from . import storage
 from .history import History
 from .learn.progress import LearnProgress
-from .settings import FADE_FIELDS, Settings
+from .settings import FADE_FIELDS, STARTER, Settings
 from .stats import SessionStats
 from .terminal import console
 from .terminal.art import THEME_ART
@@ -175,6 +176,8 @@ class App:
         d = storage.read() or {}
         if s is None:
             s = dict(d.get("settings") or {}, key_state=d.get("key_state"))
+            if not d.get("settings") and not os.environ.get("MINITYPE_FACTORY"):
+                s = dict(STARTER, **{k: v for k, v in s.items() if v is not None})   # a new install
         self.settings.apply(s)
         ks = s.get("key_state")
         if isinstance(ks, dict):
