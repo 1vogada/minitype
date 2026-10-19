@@ -14,7 +14,7 @@ from .config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS,
                      ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS,
                      FADE_STARTS, FADE_ANGLES, FADE_CURVES, NUMBER_RANGES,
                      TEXT_CONTRASTS, SEE_THROUGH, HELP_POSITIONS, HELP_BORDERS,
-                     LYRICS_SOURCES)
+                     LYRICS_SOURCES, LYRICS_TAPE, LYRICS_PUNCT, LYRICS_LINES)
 from .terminal.style import theme_names
 from .words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 
@@ -56,6 +56,9 @@ CHOICES = {
     "help_position": HELP_POSITIONS,
     "help_border": HELP_BORDERS,
     "lyrics_source": LYRICS_SOURCES,
+    "lyrics_tape": LYRICS_TAPE,
+    "lyrics_punctuation": LYRICS_PUNCT,
+    "lyrics_lines": LYRICS_LINES,
     "text_lighten": SEE_THROUGH,
     "untyped_lighten": SEE_THROUGH,
     "fade_start_top": FADE_STARTS,
@@ -247,6 +250,9 @@ class Settings:
     quote_genre: str = "all"
     lyrics_source: str = "search"   # lyrics mode: "search" (type a song in) or "spotify" (now playing)
     karaoke: bool = True            # lyrics mode: a caret where the song is, from the lyrics' timestamps
+    lyrics_tape: str = "same"       # lyrics mode's own tape (same: the tape setting)
+    lyrics_punctuation: str = "same"   # ...and punctuation
+    lyrics_lines: str = "new line"  # a song's lines: each on a new line, a / between them, or run together
     spotify_client_id: str = ""     # your own app's, from developer.spotify.com/dashboard
     code_lang: str = "python"
     book_page: int = 50          # words per page in book mode

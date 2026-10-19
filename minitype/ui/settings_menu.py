@@ -24,7 +24,7 @@ from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICU
                       ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS,
                       FADE_STARTS, FADE_ANGLES, FADE_CURVES, NUMBER_RANGES,
                       TEXT_CONTRASTS, SEE_THROUGH, HELP_POSITIONS, HELP_BORDERS,
-                      LYRICS_SOURCES)
+                      LYRICS_SOURCES, LYRICS_TAPE, LYRICS_PUNCT, LYRICS_LINES)
 from ..terminal.art import ART_NAMES, THEME_ART
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import spotify, storage
@@ -242,6 +242,21 @@ def raw_items(app):
                "is (songs whose lyrics have timestamps); with spotify it "
                "starts where the song is playing",
                tags=("lyrics", "song", "music", "caret", "race", "sing")),
+        b.choice("lyrics tape", "lyrics_tape", LYRICS_TAPE,
+                 help="tape for lyrics tests only: same follows the tape "
+                      "setting; off, on or from middle set their own",
+                 tags=("lyrics", "song", "music", "tape", "scroll", "line")),
+        b.choice("lyrics punctuation", "lyrics_punctuation", LYRICS_PUNCT,
+                 help="punctuation for lyrics tests only: same follows the "
+                      "punctuation setting; off, on or forgive set their own",
+                 tags=("lyrics", "song", "music", "punctuation", "symbols")),
+        b.choice("song lines", "lyrics_lines", LYRICS_LINES,
+                 help="how a song's lines (its bars) are told apart: new line "
+                      "puts each on a line of its own, marker shows a / where "
+                      "the next one starts (tape always uses the marker), off "
+                      "runs them together",
+                 tags=("lyrics", "song", "music", "bars", "lines", "verse",
+                       "split", "break")),
         b.item("spotify client id", lambda: _client_id(app),
                lambda: (app.settings.spotify_client_id[:8] + "...")
                if app.settings.spotify_client_id else "not set",

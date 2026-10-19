@@ -451,4 +451,46 @@ for _ in range(300):
     time.sleep(0.01)
 assert h.next and h.next[1]["title"] == "Four" and not h.busy, "retried and got them"
 h.stop()
+# ---------------------------------------------------------------- lyrics' own tape, punctuation, lines
+from minitype.engine import render                               # noqa: E402
+from minitype.ui import settings_tree                            # noqa: E402
+from minitype.engine.spec import TestSpec                        # noqa: E402
+import re                                                        # noqa: E402
+
+
+def render_strip(x):
+    return re.sub(r'\x1b\[[0-9;]*m', '', x)
+
+
+ls = App()
+ls.settings.punctuation, ls.settings.tape = "off", "off"
+bars = lyrics.Song("B", "C", lines=((1.0, "Hello, there"), (2.0, "big world"), (3.0, "bye")))
+lt = TypingTest(ls, lyrics_mode.spec_for(bars))
+assert lt.words[0] == "Hello" and lt.breaks == {2, 4}, (lt.words, lt.breaks)
+assert lt.punctuation() == "off" and lt.tape() == "off" and lt.line_breaks()[1] == "new line"
+ls.settings.lyrics_punctuation, ls.settings.lyrics_tape = "on", "on"
+lt = TypingTest(ls, lyrics_mode.spec_for(bars))
+assert lt.words[0] == "Hello," and lt.punctuation() == "on" and lt.tape() == "on"
+ls.settings.lyrics_punctuation = "forgive"
+assert TypingTest(ls, lyrics_mode.spec_for(bars))._forgive()
+other = TypingTest(ls, TestSpec("x", "words", 3, "custom", words=("a", "b", "c")))
+assert other.punctuation() == "off" and other.tape() == "off" and other.line_breaks()[0] == (), \
+    "only lyrics tests use them"
+# the words wrap at each of the song's lines; a marker shows the gap instead
+assert render.wrap(["aa", "bb", "cc", "dd"], 80, {2}) == [(0, 2), (2, 4)]
+assert render.wrap(["aa", "bb", "cc", "dd"], 80) == [(0, 4)]
+seen = []
+with mock.patch.object(console, "present", lambda out, *a, **k: seen.append(out)):
+    st = ls.styles()
+    words = ["Hello", "there", "big", "world", "bye"]
+    for tape, split in (("off", "new line"), ("off", "marker"), ("on", "new line"), ("off", "off")):
+        render.draw(st, ls.settings, "", words, [""] * 5, 0, 80, "", tape=tape,
+                    breaks={2, 4}, split=split)
+plain = [[render_strip(x) for x in out if render_strip(x).strip()] for out in seen]
+assert [x.strip() for x in plain[0][:3]] == ["Hello there", "big world", "bye"], plain[0]
+assert "there / big world / bye" in plain[1][0], plain[1]
+assert "there / big world / bye" in plain[2][0], "tape: always the marker"
+assert "there big world bye" in plain[3][0]
+names = [x for page in settings_tree.TREE for x in str(page).split("'")]
+assert "song lines" in names and "lyrics tape" in names and "lyrics punctuation" in names
 print("ALL OK")

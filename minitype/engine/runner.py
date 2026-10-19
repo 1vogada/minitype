@@ -44,6 +44,7 @@ class TypingTest:
         self.quote = ""        # the quote as picked, for favouriting
         self.timing = []       # lyrics: (seconds, char offset) where each line starts
         self.follow = None     # lyrics from spotify: keeps up with it (spotify.Follow)
+        self.breaks = set()    # lyrics: the words that start a line of the song
         self.words = self._make_words()
         self.typed = [""] * len(self.words)
         self.wi = self.keys = self.bad_keys = 0
@@ -109,7 +110,7 @@ class TypingTest:
         """A song's words, line after line, as a quote's are (punctuation off
         strips it), noting where each timed line starts for the karaoke
         caret."""
-        strip = self.app.settings.punctuation == "off"
+        strip = self.punctuation() == "off"
         words, at = [], 0
         for t, text in self.spec.lines:
             line = text.replace("—", " ").replace("--", " ").split()
@@ -120,6 +121,8 @@ class TypingTest:
                 continue
             if t is not None:
                 self.timing.append((t, at))
+            if words:
+                self.breaks.add(len(words))
             words += line
             at += sum(len(w) + 1 for w in line)
         self.timing.append((None, at))          # the end
@@ -377,7 +380,28 @@ class TypingTest:
 
     def _forgive(self):
         """Whether punctuation can be skipped without a mistake."""
-        return self.app.settings.punctuation == "forgive"
+        return self.punctuation() == "forgive"
+
+    def punctuation(self):
+        """The punctuation setting for this test: lyrics have their own
+        (unless it's "same")."""
+        s = self.app.settings
+        if self.spec.source == "lyrics" and s.lyrics_punctuation != "same":
+            return s.lyrics_punctuation
+        return s.punctuation
+
+    def tape(self):
+        """The tape setting for this test: lyrics have their own too."""
+        s = self.app.settings
+        if self.spec.source == "lyrics" and s.lyrics_tape != "same":
+            return s.lyrics_tape
+        return s.tape
+
+    def line_breaks(self):
+        """(word indices that start a song's line, how to show them)."""
+        if not self.breaks:
+            return (), "off"
+        return self.breaks, self.app.settings.lyrics_lines
 
     def _space(self, el):
         word, typed = self.words[self.wi], self.typed[self.wi]
@@ -593,7 +617,7 @@ def run_test(app, spec):
              test.wi, max(10, console.size()[0] - 4), test.footer(), marks, test.wrong,
              keyboard_lines(app, test), test.hidden(now),
              test.error_marks(), test.combo, now, test.last_error,
-             test.typo_keys)
+             test.typo_keys, test.tape(), *test.line_breaks())
     app.current_test = (test, paint)       # for ctrl-o: pause, settings, resume?
     from ..ui.lyrics_mode import follow_for     # the ui imports the engine
     test.follow = follow_for(spec)

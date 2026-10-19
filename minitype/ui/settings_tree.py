@@ -46,8 +46,10 @@ TREE = [
          ("test", "punctuation")),
         ("quotes", "where quotes come from and which kinds", [
             ("words", "quotes from"), ("words", "quote genre")]),
-        ("lyrics", "the lyrics mode: search or spotify, karaoke, linking spotify", [
-            ("words", "lyrics from"), ("words", "karaoke"),
+        ("lyrics", "the lyrics mode: search or spotify, karaoke, its own tape and "
+                   "punctuation, linking spotify", [
+            ("words", "lyrics from"), ("words", "karaoke"), ("words", "song lines"),
+            ("words", "lyrics tape"), ("words", "lyrics punctuation"),
             ("spotify", "linking to spotify, for what's playing", [
                 ("words", "spotify"), ("words", "spotify client id")]),
         ], ("words", "lyrics from")),

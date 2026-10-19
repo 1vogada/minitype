@@ -39,17 +39,19 @@ SHAKE_STEPS = (1, -1, 1, -1, 0)
 BOB_RATE = 5.0         # how fast letters bob
 BOB_RANGE = 8          # gentle bounce: letters this close to the caret bob
 PULSE_RATE = 2.0       # caret blinks a second
+LINE_MARK = "/"        # lyrics: the gap where the song's next line starts
 
 
-def wrap(display, width):
+def wrap(display, width, breaks=()):
     """Greedily group word indices into lines. display holds what each word
-    currently renders as, so extra chars push words onto the next line."""
+    currently renders as, so extra chars push words onto the next line;
+    a word in breaks always starts a new one (a song's lines)."""
     lines = []
     start = 0
     cur = 0
     for i, s in enumerate(display):
         add = len(s) if cur == 0 else len(s) + 1
-        if cur + add > width and i > start:
+        if (cur + add > width or i in breaks) and i > start:
             lines.append((start, i))
             start = i
             cur = len(s)
@@ -94,6 +96,7 @@ class Painter:
         if self.fx.caret_fx == "pulse" and int(now * PULSE_RATE * self.speed) % 2:
             self.caret, self.caret_gap = st.dim, ""        # the blink's off half
         self.gap_style = settings.word_gap
+        self.breaks, self.split = (), "off"    # a song's lines (set by draw)
         self.display = [w + typed[i][len(w):] for i, w in enumerate(words)]
         self.offs = []
         g = 0
@@ -202,6 +205,8 @@ class Painter:
             return (self.caret_gap, " ", off)
         if off in self.marks:
             return (self.st.dim + UND, " ", off)
+        if self.split == "marker" and i + 1 in self.breaks:
+            return (self.st.dim, LINE_MARK, off)      # where the song's next line starts
         if self.gap_style == "dots":
             return (self.st.dim, SPACE_DOT, off)
         if self.gap_style == "underline":
@@ -214,7 +219,11 @@ class Painter:
         cells = []
         for i in range(a, b):
             if i > a:
-                cells.append(self.gap(i - 1))
+                g = self.gap(i - 1)
+                if self.split == "marker" and i in self.breaks:   # " / ": room around it
+                    cells += [("", " ", -1), g, ("", " ", -1)]
+                else:
+                    cells.append(g)
             cells += self.word(i)
         last = b - 1
         if last == self.wi == len(self.words) - 1 \
@@ -248,7 +257,11 @@ def rows(p, cells):
 
 
 def block_lines(p, width):
-    lines = wrap(p.display, width)
+    if p.split == "marker":                    # the marker's room, so lines still fit
+        lines = wrap([d + "  " if i + 1 in p.breaks else d for i, d in enumerate(p.display)],
+                     width)
+    else:
+        lines = wrap(p.display, width, p.breaks if p.split == "new line" else ())
     li = next((n for n, (a, b) in enumerate(lines) if a <= p.wi < b),
               len(lines) - 1)
     top = max(0, min(li - 1, len(lines) - VIEW_LINES))
@@ -284,7 +297,7 @@ def tape_line(p, width, mode="on"):
 
 def draw(st, settings, header, words, typed, wi, width, footer, marks=(),
          wrong=False, below=(), hidden=False, errors=(), combo=0, now=0.0,
-         last_error=-1.0, typo_keys=None):
+         last_error=-1.0, typo_keys=None, tape=None, breaks=(), split="off"):
     """Redraw the test screen in place.
 
     marks:  global char offsets to underline (ghost and pace carets)
@@ -296,15 +309,21 @@ def draw(st, settings, header, words, typed, wi, width, footer, marks=(),
     combo, now:  for theme heat, flow and the animated modifiers
     last_error:  when the last wrong key was, for shake
     typo_keys:   the wrong key pressed at each of those, for indicate typos
+    tape:        the tape setting, when the test has its own (lyrics)
+    breaks, split:  the words that start a song's line, and how that shows -
+                 "new line", "marker" (a / in the gap) or "off"
     """
     p = Painter(st, settings, words, typed, wi, marks, wrong, hidden, errors,
                 combo, now, typo_keys)
+    tape = settings.tape if tape is None else tape
+    tape_on = tape not in (False, "off", None)
+    # a tape is one line: new lines can't show there, so a marker does
+    p.breaks, p.split = breaks, ("marker" if tape_on and split == "new line" else split)
     out = []
     if header:
         out += ["  " + st.dim + header + RESET, ""]
     focus = len(out)
-    tape_on = settings.tape not in (False, "off", None)
-    text = tape_line(p, width, settings.tape) + [""] if tape_on else block_lines(p, width)
+    text = tape_line(p, width, tape) + [""] if tape_on else block_lines(p, width)
     shifted = " " * (2 + p.shake(last_error))       # shake nudges just the words
     out += [shifted + line if line else "" for line in text]
     if below:
