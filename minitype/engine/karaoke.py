@@ -107,6 +107,19 @@ def _points(rows, end):
     return out
 
 
+def reach(points, c):
+    """When (seconds into the song) the caret gets to char offset c; inf if
+    it never does."""
+    if not points:
+        return float("inf")
+    if c <= points[0][1]:
+        return points[0][0]
+    for (t0, c0), (t1, c1) in zip(points, points[1:]):
+        if c1 >= c > c0:
+            return t0 + (c - c0) * (t1 - t0) / (c1 - c0)
+    return float("inf")
+
+
 def position(points, t):
     """The caret's char offset at t seconds into the song."""
     if not points:

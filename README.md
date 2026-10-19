@@ -432,6 +432,21 @@ settings; if one has a mistake, the theme row's help says what's wrong.
 
 ## Results and progress
 
+- **two wpm systems** (settings → results → wpm system), both worked out for
+  every test, so you can switch any time - bests, the profile and its chart
+  switch with it (tests from before active wpm count with their classic
+  speed):
+  - **active** (the default): your speed over the time you were typing. A
+    gap between keys counts in full up to four of your own typical gaps
+    (1-3 seconds), so a pause to think costs a little and walking away
+    doesn't wreck the test. In a lyrics test, time spent ahead of the
+    singer - you've typed the line, the song hasn't got there - is waiting,
+    not slow typing, and isn't counted.
+  - **classic**: correct letters over the whole clock from your first key,
+    like monkeytype.
+
+  The results show the other system's number next to the main one, and in
+  active wpm how much of the time was typing.
 - speed chart across the test with errors marked
 - keyboard heatmap coloured by how often each key was missed
 - personal bests per mode, with a banner when you beat one

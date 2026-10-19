@@ -27,6 +27,14 @@ def toggle_fav(app, result):
     app.save_settings()
 
 
+def _time(r):
+    """The test's time - and, in active wpm, the part of it spent typing
+    when long stops were left out."""
+    if r.system == "active" and r.active_secs and r.elapsed - r.active_secs >= 1:
+        return f"{r.elapsed:5.1f}s ({r.active_secs:.1f}s typing)"
+    return f"{r.elapsed:5.1f}s"
+
+
 def headline(app, st, r):
     dim, ok = st.dim, st.title
     lines = []
@@ -34,9 +42,12 @@ def headline(app, st, r):
         why = r.fail_reason or r.difficulty
         lines.append(f"  {st.bad}failed{RESET} {dim}({why}){RESET}")
     else:
-        lines.append(f"  {ok}{r.wpm:5.1f}{RESET} wpm")
+        other = (("classic", r.classic) if r.system == "active" else ("active", r.active))
+        aside = (f"   {dim}{other[1]:.1f} {other[0]}{RESET}"
+                 if other[1] and abs(other[1] - r.wpm) >= 0.05 else "")
+        lines.append(f"  {ok}{r.wpm:5.1f}{RESET} wpm{aside}")
     lines.append(f"  {dim}{r.raw:5.1f} raw   {r.acc:5.1f}% acc   "
-                 f"{r.elapsed:5.1f}s   {r.errors} errors   combo {r.best_combo}{RESET}")
+                 f"{_time(r)}   {r.errors} errors   combo {r.best_combo}{RESET}")
     if r.note or r.quote:
         star = f"{st.title}★{RESET} " if r.quote and is_fav(app, r) else ""
         lines.append(f"  {star}{dim}{'- ' + r.note if r.note else ''}{RESET}")

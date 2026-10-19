@@ -1,10 +1,15 @@
-def score(words, typed, wi, keys, bad_keys, elapsed):
-    """Returns (wpm, raw wpm, accuracy %)."""
-    # spaces after cleanly finished words count as correct characters
+def correct_chars(words, typed, wi):
+    """The letters typed right, and a space for each word finished cleanly."""
     chars = sum(1 for i in range(min(wi, len(words))) if typed[i] == words[i])
     for i in range(min(wi + 1, len(words))):
         w, t = words[i], typed[i]
         chars += sum(1 for j, c in enumerate(t) if j < len(w) and c == w[j])
+    return chars
+
+
+def score(words, typed, wi, keys, bad_keys, elapsed):
+    """Returns (wpm, raw wpm, accuracy %) - classic: over the whole clock."""
+    chars = correct_chars(words, typed, wi)
     mins = elapsed / 60
     wpm = (chars / 5) / mins if mins else 0
     raw = (keys / 5) / mins if mins else 0

@@ -25,7 +25,7 @@ from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICU
                       FADE_STARTS, FADE_ANGLES, FADE_CURVES, NUMBER_RANGES,
                       TEXT_CONTRASTS, SEE_THROUGH, HELP_POSITIONS, HELP_BORDERS,
                       LYRICS_SOURCES, LYRICS_TAPE, LYRICS_PUNCT, LYRICS_LINES, LYRICS_CAPITALS,
-                      KARAOKE_OFFSETS)
+                      KARAOKE_OFFSETS, WPM_SYSTEMS)
 from ..terminal.art import ART_NAMES, THEME_ART
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import spotify, storage
@@ -134,6 +134,15 @@ def raw_items(app):
                  help="expert: a wrong word ends the test. "
                       "master: a wrong key ends it",
                  tags=("hard", "fail", "expert", "master", "mistakes")),
+        b.choice("wpm system", "wpm_system", WPM_SYSTEMS,
+                 help="active: your speed over the time you were typing - a "
+                      "long stop counts a few seconds at most, and waiting "
+                      "for the singer in a lyrics test not at all. classic: "
+                      "over the whole clock, like monkeytype. Both are kept "
+                      "for every test, so switching changes your bests and "
+                      "charts too",
+                 tags=("speed", "wpm", "score", "active", "classic", "idle",
+                       "pause", "accurate")),
         b.choice("stop on error", "stop_on_error", STOP_MODES,
                  help="letter: a wrong key doesn't move the cursor. "
                       "word: you can't leave a wrong word",

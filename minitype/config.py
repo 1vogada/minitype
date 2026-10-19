@@ -71,6 +71,7 @@ LYRICS_PUNCT = ["same"] + PUNCTUATION_MODES         # ...and punctuation
 LYRICS_CAPITALS = ["same", "on", "forgive", "off"]  # ...and capitals (forgive: shown, shift optional; off: all lowercase)
 KARAOKE_OFFSETS = [-2000, -1500, -1000, -750, -500, -250, 0, 250, 500, 750, 1000,
                    1500, 2000]   # ms the karaoke caret is moved on (+) or back (-)
+WPM_SYSTEMS = ["active", "classic"]   # active: over the time you typed; classic: the whole clock
 LYRICS_LINES = ["new line", "marker", "off"]       # how a song's lines are told apart
 UI_STYLES = ["list", "sidebar", "tabs"]
 SIDEBAR_TABS = ["off", "top", "left"]

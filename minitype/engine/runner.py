@@ -11,10 +11,10 @@ from ..nav import MENU, QUIT
 from ..terminal import console, keys
 from ..words import books, code, funbox
 from . import keyboard
-from . import karaoke
+from . import karaoke, speed
 from .render import draw
 from .result import TestResult
-from .scoring import score
+from .scoring import correct_chars, score
 
 FOOTER = "esc menu   tab restart   ctrl-bksp word   ctrl-o settings   ctrl-q hide"
 ZEN_FOOTER = "enter finish   esc menu   ctrl-o settings   ctrl-q hide"
@@ -56,6 +56,8 @@ class TypingTest:
         self.presses = {}
         self.samples = []
         self.events = []
+        self.key_times = []     # every typing key (backspaces too), for active wpm
+        self.song_marks = []    # lyrics: (song seconds, char offset you're on) at each of them
         self.start = None
         self.failed = False
         self.fail_reason = ""
@@ -187,8 +189,56 @@ class TypingTest:
             self.typed += [""] * 100
 
     def score(self, elapsed):
+        """(wpm, raw, accuracy) in the wpm system the settings pick."""
+        if self.app.settings.wpm_system == "classic":
+            return self.classic(elapsed)
+        return self.active(elapsed)
+
+    def classic(self, elapsed):
+        """Over the whole clock, from the first key."""
         return score(self.words, self.typed, self.wi, self.keys,
                      self.bad_keys, elapsed)
+
+    def active(self, elapsed):
+        """Over the time you were typing (speed.py): long stops and waiting
+        for the singer left out."""
+        _, _, acc = self.classic(elapsed)
+        secs = self.active_seconds(elapsed)
+        if secs < 0.05:                    # not enough typing to tell: the clock
+            return self.classic(elapsed)
+        wpm, raw = speed.wpm(correct_chars(self.words, self.typed, self.wi), self.keys, secs)
+        return wpm, raw, acc
+
+    def active_seconds(self, elapsed):
+        return speed.active_seconds(self.key_times, elapsed, self._waits(elapsed))
+
+    def _active(self, now):
+        """Note a typing key for active wpm, and in a timed song where the
+        singer was."""
+        if self.start is None:
+            return
+        self.key_times.append(now - self.start)
+        if self.points:
+            done = sum(len(w) + 1 for w in self.words[:self.wi]) + len(self.typed[self.wi])                 if self.wi < len(self.words) else self.timing[-1][1]
+            self.song_marks.append((self.song_time(now), done))
+
+    def _waits(self, elapsed):
+        """How much of the gap after each key was spent ahead of the singer:
+        the caret hadn't got to the letter you were on yet."""
+        if not self.song_marks:
+            return ()
+        out = []
+        ends = [m[0] for m in self.song_marks[1:]] + [self.song_time(self.start + elapsed)]
+        for (gap, ((s0, c), s1)) in zip(speed.gaps(self.key_times, elapsed),
+                                        zip(self.song_marks, ends)):
+            r = karaoke.reach(self.points, c + 1)       # the singer at the next letter
+            if s0 is None or s1 is None or r <= s0:
+                out.append(0.0)                         # you were behind: typing
+            elif s1 <= r:
+                out.append(gap)                         # ahead all the gap
+            else:
+                out.append(gap * (r - s0) / max(s1 - s0, 1e-6))
+        return out
 
     def next_char(self):
         """The key you should press next, " " for space, None at the end."""
@@ -285,10 +335,12 @@ class TypingTest:
         if key == keys.BACKSPACE:
             if self._can_backspace():
                 self._backspace()
+                self._active(time.time())
             return None
         if key in (keys.CTRL_BACKSPACE, keys.CTRL_W):
             if self._can_backspace():
                 self._wipe_word()
+                self._active(time.time())
             return None
         if key in (keys.ENTER, keys.SHIFT_ENTER) and self.spec.kind == "zen":
             self.done = True
@@ -301,6 +353,7 @@ class TypingTest:
         if self.start is None:
             self.start = time.time()
         el = time.time() - self.start
+        self._active(self.start + el)
         if key == " ":
             self._space(el)
         else:
@@ -519,6 +572,7 @@ class TypingTest:
             return MENU
         elapsed = time.time() - self.start
         wpm, raw, acc = self.score(elapsed)
+        classic, active = self.classic(elapsed)[0], self.active(elapsed)[0]
         if self.learning:
             self.app.learn.finish(self.n_before)
         if not self.failed:
@@ -530,6 +584,9 @@ class TypingTest:
                             self.best_combo, self.misses, self.failed, self.diff,
                             self.fail_reason, self.note, self.events, self.presses)
         result.quote = self.quote
+        result.system = self.app.settings.wpm_system
+        result.classic, result.active = classic, active
+        result.active_secs = self.active_seconds(elapsed)
         result.pb_before = self.app.history.pb(result)
         self.app.history.add(result)
         self.app.save()

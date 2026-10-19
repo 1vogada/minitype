@@ -121,6 +121,7 @@ TREE = [
         ("look", "lowkey"),
     ]),
     ("results", "what the results screen shows", [
+        ("test", "wpm system"),
         ("charts", "the speed chart and the key heatmap", [
             ("results", "speed chart"), ("results", "key heatmap")]),
         ("lists", "personal best, worst keys and words, the session", [

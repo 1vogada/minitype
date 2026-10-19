@@ -49,9 +49,9 @@ def draw(app, st):
     if not h.runs:
         lines.append(f"  {dim}no tests yet{RESET}")
     else:
-        wpms = [r["wpm"] for r in runs] or [0]
+        wpms = [h.speed(r) for r in runs] or [0]
         last = runs[-10:] or [{"wpm": 0, "acc": 0}]
-        avg = sum(r["wpm"] for r in last) / len(last)
+        avg = sum(h.speed(r) for r in last) / len(last)
         acc = sum(r["acc"] for r in last) / len(last)
         rows = [
             ("tests", f"{len(h.runs)}"),
@@ -68,7 +68,7 @@ def draw(app, st):
                                   for a, v in rows[k:k + step])
             lines.append(line)
 
-        chart = [r["wpm"] for r in runs[-min(CHART_RUNS, width - 6):]]
+        chart = [h.speed(r) for r in runs[-min(CHART_RUNS, width - 6):]]
         if len(chart) > 1:
             lines += ["", f"  {dim}speed, last {len(chart)} tests  "
                           f"{min(chart):.0f}-{max(chart):.0f} wpm{RESET}",
@@ -76,8 +76,8 @@ def draw(app, st):
 
         if h.pbs:
             lines += ["", f"  {dim}personal bests{RESET}"]
-            for mode, pb in sorted(h.pbs.items(), key=lambda kv: -kv[1]["wpm"]):
-                lines.append(f"  {dim}{mode:<24}{RESET}{pb['wpm']:.0f} wpm  "
+            for mode, pb in sorted(h.pbs.items(), key=lambda kv: -h.speed(kv[1])):
+                lines.append(f"  {dim}{mode:<24}{RESET}{h.speed(pb):.0f} wpm  "
                              f"{dim}{pb['acc']:.0f}%{RESET}")
 
     goal = goal_line(app, st)

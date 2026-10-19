@@ -37,6 +37,7 @@ class App:
         self.settings = Settings()
         self.stats = SessionStats()
         self.history = History()
+        self.history.system = lambda: self.settings.wpm_system
         self.bank = WordBank()
         self.quotes = QuoteBank()
         self.generator = WordGenerator(self.settings, self.stats, self.bank)

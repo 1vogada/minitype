@@ -15,7 +15,7 @@ from .config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS,
                      FADE_STARTS, FADE_ANGLES, FADE_CURVES, NUMBER_RANGES,
                      TEXT_CONTRASTS, SEE_THROUGH, HELP_POSITIONS, HELP_BORDERS,
                      LYRICS_SOURCES, LYRICS_TAPE, LYRICS_PUNCT, LYRICS_LINES,
-                     LYRICS_CAPITALS, KARAOKE_OFFSETS)
+                     LYRICS_CAPITALS, KARAOKE_OFFSETS, WPM_SYSTEMS)
 from .terminal.style import theme_names
 from .words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 
@@ -62,6 +62,7 @@ CHOICES = {
     "lyrics_lines": LYRICS_LINES,
     "lyrics_capitals": LYRICS_CAPITALS,
     "karaoke_offset": KARAOKE_OFFSETS,
+    "wpm_system": WPM_SYSTEMS,
     "text_lighten": SEE_THROUGH,
     "untyped_lighten": SEE_THROUGH,
     "fade_start_top": FADE_STARTS,
@@ -253,6 +254,7 @@ class Settings:
     quote_genre: str = "all"
     lyrics_source: str = "search"   # lyrics mode: "search" (type a song in) or "spotify" (now playing)
     karaoke: bool = True            # lyrics mode: a caret where the song is, from the lyrics' timestamps
+    wpm_system: str = "active"     # active: wpm over the time you typed (long stops left out); classic: the whole clock
     karaoke_offset: int = 0         # ms the karaoke caret is moved on (+, music plays late) or back (-)
     lyrics_tape: str = "same"       # lyrics mode's own tape (same: the tape setting)
     lyrics_punctuation: str = "same"   # ...and punctuation

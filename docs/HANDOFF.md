@@ -48,7 +48,10 @@ agent's memory don't travel, so this section is the memory.
    their own tape / punctuation / capitals (incl. forgive) and song-line
    split (`lyrics_lines`); the caret maths is `engine/karaoke.py` (line
    ends from the song's median letters/s, enhanced-LRC word tags,
-   `karaoke_offset`; `Follow._steady` keeps the least stale of the last 3
+   `karaoke_offset`; active wpm in `engine/speed.py` (gaps capped at 4x
+   the median gap, 1-3s; lyrics: time ahead of the singer from
+   `TypingTest._waits`; `settings.wpm_system`, history keeps "wpm" and
+   "awpm" - `tests/speed_check.py`); `Follow._steady` keeps the least stale of the last 3
    Spotify answers - `tests/karaoke_check.py`); tab resyncs to Spotify, ctrl-i (Windows) goes to
    the first line. `tests/lyrics_check.py` runs offline (fakes LRCLIB/Spotify,
    real local callback). Login: the browser opens a short local start
