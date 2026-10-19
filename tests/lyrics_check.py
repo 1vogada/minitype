@@ -81,9 +81,22 @@ assert t.song_offset(1005.0) in t.status(1005.0)[1], "the caret is drawn"
 app.settings.karaoke = False
 assert t.song_offset(1005.0) not in t.status(1005.0)[1]
 # a song already playing (spotify) carries on from where it is
-t2 = TypingTest(app, lyrics_mode.spec_for(song, (15.0, 500.0)))
+t2 = TypingTest(app, lyrics_mode.spec_for(song, (15.0, 500.0), now=503.0))
 t2.start = 503.0
 assert t2.song_offset(503.0) == 9, t2.song_offset(503.0)   # 18s into the song
+# joining a song partway: the test starts at the line being sung now
+three = lyrics.Song("Three", "B", lines=((10.0, "first line"), (20.0, "second line"),
+                                        (30.0, "third line")))
+mid = lyrics_mode.spec_for(three, (21.0, 500.0, True, "x"), now=504.0)    # 25s in
+assert [x for _, x in mid.lines] == ["second line", "third line"] and mid.amount == 2
+tm = TypingTest(app, mid)
+tm.start = 504.0
+assert tm.words[0] == "second" and tm.song_offset(504.0) == 6, tm.song_offset(504.0)
+assert len(lyrics_mode.spec_for(three, (5.0, 500.0, True, "x"), now=501.0).lines) == 3, \
+    "before the first line: all of it"
+assert len(lyrics_mode.spec_for(three, (25.0, 500.0, False, "x"), now=900.0).lines) == 2, \
+    "paused: where it's paused"
+assert len(lyrics_mode.spec_for(three).lines) == 3, "typed in by name: all of it"
 # unsynced lyrics: words, no caret
 t3 = TypingTest(app, lyrics_mode.spec_for(lyrics.Song("s", "a", lines=((None, "just words"),))))
 t3.start = 1.0
@@ -303,7 +316,7 @@ assert g.position(time.time()) < 99, "the caret didn't jump to the other song's 
 g.stop()
 
 # the test uses it: the caret where spotify says, the header says paused
-playing_spec = lyrics_mode.spec_for(song, lyrics_mode.song_at(dict(one, progress=10.0, at=1000.0)))
+playing_spec = lyrics_mode.spec_for(song, lyrics_mode.song_at(dict(one, progress=10.0, at=1000.0)), now=1000.0)
 assert len(playing_spec.song_at) == 4 and playing_spec.song_at[3] == "1"
 tt = TypingTest(app, playing_spec)
 tt.start = 1000.0

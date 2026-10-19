@@ -7,6 +7,8 @@ first if it isn't yet (see spotify.py). The lyrics come from LRCLIB
 the song is; for a song Spotify is playing it starts where the song is now.
 """
 
+import time
+
 from .. import spotify
 from ..engine.spec import TestSpec
 from ..terminal import console
@@ -43,10 +45,27 @@ def follow_for(spec):
                           _fetch_playing)
 
 
-def spec_for(song, song_at=()):
-    """A test of the song's lyrics."""
-    return TestSpec(song.label, "words", len(song.lines), "lyrics",
-                    lines=song.lines, song_at=tuple(song_at))
+def from_here(lines, song_at, now=None):
+    """The lines from the one being sung now on: a song spotify is already
+    partway through starts there, not at its first line. Untimed lyrics,
+    or a song not started yet, keep every line."""
+    if not song_at:
+        return lines
+    pos, at = song_at[:2]
+    playing = song_at[2] if len(song_at) > 2 else True
+    t = pos + ((time.time() if now is None else now) - at) if playing else pos
+    start = 0
+    for i, (stamp, _) in enumerate(lines):
+        if stamp is not None and stamp <= t:
+            start = i
+    return lines[start:]
+
+
+def spec_for(song, song_at=(), now=None):
+    """A test of the song's lyrics, from where the song is now."""
+    lines = from_here(song.lines, song_at, now)
+    return TestSpec(song.label, "words", len(lines), "lyrics",
+                    lines=lines, song_at=tuple(song_at))
 
 
 def ask_client_id(app):

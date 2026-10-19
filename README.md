@@ -117,7 +117,8 @@ clipped to the width.
 Lyrics come from [LRCLIB](https://lrclib.net), a free, open lyrics database
 - no key to sign up for - and most come with timestamps, which the karaoke
 caret follows: it starts with your first key at the song's first line, or,
-for a song Spotify is playing, where the song is right now. Lyrics are
+for a song Spotify is playing, where the song is right now - and the test
+starts at the line being sung, not at the top of the song. Lyrics are
 fetched for the test and never written to disk. Spotify itself has no
 lyrics API; it only says what's playing.
 
