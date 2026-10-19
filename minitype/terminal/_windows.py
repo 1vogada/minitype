@@ -4,7 +4,7 @@ import ctypes
 import msvcrt
 from ctypes import wintypes
 
-from .keynames import (BACKSPACE, CSI, CTRL_BACKSPACE, CTRL_C, CTRL_D, CTRL_O, CTRL_Q,
+from .keynames import (BACKSPACE, CSI, CTRL_BACKSPACE, CTRL_C, CTRL_D, CTRL_O, CTRL_P, CTRL_Q,
                        CTRL_W, DELETE, DOWN, END, ENTER, ESC, HOME, INSERT,
                        LEFT, PGDN, PGUP, RIGHT, SHIFT_ENTER, SHIFT_TAB, TAB,
                        UNKNOWN, UP)
@@ -19,6 +19,7 @@ _CONTROL = {
     "\x04": CTRL_D,
     "\x11": CTRL_Q,
     "\x0f": CTRL_O,
+    "\x10": CTRL_P,
     "\x17": CTRL_W,
 }
 

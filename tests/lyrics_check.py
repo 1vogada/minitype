@@ -205,7 +205,7 @@ with mock.patch.object(spotify, "now_playing", lambda: dict(now, at=777.0)), \
         mock.patch.object(lyrics, "_get", fake_get), \
         mock.patch.object(lyrics_mode, "_say", lambda *a: None):
     got = lyrics_mode.lyrics_test(app)
-assert got.song_at == (61.0, 777.0) and got.label == "One - Metallica"
+assert got.song_at[:3] == (61.0, 777.0, True) and got.label == "One - Metallica"
 with mock.patch.object(spotify, "now_playing", lambda: None), \
         mock.patch.object(lyrics_mode, "_say", lambda *a: None):
     assert lyrics_mode.lyrics_test(app) is None and "isn't playing" in app.notice
@@ -263,4 +263,103 @@ screens.clear()
 assert run_link([keys.ESC]) is False and not spotify.linked() and "not linked" in app.notice
 again = spotify.Login("CID")
 again.cancel()
+# ---------------------------------------------------------------- following spotify while you type
+from minitype import media                                       # noqa: E402
+from minitype.engine import runner                               # noqa: E402
+spotify.Follow.EVERY = 0.02
+answers = []
+
+
+def ask():
+    return answers.pop(0) if answers else None
+
+
+one = {"id": "1", "title": "One", "artist": "Metallica", "album": "a", "duration": 400,
+       "progress": 10.0, "playing": True, "at": time.time()}
+f = spotify.Follow(one, lambda now: song, ask=lambda: dict(answers[0]) if answers else dict(f.now))
+t0 = time.time()
+assert abs(f.position(t0 + 2) - (10.0 + (t0 + 2 - one["at"]))) < 0.01, "carries on while playing"
+answers[:] = [dict(one, playing=False, progress=33.0, at=time.time())]
+for _ in range(100):
+    if not f.playing:
+        break
+    time.sleep(0.01)
+assert not f.playing and f.position(time.time() + 50) == 33.0, "paused: the caret holds"
+answers[:] = [dict(one, id="2", title="Two", playing=True, progress=1.0, at=time.time())]
+for _ in range(200):
+    if f.next:
+        break
+    time.sleep(0.01)
+assert f.next and f.next[1]["title"] == "Two", "a new song: its lyrics fetched, ready to switch"
+f.stop()
+# a new song with no lyrics: noted, the caret held
+g = spotify.Follow(one, lambda now: None, ask=lambda: dict(one, id="3", title="Three", progress=99.0))
+for _ in range(200):
+    if g.missing:
+        break
+    time.sleep(0.01)
+assert g.missing == "Three" and g.next is None and not g.playing
+assert g.position(time.time()) < 99, "the caret didn't jump to the other song's time"
+g.stop()
+
+# the test uses it: the caret where spotify says, the header says paused
+playing_spec = lyrics_mode.spec_for(song, lyrics_mode.song_at(dict(one, progress=10.0, at=1000.0)))
+assert len(playing_spec.song_at) == 4 and playing_spec.song_at[3] == "1"
+tt = TypingTest(app, playing_spec)
+tt.start = 1000.0
+
+
+class Still:
+    playing, missing, next = False, "", None
+
+    def position(self, t):
+        return 15.0
+
+
+tt.follow = Still()
+assert tt.song_offset(5000.0) == tt.song_offset(1000.0), "held while the music's paused"
+assert "music paused" in tt.status(1001.0)[0]
+assert "ctrl-p pause music" in (tt.footer() or runner.LYRICS_FOOTER)
+# a song with nothing playing at the start: held too
+paused_spec = lyrics_mode.spec_for(song, (15.0, 500.0, False, "1"))
+tp = TypingTest(app, paused_spec)
+tp.start = 600.0
+mid = tp.timing[1][1] // 2                                   # 15s: halfway through the first line
+assert tp.song_offset(600.0) == tp.song_offset(900.0) == mid, "paused when the test began: held"
+
+# spotify moved on: the test switches to the new song
+class Moved(Still):
+    playing = True
+    next = (lyrics.Song("Two", "Band", lines=((1.0, "second song"),)), dict(one, id="2", title="Two"))
+
+    def stop(self):
+        pass
+
+
+with mock.patch.object(lyrics_mode, "follow_for", lambda spec: Moved()), \
+        mock.patch.object(runner, "draw", lambda *a, **k: None), \
+        mock.patch.object(keys, "key_ready", lambda: False):
+    nxt = runner.run_test(app, playing_spec)
+assert nxt.source == "lyrics" and nxt.label == "Two - Band" and nxt.song_at[3] == "2"
+
+# ctrl-p: the music and the test pause together, and resume together
+presses = []
+seq = iter([keys.CTRL_P, "x", keys.CTRL_P, keys.ESC])
+
+
+def read_key(*a, **k):
+    return next(seq)
+
+
+with mock.patch.object(media, "play_pause", lambda: presses.append(1) or True), \
+        mock.patch.object(runner, "draw", lambda *a, **k: None), \
+        mock.patch.object(keys, "key_ready", lambda: True), \
+        mock.patch.object(keys, "read_key", read_key), \
+        mock.patch.object(lyrics_mode, "follow_for", lambda spec: None), \
+        mock.patch("minitype.ui.anywhere.resume_dialog", lambda *a, **k: True):
+    app.settings.esc_pause = False
+    out = runner.run_test(app, lyrics_mode.spec_for(song))
+# before typing: ctrl-p only toggles the music; typing "x" starts the test;
+# then ctrl-p pauses both and resumes both; esc leaves
+assert len(presses) == 3, presses
 print("ALL OK")

@@ -138,6 +138,12 @@ It only reads what you're playing (`user-read-currently-playing`). The
 login is kept in `spotify.json` next to your settings; unlink it in the
 same place.
 
+While you type a song Spotify is playing, minitype keeps up with it: pause
+it and the karaoke caret stops ("music paused" in the header), seek and it
+follows, skip and the test switches to the next song's lyrics by itself.
+**ctrl-p** in a test pauses the music and the test together (the system's
+play/pause key, so it works with any player) and resuming resumes both.
+
 ## Book mode
 
 Drop `.txt` files into the `books` folder in the app folder (main menu →

@@ -3,6 +3,7 @@ import random
 import string
 import time
 
+from .. import media
 from ..config import MAX_EXTRA, RULE_GRACE
 from ..learn.progress import ORDER
 from ..learn.wordgen import lesson_words
@@ -16,6 +17,7 @@ from .scoring import score
 
 FOOTER = "esc menu   tab restart   ctrl-bksp word   ctrl-o settings   ctrl-q hide"
 ZEN_FOOTER = "enter finish   esc menu   ctrl-o settings   ctrl-q hide"
+LYRICS_FOOTER = "esc menu   tab restart   ctrl-p pause music   ctrl-o settings   ctrl-q hide"
 BOOK_FOOTER = ("esc menu   tab restart   pgdn next page   pgup previous page   "
                "ctrl-q hide")
 REDRAW_EVERY = 0.1
@@ -41,6 +43,7 @@ class TypingTest:
         self.note = ""
         self.quote = ""        # the quote as picked, for favouriting
         self.timing = []       # lyrics: (seconds, char offset) where each line starts
+        self.follow = None     # lyrics from spotify: keeps up with it (spotify.Follow)
         self.words = self._make_words()
         self.typed = [""] * len(self.words)
         self.wi = self.keys = self.bad_keys = 0
@@ -125,15 +128,19 @@ class TypingTest:
 
     def song_offset(self, now):
         """Where the singer is, as a char offset into the words (the karaoke
-        caret), or None: a song already playing (spotify) carries on from
-        where it was; otherwise the song starts with your first key, at its
-        first line. Between two lines' starts it moves on evenly."""
+        caret), or None: a song spotify is playing is where spotify says
+        (followed while you type: paused, seeked, carried on); otherwise
+        the song starts with your first key, at its first line. Between two
+        lines' starts it moves on evenly."""
         timed = [(t, c) for t, c in self.timing if t is not None]
         if not timed or self.start is None:
             return None
-        if self.spec.song_at:
-            pos, at = self.spec.song_at
-            t = pos + (now - at)
+        if self.follow is not None:
+            t = self.follow.position(now)
+        elif self.spec.song_at:
+            pos, at = self.spec.song_at[:2]
+            playing = self.spec.song_at[2] if len(self.spec.song_at) > 2 else True
+            t = pos + (now - at) if playing else pos
         else:
             t = timed[0][0] + (now - self.start)
         end = self.timing[-1][1]
@@ -233,6 +240,11 @@ class TypingTest:
                 sung = self.song_offset(now)
                 if sung is not None:
                     marks.add(sung)
+        if self.follow is not None:
+            if not self.follow.playing:
+                parts.append("music paused")
+            if self.follow.missing:
+                parts.append(f"no lyrics for {self.follow.missing}")
         flags = [f for f in (self.diff if self.diff != "normal" else "",
                              f"stop {self.stop}" if self.stop != "off" else "",
                              "blind" if s.blind else "",
@@ -247,6 +259,8 @@ class TypingTest:
         s = self.app.settings
         if (not s.hints or s.lowkey != "off") and not self.popped_hints:
             return ""
+        if self.spec.source == "lyrics":
+            return LYRICS_FOOTER
         return BOOK_FOOTER if self.spec.source == "book" else self.HINTS
 
     # ---------------------------------------------------------------- input
@@ -575,10 +589,21 @@ def run_test(app, spec):
              test.error_marks(), test.combo, now, test.last_error,
              test.typo_keys)
     app.current_test = (test, paint)       # for ctrl-o: pause, settings, resume?
+    from ..ui.lyrics_mode import follow_for     # the ui imports the engine
+    test.follow = follow_for(spec)
     try:
         return _run(app, test, paint)
     finally:
         app.current_test = None
+        if test.follow is not None:
+            test.follow.stop()
+
+
+def _next_song(test):
+    """The test for the song spotify moved on to (its lyrics are fetched)."""
+    from ..ui.lyrics_mode import song_at, spec_for
+    song, now = test.follow.next
+    return spec_for(song, song_at(now))
 
 
 def pause(app, test, paint):
@@ -611,6 +636,8 @@ def _run(app, test, paint):
             last_draw = now
             dirty = False
 
+        if test.follow is not None and test.follow.next is not None:
+            return _next_song(test)           # spotify moved on: type the new song
         if not keys.key_ready():
             time.sleep(0.002)
             dirty = dirty or console.size() != size
@@ -618,6 +645,14 @@ def _run(app, test, paint):
 
         key = keys.read_key(resize=False)
         dirty = True
+        if key == keys.CTRL_P:                # pause the music, and the test with it
+            media.play_pause()
+            if test.start is None:
+                continue
+            if pause(app, test, paint):
+                media.play_pause()            # carry on: the music too
+                continue
+            return MENU
         if key == keys.ESC and app.settings.esc_pause and test.start is not None:
             if pause(app, test, paint):
                 continue

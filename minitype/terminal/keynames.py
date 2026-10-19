@@ -10,6 +10,7 @@ TAB, SHIFT_TAB, ESC = "tab", "shift-tab", "esc"
 BACKSPACE, CTRL_BACKSPACE = "backspace", "ctrl-backspace"
 CTRL_C, CTRL_D, CTRL_Q, CTRL_W = "ctrl-c", "ctrl-d", "ctrl-q", "ctrl-w"
 CTRL_O = "ctrl-o"
+CTRL_P = "ctrl-p"
 UNKNOWN = "unknown"
 RESIZE = "resize"   # not a key: the terminal changed size while waiting
 

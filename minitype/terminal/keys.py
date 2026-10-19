@@ -15,7 +15,7 @@ import os
 import time
 
 from . import console
-from .keynames import (BACKSPACE, CTRL_BACKSPACE, CTRL_C, CTRL_D, CTRL_O, CTRL_Q,
+from .keynames import (BACKSPACE, CTRL_BACKSPACE, CTRL_C, CTRL_D, CTRL_O, CTRL_P, CTRL_Q,
                        CTRL_W, DELETE, DOWN, END, ENTER, ESC, HOME, INSERT,
                        LEFT, PGDN, PGUP, RESIZE, RIGHT, SHIFT_ENTER, SHIFT_TAB,
                        TAB, UNKNOWN, UP)
@@ -23,7 +23,7 @@ from .keynames import (BACKSPACE, CTRL_BACKSPACE, CTRL_C, CTRL_D, CTRL_O, CTRL_Q
 __all__ = [
     "UP", "DOWN", "LEFT", "RIGHT", "HOME", "END", "PGUP", "PGDN", "INSERT",
     "DELETE", "ENTER", "SHIFT_ENTER", "TAB", "SHIFT_TAB", "ESC", "BACKSPACE",
-    "CTRL_BACKSPACE", "CTRL_C", "CTRL_D", "CTRL_O", "CTRL_Q", "CTRL_W", "UNKNOWN",
+    "CTRL_BACKSPACE", "CTRL_C", "CTRL_D", "CTRL_O", "CTRL_P", "CTRL_Q", "CTRL_W", "UNKNOWN",
     "RESIZE", "setup", "restore", "key_ready", "read_key", "is_char",
     "on_settings_key",
 ]

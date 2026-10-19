@@ -237,9 +237,9 @@ def _token():
 
 
 def now_playing():
-    """What's playing: {title, artist, album, duration, progress, playing,
-    at} (seconds; `at` is when this was asked, to carry progress on), or
-    None when nothing is."""
+    """What's playing: {id, title, artist, album, duration, progress,
+    playing, at} (seconds; `at` is when this was asked, to carry progress
+    on), or None when nothing is."""
     req = urllib.request.Request(NOW, headers={"Authorization": f"Bearer {_token()}"})
     try:
         with urllib.request.urlopen(req, timeout=10) as r:
@@ -259,9 +259,70 @@ def now_playing():
     item = d.get("item") or {}
     if item.get("type") not in (None, "track"):          # a podcast: no lyrics
         return None
-    return {"title": item.get("name") or "",
+    return {"id": item.get("id") or f"{item.get('name')}|{item.get('duration_ms')}",
+            "title": item.get("name") or "",
             "artist": ", ".join(a.get("name", "") for a in item.get("artists") or []),
             "album": (item.get("album") or {}).get("name") or "",
             "duration": (item.get("duration_ms") or 0) / 1000,
             "progress": float(d.get("progress_ms") or 0) / 1000,
             "playing": bool(d.get("is_playing")), "at": at}
+
+
+class Follow:
+    """Keeps up with Spotify while you type a song's lyrics: in the
+    background it asks what's playing every EVERY seconds, so the karaoke
+    caret follows a pause, a seek or a skip. When a different song comes on
+    it fetches that one's lyrics too (`fetch(now) -> song`), and `next`
+    holds (song, now) for the test to switch to. Nothing it does blocks the
+    typing; a failed ask is simply tried again next time."""
+
+    EVERY = 2.0
+
+    def __init__(self, now, fetch, ask=None):
+        self.now = dict(now)             # the latest answer (whole dicts swapped in: thread safe)
+        self.next = None                 # (song, now) of a new song, its lyrics ready
+        self.missing = ""                # a new song with no lyrics: its name
+        self._fetch = fetch
+        self._ask = ask or now_playing
+        self._stop = threading.Event()
+        self.thread = threading.Thread(target=self._loop, daemon=True)
+        self.thread.start()
+
+    def position(self, t):
+        """Seconds into the song at time t: carried on from the last answer
+        while it plays, held while it's paused."""
+        n = self.now
+        return n["progress"] + (t - n["at"]) if n.get("playing") else n["progress"]
+
+    @property
+    def playing(self):
+        return bool(self.now.get("playing"))
+
+    def _loop(self):
+        while not self._stop.wait(self.EVERY):
+            try:
+                got = self._ask()
+            except Exception:            # offline for a moment, a token refresh: next time
+                continue
+            if not got:                  # nothing playing at all: hold where it was
+                self.now = dict(self.now, playing=False, progress=self.position(time.time()),
+                                at=time.time())
+                continue
+            if got.get("id") != self.now.get("id"):
+                try:
+                    song = self._fetch(got)
+                except Exception:
+                    song = None
+                if song is not None and getattr(song, "lines", None):
+                    self.next, self.missing = (song, got), ""
+                else:
+                    # no lyrics for it: the caret holds where it was (the
+                    # new song's position means nothing in these lyrics)
+                    self.missing = got.get("title", "")
+                    self.now = dict(got, playing=False, at=time.time(),
+                                    progress=self.position(time.time()))
+                    continue
+            self.now = got
+
+    def stop(self):
+        self._stop.set()

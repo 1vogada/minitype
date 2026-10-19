@@ -41,7 +41,13 @@ agent's memory don't travel, so this section is the memory.
    now playing), `ui/lyrics_mode.py`. The karaoke caret is
    `TypingTest.song_offset` (a mark, like the pace caret). No lyrics are
    stored. `tests/lyrics_check.py` runs offline (fakes LRCLIB/Spotify,
-   real local callback). Sidebar with tabs on the left is
+   real local callback). Login: the browser opens a short local start
+   page (`spotify.START`) that forwards to the long login link (Windows
+   cut it at "&"); the screen asks you to press enter once logged in.
+   While typing, `spotify.Follow` polls now-playing every 2s in a thread:
+   the caret follows pause/seek, a skip fetches the new song's lyrics and
+   `runner._run` switches the test to it. ctrl-p (`media.play_pause`, the
+   OS media key) pauses the music and the test together. Sidebar with tabs on the left is
    the default layout
    (`Settings.ui_style` / `sidebar_tabs`); tests that check another layout
    set it themselves. Rows are still built in

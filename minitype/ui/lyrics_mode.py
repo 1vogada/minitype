@@ -22,6 +22,27 @@ def _say(app, text):
     console.present(["", f"  {app.styles().dim}{text}{RESET}"])
 
 
+def song_at(now):
+    """A spec's song_at for what spotify says is playing: (seconds in, when,
+    playing, track id)."""
+    return (now["progress"], now["at"], bool(now["playing"]), now.get("id", ""))
+
+
+def _fetch_playing(now):
+    return lyrics.fetch(now["title"], now["artist"].split(", ")[0], now["album"], now["duration"])
+
+
+def follow_for(spec):
+    """A spotify.Follow for a test of what spotify is playing (else None):
+    the caret follows a pause, seek or skip, and a new song's lyrics are
+    fetched for the test to switch to."""
+    if spec.source != "lyrics" or len(spec.song_at) < 4:
+        return None
+    pos, at, playing, track = spec.song_at[:4]
+    return spotify.Follow({"progress": pos, "at": at, "playing": playing, "id": track},
+                          _fetch_playing)
+
+
 def spec_for(song, song_at=()):
     """A test of the song's lyrics."""
     return TestSpec(song.label, "words", len(song.lines), "lyrics",
@@ -144,10 +165,9 @@ def _from_spotify(app):
         app.notice = "spotify isn't playing a song right now"
         return None
     _say(app, f"looking up the lyrics of {now['title']}...")
-    song = lyrics.fetch(now["title"], now["artist"].split(", ")[0], now["album"], now["duration"])
-    # the song is playing: the karaoke caret starts where it is now
-    at = (now["progress"], now["at"]) if now["playing"] else ()
-    return song, at
+    song = _fetch_playing(now)
+    # the karaoke caret starts where the song is now, and follows it
+    return song, song_at(now)
 
 
 def lyrics_test(app):
