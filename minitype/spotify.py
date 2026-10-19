@@ -115,59 +115,97 @@ def login_url(client_id, challenge, state):
         "scope": SCOPES, "state": state})
 
 
-def _catch(state, wait=LOGIN_WAIT):
-    """Wait for the browser to come back to REDIRECT; the code it brings."""
-    got = {}
+class Login:
+    """A login in progress: Spotify's login page to open, and a small server
+    on REDIRECT, in the background, waiting for the browser to come back.
+    Nothing blocks: ask `answered()` whenever you like (the screen does when
+    you press enter), then `finish()` - or `cancel()`."""
 
-    class Handler(BaseHTTPRequestHandler):
-        def do_GET(self):
-            q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
-            got.update({k: v[0] for k, v in q.items()})
-            ok = "code" in got and got.get("state") == state
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.end_headers()
-            self.wfile.write(("<p style='font-family:monospace'>minitype: "
-                              + ("linked to spotify - you can close this tab."
-                                 if ok else "that didn't work - try again from minitype.")
-                              + "</p>").encode())
+    def __init__(self, client_id):
+        client_id = (client_id or "").strip()
+        if not client_id:
+            raise SpotifyError("set your spotify client id first (settings -> words -> lyrics)")
+        self.client_id = client_id
+        self.verifier, challenge = pkce()
+        self.state = secrets.token_urlsafe(16)
+        self.url = login_url(client_id, challenge, self.state)
+        self.got = {}
+        got, state = self.got, self.state
 
-        def log_message(self, *a):
-            pass
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+                if not q:                          # a favicon or the like: not the answer
+                    self.send_response(404)
+                    self.end_headers()
+                    return
+                got.update({k: v[0] for k, v in q.items()})
+                ok = "code" in got and got.get("state") == state
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.end_headers()
+                self.wfile.write(("<p style='font-family:monospace'>minitype: "
+                                  + ("logged in - go back to minitype and press enter."
+                                     if ok else "that didn't work - go back to minitype.")
+                                  + "</p>").encode())
 
-    try:
-        server = HTTPServer(("127.0.0.1", PORT), Handler)
-    except OSError as e:
-        raise SpotifyError(f"port {PORT} is busy - close what's using it and try again") from e
-    server.timeout = 1
+            def log_message(self, *a):
+                pass
+
+        try:
+            self.server = HTTPServer(("127.0.0.1", PORT), Handler)
+        except OSError as e:
+            raise SpotifyError(f"port {PORT} is busy - close what's using it and try again") from e
+        self.server.timeout = 0.5
+        self._stop = False
+        self.thread = threading.Thread(target=self._serve, daemon=True)
+        self.thread.start()
+
+    def _serve(self):
+        try:
+            while not self._stop and not self.got:
+                self.server.handle_request()
+        finally:
+            self.server.server_close()
+
+    def answered(self):
+        """Whether the browser has come back yet."""
+        return bool(self.got)
+
+    def finish(self):
+        """Keep the tokens for the answer the browser brought. SpotifyError
+        if it hasn't come back, or came back with no."""
+        if not self.got:
+            raise SpotifyError("no answer from the browser yet")
+        if self.got.get("error"):
+            raise SpotifyError(f"spotify said: {self.got['error']}")
+        if self.got.get("state") != self.state or "code" not in self.got:
+            raise SpotifyError("the login answer didn't match - try again")
+        self.cancel()
+        _keep(_post(TOKEN, {"grant_type": "authorization_code", "code": self.got["code"],
+                            "redirect_uri": REDIRECT, "client_id": self.client_id,
+                            "code_verifier": self.verifier}), self.client_id)
+
+    def cancel(self):
+        """Stop waiting; the port is free again when this returns."""
+        self._stop = True
+        if self.thread.is_alive() and self.thread is not threading.current_thread():
+            self.thread.join(2)
+
+
+def link(client_id, open_browser=webbrowser.open, wait=LOGIN_WAIT):
+    """Log in to Spotify in the browser and keep the tokens, waiting for the
+    browser (up to `wait` seconds) - for scripts; the screen uses Login
+    itself, so you say when you've logged in."""
+    login = Login(client_id)
+    open_browser(login.url)
     end = time.time() + wait
-    try:
-        while not got and time.time() < end:
-            server.handle_request()
-    finally:
-        server.server_close()
-    if not got:
+    while not login.answered() and time.time() < end:
+        time.sleep(0.1)
+    if not login.answered():
+        login.cancel()
         raise SpotifyError("no answer from the browser - try linking again")
-    if got.get("error"):
-        raise SpotifyError(f"spotify said: {got['error']}")
-    if got.get("state") != state or "code" not in got:
-        raise SpotifyError("the login answer didn't match - try again")
-    return got["code"]
-
-
-def link(client_id, open_browser=webbrowser.open):
-    """Log in to Spotify in the browser and keep the tokens."""
-    client_id = (client_id or "").strip()
-    if not client_id:
-        raise SpotifyError("set your spotify client id first (settings -> words -> lyrics)")
-    verifier, challenge = pkce()
-    state = secrets.token_urlsafe(16)
-    url = login_url(client_id, challenge, state)
-    threading.Timer(0.3, lambda: open_browser(url)).start()   # once the server is listening
-    code = _catch(state)
-    _keep(_post(TOKEN, {"grant_type": "authorization_code", "code": code,
-                        "redirect_uri": REDIRECT, "client_id": client_id,
-                        "code_verifier": verifier}), client_id)
+    login.finish()
 
 
 def _token():

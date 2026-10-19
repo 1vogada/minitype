@@ -190,4 +190,56 @@ with mock.patch.object(spotify, "now_playing", lambda: None), \
     assert lyrics_mode.lyrics_test(app) is None and "isn't playing" in app.notice
 spotify.unlink()
 assert not spotify.linked()
+
+# ---------------------------------------------------------------- the login screen: it asks
+from minitype.terminal import console, keys                      # noqa: E402
+app.settings.spotify_client_id = "CID"
+screens, opened, copied = [], [], []
+state = {"login": None}
+real_login = spotify.Login
+
+
+def remember_login(cid):
+    state["login"] = real_login(cid)
+    return state["login"]
+
+
+def pressed(seq):
+    """Keys for the login screen; "BACK" stands for the browser coming back."""
+    it = iter(seq)
+
+    def read(*a, **k):
+        key = next(it)
+        if key == "BACK":
+            browser(state["login"].url)
+            key = next(it)
+        return key
+    return read
+
+
+def run_link(seq):
+    with mock.patch.object(keys, "read_key", pressed(seq)), \
+            mock.patch.object(console, "present", lambda lines, focus=None, pinned=():
+                              screens.append("\n".join(list(lines) + list(pinned)))), \
+            mock.patch("webbrowser.open", opened.append), \
+            mock.patch.object(spotify, "Login", remember_login), \
+            mock.patch.object(lyrics_mode, "_copy", lambda t: copied.append(t) or True), \
+            mock.patch.object(spotify, "_post", fake_post):
+        return lyrics_mode.link(app)
+
+
+# enter before logging in: it says so and keeps asking; c copies the link;
+# then the browser comes back and enter links it
+ok = run_link([keys.ENTER, "c", "BACK", keys.ENTER])
+assert ok and spotify.linked() and app.notice == "linked to spotify"
+assert opened and opened[0].startswith(spotify.AUTH), "the browser was sent to the login"
+assert any("not yet" in s for s in screens), "enter too early: not yet"
+assert copied == [opened[0]] and any("link copied" in s for s in screens)
+assert "press" in screens[0] and "enter" in screens[0] and "esc: cancel" in screens[0]
+spotify.unlink()
+# esc cancels, and frees the port for the next login straight away
+screens.clear()
+assert run_link([keys.ESC]) is False and not spotify.linked() and "not linked" in app.notice
+again = spotify.Login("CID")
+again.cancel()
 print("ALL OK")
