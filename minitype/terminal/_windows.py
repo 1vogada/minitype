@@ -4,7 +4,7 @@ import ctypes
 import msvcrt
 from ctypes import wintypes
 
-from .keynames import (BACKSPACE, CSI, CTRL_BACKSPACE, CTRL_C, CTRL_D, CTRL_O, CTRL_P, CTRL_Q,
+from .keynames import (BACKSPACE, CSI, CTRL_BACKSPACE, CTRL_C, CTRL_D, CTRL_O, CTRL_P, CTRL_I, CTRL_Q,
                        CTRL_W, DELETE, DOWN, END, ENTER, ESC, HOME, INSERT,
                        LEFT, PGDN, PGUP, RIGHT, SHIFT_ENTER, SHIFT_TAB, TAB,
                        UNKNOWN, UP)
@@ -32,6 +32,7 @@ _EXTENDED = {
 }
 
 VK_TAB = 0x09
+VK_I = 0x49
 VK_RETURN = 0x0D
 VK_SHIFT = 0x10
 SHIFT_PRESSED = 0x0010
@@ -88,6 +89,23 @@ def _with_shift(vk):
         return False
 
 
+def _ctrl_i():
+    """Whether the tab character waiting came from ctrl-i, not the Tab key:
+    the console sends both as "\t", but its raw key event says which key
+    it was."""
+    try:
+        k32 = ctypes.windll.kernel32
+        recs = (_InputRecord * 32)()
+        n = wintypes.DWORD()
+        if k32.PeekConsoleInputW(k32.GetStdHandle(-10), recs, 32, ctypes.byref(n)):
+            for r in recs[:n.value]:
+                if r.type == KEY_EVENT and r.key.down and r.key.char == "\t":
+                    return r.key.vk == VK_I
+    except (AttributeError, OSError):
+        pass
+    return False
+
+
 def _escape_sequence():
     """After ESC: decode "ESC [ x" if one is arriving, otherwise it was a
     plain Esc press. Anything else read ahead is put back."""
@@ -105,11 +123,12 @@ def read():
     # shift has to be read off the raw event before msvcrt consumes the key
     shift_tab = _with_shift(VK_TAB)
     shift_enter = _with_shift(VK_RETURN)
+    ctrl_i = _ctrl_i()
     c = _getch()
     if c in ("\x00", "\xe0"):
         return _EXTENDED.get(_getch(), UNKNOWN)
     if c == "\t":
-        return SHIFT_TAB if shift_tab else TAB
+        return CTRL_I if ctrl_i else SHIFT_TAB if shift_tab else TAB
     if c == "\r":
         return SHIFT_ENTER if shift_enter else ENTER
     if c == "\x1b":

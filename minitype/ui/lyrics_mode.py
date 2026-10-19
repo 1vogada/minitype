@@ -8,6 +8,7 @@ the song is; for a song Spotify is playing it starts where the song is now.
 """
 
 import time
+from dataclasses import replace
 
 from .. import spotify
 from ..engine.spec import TestSpec
@@ -66,6 +67,13 @@ def spec_for(song, song_at=(), now=None):
     lines = from_here(song.lines, song_at, now)
     return TestSpec(song.label, "words", len(lines), "lyrics",
                     lines=lines, song_at=tuple(song_at), whole=tuple(song.lines))
+
+
+def from_start(spec):
+    """Ctrl-i in a lyrics test: the song again from its first line (a song
+    spotify is playing starts partway, where it was)."""
+    whole = spec.whole or spec.lines
+    return replace(spec, lines=whole, amount=len(whole))
 
 
 def synced(spec, now, t=None):

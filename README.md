@@ -145,7 +145,8 @@ follows, skip and the test switches to the next song's lyrics by itself.
 **ctrl-p** in a test pauses the music and the test together (the system's
 play/pause key, so it works with any player) and resuming resumes both.
 **tab** starts the song again from the line being sung right now - after
-a seek, or when you've fallen behind.
+a seek, or when you've fallen behind. **ctrl-i** starts it from the song's
+first line instead (Windows only - other terminals send ctrl-i as tab).
 
 Lyrics have their own settings (settings → words → lyrics): **lyrics tape**
 and **lyrics punctuation** and **lyrics capitals** (`same` follows the normal

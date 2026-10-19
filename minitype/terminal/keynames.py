@@ -11,6 +11,7 @@ BACKSPACE, CTRL_BACKSPACE = "backspace", "ctrl-backspace"
 CTRL_C, CTRL_D, CTRL_Q, CTRL_W = "ctrl-c", "ctrl-d", "ctrl-q", "ctrl-w"
 CTRL_O = "ctrl-o"
 CTRL_P = "ctrl-p"
+CTRL_I = "ctrl-i"     # Windows only: elsewhere ctrl-i is the same byte as tab
 UNKNOWN = "unknown"
 RESIZE = "resize"   # not a key: the terminal changed size while waiting
 

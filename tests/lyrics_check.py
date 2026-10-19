@@ -117,6 +117,10 @@ assert [x for _, x in tm.handle(keys.TAB, 506.0).lines] == ["third line"]
 assert "tab sync to the song" in runner.LYRICS_FOOTER
 tm.follow = None
 assert tm.handle(keys.TAB, 507.0) is mid, "not following spotify: tab restarts"
+top = tm.handle(keys.CTRL_I, 508.0)
+assert [x for _, x in top.lines] == ["first line", "second line", "third line"] and top.amount == 3
+assert top.song_at == mid.song_at, "ctrl-i: the song from its first line, still followed"
+assert "ctrl-i song start" in runner.LYRICS_FOOTER
 # unsynced lyrics: words, no caret
 t3 = TypingTest(app, lyrics_mode.spec_for(lyrics.Song("s", "a", lines=((None, "just words"),))))
 t3.start = 1.0
