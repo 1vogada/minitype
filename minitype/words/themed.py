@@ -70,7 +70,7 @@ def _pool(extra):
     online lists already downloaded this session. For qwerty the one-hand
     lists alone are plenty; other layouts lean on the rest."""
     words = (hand_words.LEFT + hand_words.RIGHT + LEFT_HAND + RIGHT_HAND
-             + HOME_ROW + list(BUILTIN))
+             + HOME_ROW + list(BUILTIN) + hand_words.RIGHT_HEAVY)
     for ws in extra:
         words += [w.lower() for w in ws if w.isalpha()]
     return words
@@ -89,6 +89,22 @@ def right_hand(layout="qwerty", extra=()):
     return _only(hand_letters(layout, "right"), extra)
 
 
+HEAVY = 0.65     # right heavy: at least this share of a word's letters on the right
+
+
+def right_heavy(layout="qwerty", extra=()):
+    """Words that lean on the right hand: the right-hand-only ones, then
+    common words with most of their letters on the right (65%+) - far more
+    of them, and real everyday words, for training a weaker right hand."""
+    letters = hand_letters(layout, "right")
+    if layout == "qwerty":
+        heavy = list(hand_words.RIGHT_HEAVY)
+    else:
+        heavy = [w for w in _pool(extra) if len(w) >= 3 and not set(w) <= letters
+                 and sum(c in letters for c in w) / len(w) >= HEAVY]
+    return list(dict.fromkeys(right_hand(layout, extra) + heavy))
+
+
 def home_row(layout="qwerty", extra=()):
     return _only(home_letters(layout), extra)
 
@@ -97,6 +113,7 @@ THEMED = {
     "programming": lambda layout="qwerty", extra=(): list(dict.fromkeys(PROGRAMMING)),
     "left hand": left_hand,
     "right hand": right_hand,
+    "right heavy": right_heavy,
     "home row": home_row,
 }
-LAYOUT_DEPENDENT = ("left hand", "right hand", "home row")
+LAYOUT_DEPENDENT = ("left hand", "right hand", "right heavy", "home row")

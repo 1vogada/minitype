@@ -235,8 +235,9 @@ def raw_items(app):
         b.item("word list", lambda: load_list(1), lambda: app.bank.source,
                back=lambda: load_list(-1),
                help="built-in and themed lists work offline; the online "
-                    "ones come from monkeytype. left hand, right hand and "
-                    "home row follow your keyboard layout",
+                    "ones come from monkeytype. left hand, right hand, right "
+                    "heavy (common words typed mostly with the right hand) "
+                    "and home row follow your keyboard layout",
                tags=("source", "language", "english", "online", "vocabulary",
                      "text", "hand", "one hand", "left", "right")),
         b.choice("quotes from", "quote_source", QUOTE_SOURCES,

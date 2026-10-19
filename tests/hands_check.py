@@ -65,4 +65,23 @@ assert app.bank.source == "right hand" and app.bank.words == q, "back to qwerty 
 # a non-hand list is left alone on a layout change
 app.load_words("programming"); v = app.bank.version
 app.layout_changed(); assert app.bank.version == v
+# right heavy: the right-only words, then common words mostly on the right
+from minitype.words import hand_words                            # noqa: E402
+rh = themed.right_heavy("qwerty")
+r = themed.hand_letters("qwerty", "right")
+assert len(rh) > 900 and rh[:len(themed.right_hand("qwerty"))] == themed.right_hand("qwerty")
+assert all(sum(c in r for c in w) / len(w) >= themed.HEAVY for w in rh)
+assert {"phone", "million", "public", "only"} <= set(rh) and "london" not in rh
+assert sum(sum(c in r for c in w) for w in rh) / sum(len(w) for w in rh) > 0.7
+for lay in ("colemak", "dvorak"):
+    other = themed.right_heavy(lay)
+    rl = themed.hand_letters(lay, "right")
+    assert len(other) > 300 and all(sum(c in rl for c in w) / len(w) >= themed.HEAVY
+                                    for w in other), lay
+app.settings.layout = "qwerty"
+app.layout_changed()
+assert app.load_words("right heavy") and app.bank.source == "right heavy"
+assert "right heavy on qwerty" in app.bank.note, app.bank.note
+assert hand_words.RIGHT_HEAVY and "right heavy" in __import__("minitype.words.bank",
+                                                               fromlist=["NAMES"]).NAMES
 print("ALL OK")

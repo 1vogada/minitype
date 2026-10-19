@@ -493,13 +493,20 @@ in `%LOCALAPPDATA%\minitype` is moved into the app folder automatically.
 
 built-in, Monkeytype's English 200 / 1k / 5k / 10k / 25k / 450k, double
 letters, commonly misspelled, and offline themed lists: programming,
-left hand, right hand, home row.
+left hand, right hand, right heavy, home row.
 
 The one-hand and home-row lists follow your keyboard layout (settings →
 look → layout). On qwerty there are about 770 left-hand and 135 right-hand
 words. Some layouts have almost none: dvorak puts every vowel on the left,
 so its right hand falls back to the built-in list (the menu says so) until
 you switch back.
+
+**right heavy** is for training a weaker right hand: right-hand words are
+few (qwerty's right hand has only u, i and o for vowels), so it adds about
+900 common everyday words typed mostly with the right hand - 65% or more of
+their letters, like "phone", "million", "public" - about 1,000 words in
+all, three quarters of the letters on the right. It follows your layout
+too, and works on dvorak.
 
 The detailed pictures in `minitype/terminal/art_detailed.py` are made by
 `python tools/make_art.py` from the scenes in `tools/art_scenes.py`:

@@ -22,6 +22,7 @@ SOURCES = {
     "programming": "themed",
     "left hand": "themed",
     "right hand": "themed",
+    "right heavy": "themed",
     "home row": "themed",
 }
 NAMES = list(SOURCES)
