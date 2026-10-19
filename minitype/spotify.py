@@ -277,11 +277,14 @@ class Follow:
     typing; a failed ask is simply tried again next time."""
 
     EVERY = 2.0
+    RETRY = 10.0                         # seconds between lyrics fetches that failed
 
     def __init__(self, now, fetch, ask=None):
         self.now = dict(now)             # the latest answer (whole dicts swapped in: thread safe)
         self.next = None                 # (song, now) of a new song, its lyrics ready
         self.missing = ""                # a new song with no lyrics: its name
+        self.busy = False                # ...because the lyrics site couldn't be asked
+        self._failed, self._again = None, 0.0   # a song whose fetch failed, and when to retry
         self._fetch = fetch
         self._ask = ask or now_playing
         self._stop = threading.Event()
@@ -309,10 +312,19 @@ class Follow:
                                 at=time.time())
                 continue
             if got.get("id") != self.now.get("id"):
+                if got.get("id") == self._failed and time.time() < self._again:
+                    continue                 # the lyrics site was busy: not every poll
                 try:
                     song = self._fetch(got)
                 except Exception:
-                    song = None
+                    # couldn't get them (the site busy, offline): hold the
+                    # caret and keep the old song, so it's tried again
+                    self._failed, self._again = got.get("id"), time.time() + self.RETRY
+                    self.missing, self.busy = got.get("title", ""), True
+                    self.now = dict(self.now, playing=False, progress=self.position(time.time()),
+                                    at=time.time())
+                    continue
+                self.busy = False
                 if song is not None and getattr(song, "lines", None):
                     self.next, self.missing = (song, got), ""
                 else:

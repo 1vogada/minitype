@@ -244,7 +244,9 @@ class TypingTest:
             if not self.follow.playing:
                 parts.append("music paused")
             if self.follow.missing:
-                parts.append(f"no lyrics for {self.follow.missing}")
+                parts.append(f"lyrics site busy - retrying {self.follow.missing}"
+                             if getattr(self.follow, "busy", False)
+                             else f"no lyrics for {self.follow.missing}")
         flags = [f for f in (self.diff if self.diff != "normal" else "",
                              f"stop {self.stop}" if self.stop != "off" else "",
                              "blind" if s.blind else "",

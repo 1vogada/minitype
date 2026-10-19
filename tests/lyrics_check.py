@@ -362,4 +362,60 @@ with mock.patch.object(media, "play_pause", lambda: presses.append(1) or True), 
 # before typing: ctrl-p only toggles the music; typing "x" starts the test;
 # then ctrl-p pauses both and resumes both; esc leaves
 assert len(presses) == 3, presses
+# ---------------------------------------------------------------- the lyrics site busy (503)
+import io                                                        # noqa: E402
+import urllib.error                                              # noqa: E402
+calls = []
+
+
+def busy_then(answer, times):
+    def urlopen(req, timeout=None):
+        calls.append(1)
+        if len(calls) <= times:
+            raise urllib.error.HTTPError(req.full_url, 503, "busy", {}, io.BytesIO(b""))
+        return io.BytesIO(json.dumps(answer).encode())
+    return urlopen
+
+
+with mock.patch.object(lyrics, "RETRY", (0, 0)), \
+        mock.patch.object(urllib.request, "urlopen", busy_then({"ok": 1}, 2)):
+    assert lyrics._get("get", {}) == {"ok": 1} and len(calls) == 3, "retried till it answered"
+calls.clear()
+with mock.patch.object(lyrics, "RETRY", (0, 0)), \
+        mock.patch.object(urllib.request, "urlopen", busy_then({}, 9)):
+    try:
+        lyrics._get("get", {})
+        raise AssertionError("should have given up")
+    except lyrics.LyricsError as e:
+        assert "busy or down" in str(e) and "503" in str(e) and len(calls) == 3, e
+
+# following spotify: a busy site holds the caret and tries again later
+tries = []
+
+
+def flaky(now):
+    tries.append(1)
+    if len(tries) == 1:
+        raise lyrics.LyricsError("busy")
+    return song
+
+
+spotify.Follow.RETRY = 0.05
+h = spotify.Follow(one, flaky, ask=lambda: dict(one, id="4", title="Four", progress=5.0,
+                                                at=time.time()))
+for _ in range(100):
+    if h.busy:
+        break
+    time.sleep(0.01)
+assert h.busy and h.missing == "Four" and h.now["id"] == "1" and not h.playing
+tb = TypingTest(app, playing_spec)
+tb.start = 1000.0
+tb.follow = h
+assert "lyrics site busy - retrying Four" in tb.status(1001.0)[0]
+for _ in range(300):
+    if h.next:
+        break
+    time.sleep(0.01)
+assert h.next and h.next[1]["title"] == "Four" and not h.busy, "retried and got them"
+h.stop()
 print("ALL OK")

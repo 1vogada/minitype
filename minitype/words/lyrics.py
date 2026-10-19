@@ -8,6 +8,7 @@ are not written to disk.
 
 import json
 import re
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -17,6 +18,8 @@ from typing import Optional, Tuple
 API = "https://lrclib.net/api"
 AGENT = "minitype (https://github.com/1vogada/minitype)"   # LRCLIB asks clients to say who they are
 TIMEOUT = 8
+BUSY = (429, 500, 502, 503, 504)   # the site having a moment: worth asking again
+RETRY = (1.0, 2.5)                 # seconds to wait before each new try
 WHOLE = 8          # fewer lines than this and an entry is a fragment
 _STAMP = re.compile(r"^\[(\d+):(\d+(?:\.\d+)?)\]\s*(.*)$")
 _SECTION = re.compile(r"^\s*[\[(](verse|chorus|bridge|intro|outro|hook|pre-chorus|refrain)[^\])]*[\])]\s*$", re.I)
@@ -61,15 +64,21 @@ def parse(plain="", synced=""):
 def _get(path, params, timeout=TIMEOUT):
     url = f"{API}/{path}?" + urllib.parse.urlencode({k: v for k, v in params.items() if v})
     req = urllib.request.Request(url, headers={"User-Agent": AGENT})
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            return json.loads(r.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        if e.code == 404:
-            return None
-        raise LyricsError(f"the lyrics site said {e.code}") from e
-    except (urllib.error.URLError, OSError, ValueError) as e:
-        raise LyricsError("couldn't reach the lyrics site (lrclib.net) - are you online?") from e
+    for wait in RETRY + (None,):
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                return json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                return None
+            if e.code not in BUSY:
+                raise LyricsError(f"the lyrics site said {e.code}") from e
+            if wait is None:             # busy every time: say so plainly
+                raise LyricsError(f"the lyrics site (lrclib.net) is busy or down right now "
+                                  f"({e.code}) - try again in a minute") from e
+        except (urllib.error.URLError, OSError, ValueError) as e:
+            raise LyricsError("couldn't reach the lyrics site (lrclib.net) - are you online?") from e
+        time.sleep(wait)
 
 
 def _clean(text):
