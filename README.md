@@ -131,7 +131,8 @@ minitype doesn't ship one - you make your own, free:
    client id, then pick spotify on the lyrics row (or press enter on
    settings → ... → spotify): your browser opens Spotify's login; log
    in, come back to minitype and press enter. If the browser didn't open,
-   `c` copies the login link; `i` changes the client id; esc cancels
+   open `http://127.0.0.1:8888/` (`c` copies it) - it sends you on to
+   Spotify's login; `i` changes the client id; esc cancels
 
 It only reads what you're playing (`user-read-currently-playing`). The
 login is kept in `spotify.json` next to your settings; unlink it in the

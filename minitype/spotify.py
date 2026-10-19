@@ -31,6 +31,7 @@ from . import storage
 
 PORT = 8888
 REDIRECT = f"http://127.0.0.1:{PORT}/callback"        # Spotify wants the loopback address, not "localhost"
+START = f"http://127.0.0.1:{PORT}/"     # the short link minitype opens: it sends you on to the login
 SCOPES = "user-read-currently-playing user-read-playback-state"
 AUTH = "https://accounts.spotify.com/authorize"
 TOKEN = "https://accounts.spotify.com/api/token"
@@ -115,11 +116,20 @@ def login_url(client_id, challenge, state):
         "scope": SCOPES, "state": state})
 
 
+class _Server(HTTPServer):
+    # on Windows "reuse" lets a second server listen on the same port and
+    # take half the requests (minitype open twice): say the port is busy
+    allow_reuse_address = os.name != "nt"
+
+
 class Login:
-    """A login in progress: Spotify's login page to open, and a small server
-    on REDIRECT, in the background, waiting for the browser to come back.
-    Nothing blocks: ask `answered()` whenever you like (the screen does when
-    you press enter), then `finish()` - or `cancel()`."""
+    """A login in progress: a small server on PORT, in the background. Its
+    START page sends the browser on to Spotify's login (`url`) - so the link
+    opened, copied or typed is a short one with no "&" in it to be cut off
+    (Windows can cut a long one there, and Spotify then finds no
+    redirect_uri) - and REDIRECT catches Spotify's answer. Nothing blocks:
+    ask `answered()` whenever you like (the screen does when you press
+    enter), then `finish()` - or `cancel()`."""
 
     def __init__(self, client_id):
         client_id = (client_id or "").strip()
@@ -130,12 +140,19 @@ class Login:
         self.state = secrets.token_urlsafe(16)
         self.url = login_url(client_id, challenge, self.state)
         self.got = {}
-        got, state = self.got, self.state
+        self.start = START
+        got, state, login_url_ = self.got, self.state, self.url
 
         class Handler(BaseHTTPRequestHandler):
             def do_GET(self):
-                q = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
-                if not q:                          # a favicon or the like: not the answer
+                where = urllib.parse.urlparse(self.path)
+                if where.path == "/":              # the start page: on to spotify's login
+                    self.send_response(302)
+                    self.send_header("Location", login_url_)
+                    self.end_headers()
+                    return
+                q = urllib.parse.parse_qs(where.query)
+                if where.path != "/callback" or not q:     # a favicon or the like
                     self.send_response(404)
                     self.end_headers()
                     return
@@ -153,7 +170,7 @@ class Login:
                 pass
 
         try:
-            self.server = HTTPServer(("127.0.0.1", PORT), Handler)
+            self.server = _Server(("127.0.0.1", PORT), Handler)
         except OSError as e:
             raise SpotifyError(f"port {PORT} is busy - close what's using it and try again") from e
         self.server.timeout = 0.5
@@ -198,7 +215,7 @@ def link(client_id, open_browser=webbrowser.open, wait=LOGIN_WAIT):
     browser (up to `wait` seconds) - for scripts; the screen uses Login
     itself, so you say when you've logged in."""
     login = Login(client_id)
-    open_browser(login.url)
+    open_browser(login.start)
     end = time.time() + wait
     while not login.answered() and time.time() < end:
         time.sleep(0.1)

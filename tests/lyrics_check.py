@@ -107,6 +107,13 @@ with mock.patch.object(lyrics_mode, "prompt", lambda *a, **k: "nothing at all"),
     assert lyrics_mode.lyrics_test(app) is None and "no lyrics found" in app.notice
 
 # ---------------------------------------------------------------- spotify: the login
+# on a port of its own, so a minitype you have open (on 8888) can't answer
+import socket                                                 # noqa: E402
+with socket.socket() as _s:
+    _s.bind(("127.0.0.1", 0))
+    spotify.PORT = _s.getsockname()[1]
+spotify.REDIRECT = f"http://127.0.0.1:{spotify.PORT}/callback"
+spotify.START = f"http://127.0.0.1:{spotify.PORT}/"
 verifier, challenge = spotify.pkce()
 import base64, hashlib                                       # noqa: E401,E402
 assert challenge == base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).decode().rstrip("=")
@@ -117,7 +124,21 @@ assert "user-read-currently-playing" in q["scope"][0] and spotify.REDIRECT.start
 
 
 def browser(url):
-    """A browser that logs straight in: comes back to the redirect uri."""
+    """A browser that logs straight in: from the start page (whose redirect
+    it reads, without going on to spotify) back to the redirect uri."""
+    if url == spotify.START:
+        import http.client
+        for _ in range(50):
+            try:
+                c = http.client.HTTPConnection("127.0.0.1", spotify.PORT, timeout=2)
+                c.request("GET", "/")
+                r = c.getresponse()
+                assert r.status == 302, r.status
+                url = r.getheader("Location")
+                break
+            except ConnectionError:
+                time.sleep(0.1)
+        assert url.startswith(spotify.AUTH) and "redirect_uri=" in url, url
     q = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)
     back = spotify.REDIRECT + "?" + urllib.parse.urlencode({"code": "C0DE", "state": q["state"][0]})
     for _ in range(50):
@@ -211,7 +232,7 @@ def pressed(seq):
     def read(*a, **k):
         key = next(it)
         if key == "BACK":
-            browser(state["login"].url)
+            browser(state["login"].start)
             key = next(it)
         return key
     return read
@@ -232,7 +253,7 @@ def run_link(seq):
 # then the browser comes back and enter links it
 ok = run_link([keys.ENTER, "c", "BACK", keys.ENTER])
 assert ok and spotify.linked() and app.notice == "linked to spotify"
-assert opened and opened[0].startswith(spotify.AUTH), "the browser was sent to the login"
+assert opened == [spotify.START], "the browser gets the short start link (nothing to cut off)"
 assert any("not yet" in s for s in screens), "enter too early: not yet"
 assert copied == [opened[0]] and any("link copied" in s for s in screens)
 assert "press" in screens[0] and "enter" in screens[0] and "esc: cancel" in screens[0]

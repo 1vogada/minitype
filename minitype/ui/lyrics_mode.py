@@ -57,15 +57,13 @@ def _copy(text):
 
 
 def _login_screen(app, login, status):
-    import textwrap
     st = app.styles()
-    width = max(20, console.size()[0] - 6)
     dim, title = st.dim, st.title
     lines = ["", f"  {title}link spotify{RESET}", "",
              f"  log in to spotify in your browser (it should have opened),",
              f"  then come back here and press {title}enter{RESET}.", "",
-             f"  {dim}didn't open? press c to copy the link, or open it yourself:{RESET}"]
-    lines += [f"  {dim}{part}{RESET}" for part in textwrap.wrap(login.url, width, break_on_hyphens=False)]
+             f"  {dim}didn't open? open this in your browser (c copies it):{RESET}",
+             f"  {title}{login.start}{RESET}"]
     lines += ["", f"  {dim}if spotify shows an error about the redirect uri, add {spotify.REDIRECT}",
               f"  to your app at developer.spotify.com/dashboard; INVALID_CLIENT: press i{RESET}"]
     if status:
@@ -89,7 +87,7 @@ def link(app):
     except spotify.SpotifyError as e:
         app.notice = f"spotify: {e}"
         return False
-    webbrowser.open(login.url)
+    webbrowser.open(login.start)
     status = ""
     try:
         while True:
@@ -101,7 +99,7 @@ def link(app):
                 app.notice = "spotify: not linked"
                 return False
             if key == "c":
-                status = "link copied" if _copy(login.url) else "couldn't copy - select the link above"
+                status = "link copied" if _copy(login.start) else "couldn't copy - type the link above"
             elif key == "i":
                 login.cancel()
                 app.settings.spotify_client_id = ""
@@ -114,7 +112,7 @@ def link(app):
                 except spotify.SpotifyError as e:
                     app.notice = f"spotify: {e}"
                     return False
-                webbrowser.open(login.url)
+                webbrowser.open(login.start)
                 status = "new client id - log in again in the browser"
             elif key in (keys.ENTER, keys.SHIFT_ENTER):
                 if not login.answered():
