@@ -484,6 +484,18 @@ assert TypingTest(ls, lyrics_mode.spec_for(bars)).words[0] == "Hello,", "on: as 
 ls.settings.lowercase, ls.settings.lyrics_capitals = False, "off"
 assert TypingTest(ls, lyrics_mode.spec_for(bars)).words[0] == "hello,", "off: lowercase"
 assert TypingTest(ls, TestSpec("x", "words", 1, "custom", words=("Ab",))).words == ["Ab"],     "only lyrics"
+ls.settings.lyrics_capitals, ls.settings.stop_on_error = "forgive", "off"
+fc = TypingTest(ls, lyrics_mode.spec_for(bars))
+assert fc.words[0] == "Hello,", "forgive: the capital still shows"
+for ch in "hello, ":
+    fc.handle(ch, 1.0)
+assert fc.typed[0] == "Hello," and fc.bad_keys == 0 and fc.wi == 1, (fc.typed, fc.bad_keys)
+fc.handle("T", 2.0)
+assert fc.bad_keys == 1, "a capital where there's none is still wrong"
+ls.settings.lyrics_capitals = "on"
+strict = TypingTest(ls, lyrics_mode.spec_for(bars))
+strict.handle("h", 1.0)
+assert strict.bad_keys == 1, "on: shift needed"
 ls.settings.lyrics_capitals = "same"
 other = TypingTest(ls, TestSpec("x", "words", 3, "custom", words=("a", "b", "c")))
 assert other.punctuation() == "off" and other.tape() == "off" and other.line_breaks()[0] == (), \

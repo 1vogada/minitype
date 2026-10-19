@@ -403,6 +403,15 @@ class TypingTest:
             return s.lyrics_capitals == "off"
         return s.lowercase
 
+    def _caps_forgive(self):
+        """Lyrics capitals on forgive: capitals show, but the lower case
+        letter counts too (no shift needed)."""
+        return self.spec.source == "lyrics" and self.app.settings.lyrics_capitals == "forgive"
+
+    def _same(self, ch, want):
+        """Whether key ch types the letter want."""
+        return ch == want or (self._caps_forgive() and want.isupper() and ch == want.lower())
+
     def tape(self):
         """The tape setting for this test: lyrics have their own too."""
         s = self.app.settings
@@ -463,12 +472,12 @@ class TypingTest:
             # punctuation you leave out is typed for you: the next key matches
             # the letter after it, not the mark itself
             while j < len(word) and word[j] in QUOTE_PUNCT and j + 1 < len(word) \
-                    and ch != word[j] and ch == word[j + 1]:
+                    and ch != word[j] and self._same(ch, word[j + 1]):
                 self.typed[self.wi] += word[j]
                 j += 1
         want = word[j] if j < len(word) else "+"
         self._due(want)
-        ok = j < len(word) and (ch == word[j] or (self._forgive()
+        ok = j < len(word) and (self._same(ch, word[j]) or (self._forgive()
                                                   and ch in ("'", "’", "‘") and word[j] in ("'", "’", "‘")))
         if ok and j < len(word) and ch != word[j]:
             ch = word[j]

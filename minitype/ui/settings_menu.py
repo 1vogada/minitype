@@ -252,8 +252,9 @@ def raw_items(app):
                  tags=("lyrics", "song", "music", "punctuation", "symbols")),
         b.choice("lyrics capitals", "lyrics_capitals", LYRICS_CAPITALS,
                  help="capitals for lyrics tests only: same follows all "
-                      "lowercase; on keeps them as sung, off makes every "
-                      "word lower case",
+                      "lowercase; on keeps them as sung, forgive shows them "
+                      "but lower case counts too (no shift needed), off "
+                      "makes every word lower case",
                  tags=("lyrics", "song", "music", "capitals", "lower", "case", "shift")),
         b.choice("song lines", "lyrics_lines", LYRICS_LINES,
                  help="how a song's lines (its bars) are told apart: new line "

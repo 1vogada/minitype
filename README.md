@@ -150,7 +150,8 @@ first line instead (Windows only - other terminals send ctrl-i as tab).
 
 Lyrics have their own settings (settings → words → lyrics): **lyrics tape**
 and **lyrics punctuation** and **lyrics capitals** (`same` follows the normal
-setting; capitals off is all lowercase), and **song
+setting; capitals forgive shows them but takes lower case too, off is all
+lowercase), and **song
 lines** - each of the song's lines on a line of its own (`new line`, the
 default), a `/` where the next one starts (`marker`; tape always uses it),
 or run together (`off`).
