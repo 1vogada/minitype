@@ -22,6 +22,7 @@ BUSY = (429, 500, 502, 503, 504)   # the site having a moment: worth asking agai
 RETRY = (1.0, 2.5)                 # seconds to wait before each new try
 WHOLE = 8          # fewer lines than this and an entry is a fragment
 _STAMP = re.compile(r"^\[(\d+):(\d+(?:\.\d+)?)\]\s*(.*)$")
+_NOTES = str.maketrans("", "", "♪♫♬♩♭♯🎵🎶🎼🎤")   # music notes, not words
 _SECTION = re.compile(r"^\s*[\[(](verse|chorus|bridge|intro|outro|hook|pre-chorus|refrain)[^\])]*[\])]\s*$", re.I)
 
 
@@ -50,19 +51,36 @@ class Song:
         return f"{self.title} - {self.artist}" if self.artist else self.title
 
 
+def tidy(lines):
+    """Lyric lines without the music notes (♪) some entries mark breaks
+    with, and without section labels ("[chorus]"). A timed line that's
+    left empty stays as a break, (seconds, ""), so the karaoke caret waits
+    through it instead of crawling; untimed empty ones go. No words at all:
+    no lines."""
+    out = []
+    for t, text in lines:
+        text = " ".join(text.translate(_NOTES).split())
+        if _SECTION.match(text):
+            text = ""
+        if text:
+            out.append((t, text))
+        elif t is not None and out and out[-1][1]:
+            out.append((t, ""))                  # a break, after some words
+    return tuple(out) if any(text for _, text in out) else ()
+
+
 def parse(plain="", synced=""):
     """The lyric lines, as (seconds, text): timed from LRC text when there
-    is any, else (None, text) from the plain lyrics. Empty lines and section
-    labels ("[chorus]") are left out."""
-    out = []
+    is any, else (None, text) from the plain lyrics (see tidy)."""
+    timed = []
     for raw in (synced or "").splitlines():
         m = _STAMP.match(raw.strip())
-        if m and m.group(3).strip() and not _SECTION.match(m.group(3)):
-            out.append((int(m.group(1)) * 60 + float(m.group(2)), m.group(3).strip()))
+        if m:
+            timed.append((int(m.group(1)) * 60 + float(m.group(2)), m.group(3)))
+    out = tidy(timed)
     if out:
-        return tuple(out)
-    return tuple((None, line.strip()) for line in (plain or "").splitlines()
-                 if line.strip() and not _SECTION.match(line))
+        return out
+    return tidy((None, line) for line in (plain or "").splitlines())
 
 
 def _get(path, params, timeout=TIMEOUT):

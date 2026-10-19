@@ -119,6 +119,8 @@ class TypingTest:
                 line = [w.strip(QUOTE_PUNCT).replace(",", "") for w in line]
             line = [w for w in line if w]
             if not line:
+                if t is not None and words:
+                    self.timing.append((t, at))  # a break: the caret waits at the line's end
                 continue
             if t is not None:
                 self.timing.append((t, at))

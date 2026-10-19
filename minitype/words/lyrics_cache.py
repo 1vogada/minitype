@@ -57,7 +57,7 @@ def get(title, artist):
     if d.get("none"):
         return "none" if time.time() - d.get("at", 0) < RETRY_NONE else None
     return Song(d.get("title", title), d.get("artist", artist), d.get("album", ""),
-                d.get("duration") or 0.0, tuple((t, x) for t, x in d.get("lines", [])))
+                d.get("duration") or 0.0, lyrics.tidy((t, x) for t, x in d.get("lines", [])))
 
 
 def put(title, artist, song):

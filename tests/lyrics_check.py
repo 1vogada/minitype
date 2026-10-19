@@ -22,7 +22,7 @@ LRC = "\n".join(f"[00:{10 + 3 * k:02d}.00] line {k} of the song" for k in range(
 
 # ---------------------------------------------------------------- parsing
 lines = lyrics.parse("", "[00:01.50] Hello, world!\n[00:04.00] [Chorus]\n[00:05.00]\n[01:02.25] again")
-assert lines == ((1.5, "Hello, world!"), (62.25, "again")), lines
+assert lines == ((1.5, "Hello, world!"), (4.0, ""), (62.25, "again")), lines   # a break kept
 assert lyrics.parse("one\n\n[Verse 2]\ntwo", "") == ((None, "one"), (None, "two"))
 assert lyrics.split_query("one - metallica") == ("one", "metallica")
 assert lyrics.split_query("hello by adele") == ("hello", "adele")
@@ -517,4 +517,20 @@ assert "there / big world / bye" in plain[2][0], "tape: always the marker"
 assert "there big world bye" in plain[3][0]
 names = [x for page in settings_tree.TREE for x in str(page).split("'")]
 assert "song lines" in names and "lyrics tape" in names and "lyrics punctuation" in names
+# ---------------------------------------------------------------- music notes left out
+lrc = "\n".join(["[00:01.00] ♪", "[00:05.00]Hello ♪ there", "[00:09.00]♪ ♫", "[00:20.00]world",
+               "[00:25.00]♪"])
+got = lyrics.parse("", lrc)
+assert got == ((5.0, "Hello there"), (9.0, ""), (20.0, "world"), (25.0, "")), got
+assert lyrics.parse("\n".join(["♪ ♪", "la la ♫", "♪"]), "") == ((None, "la la"),)
+assert lyrics.parse("♪", "[00:01.00]♪") == (), "nothing but notes: no lyrics"
+gt = TypingTest(App(), lyrics_mode.spec_for(lyrics.Song("s", "a", lines=got)))
+assert gt.words == ["Hello", "there", "world"] and gt.breaks == {2}, (gt.words, gt.breaks)
+gt.start = 100.0
+assert gt.song_offset(100.0) == 0 and gt.song_offset(104.0) == 12   # the song starts with your first key
+assert gt.song_offset(110.0) == gt.song_offset(114.0) == 12 < gt.song_offset(118.0), "the break: the caret waits at the line's end"
+# lyrics kept before this lose their notes too
+from minitype.words import lyrics_cache                          # noqa: E402
+lyrics_cache.put("Old", "B", lyrics.Song("Old", "B", lines=((1.0, "♪"), (2.0, "hi ♪"))))
+assert lyrics_cache.get("Old", "B").lines == ((2.0, "hi"),)
 print("ALL OK")
