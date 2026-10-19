@@ -50,6 +50,7 @@ TREE = [
                    "punctuation, linking spotify", [
             ("words", "lyrics from"), ("words", "karaoke"), ("words", "song lines"),
             ("words", "lyrics tape"), ("words", "lyrics punctuation"),
+            ("words", "lyrics capitals"),
             ("spotify", "linking to spotify, for what's playing", [
                 ("words", "spotify"), ("words", "spotify client id")]),
         ], ("words", "lyrics from")),

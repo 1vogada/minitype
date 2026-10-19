@@ -102,7 +102,7 @@ class TypingTest:
             words = [w.replace("'", "").replace("’", "").replace("‘", "") for w in words]
             words = [w for w in words if w]
         words = funbox.apply(words, app.settings.funbox)
-        if app.settings.lowercase:
+        if self.lowercase():
             words = [w.lower() for w in words]
         return words
 
@@ -389,6 +389,14 @@ class TypingTest:
         if self.spec.source == "lyrics" and s.lyrics_punctuation != "same":
             return s.lyrics_punctuation
         return s.punctuation
+
+    def lowercase(self):
+        """Whether the words are all lower case: lyrics have their own
+        capitals setting (on: as sung, off: all lowercase)."""
+        s = self.app.settings
+        if self.spec.source == "lyrics" and s.lyrics_capitals != "same":
+            return s.lyrics_capitals == "off"
+        return s.lowercase
 
     def tape(self):
         """The tape setting for this test: lyrics have their own too."""

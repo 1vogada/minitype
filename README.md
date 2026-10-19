@@ -148,7 +148,8 @@ play/pause key, so it works with any player) and resuming resumes both.
 a seek, or when you've fallen behind.
 
 Lyrics have their own settings (settings → words → lyrics): **lyrics tape**
-and **lyrics punctuation** (`same` follows the normal setting), and **song
+and **lyrics punctuation** and **lyrics capitals** (`same` follows the normal
+setting; capitals off is all lowercase), and **song
 lines** - each of the song's lines on a line of its own (`new line`, the
 default), a `/` where the next one starts (`marker`; tape always uses it),
 or run together (`off`).

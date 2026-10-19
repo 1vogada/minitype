@@ -24,7 +24,7 @@ from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICU
                       ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS,
                       FADE_STARTS, FADE_ANGLES, FADE_CURVES, NUMBER_RANGES,
                       TEXT_CONTRASTS, SEE_THROUGH, HELP_POSITIONS, HELP_BORDERS,
-                      LYRICS_SOURCES, LYRICS_TAPE, LYRICS_PUNCT, LYRICS_LINES)
+                      LYRICS_SOURCES, LYRICS_TAPE, LYRICS_PUNCT, LYRICS_LINES, LYRICS_CAPITALS)
 from ..terminal.art import ART_NAMES, THEME_ART
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import spotify, storage
@@ -250,6 +250,11 @@ def raw_items(app):
                  help="punctuation for lyrics tests only: same follows the "
                       "punctuation setting; off, on or forgive set their own",
                  tags=("lyrics", "song", "music", "punctuation", "symbols")),
+        b.choice("lyrics capitals", "lyrics_capitals", LYRICS_CAPITALS,
+                 help="capitals for lyrics tests only: same follows all "
+                      "lowercase; on keeps them as sung, off makes every "
+                      "word lower case",
+                 tags=("lyrics", "song", "music", "capitals", "lower", "case", "shift")),
         b.choice("song lines", "lyrics_lines", LYRICS_LINES,
                  help="how a song's lines (its bars) are told apart: new line "
                       "puts each on a line of its own, marker shows a / where "

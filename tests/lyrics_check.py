@@ -473,6 +473,14 @@ lt = TypingTest(ls, lyrics_mode.spec_for(bars))
 assert lt.words[0] == "Hello," and lt.punctuation() == "on" and lt.tape() == "on"
 ls.settings.lyrics_punctuation = "forgive"
 assert TypingTest(ls, lyrics_mode.spec_for(bars))._forgive()
+ls.settings.lowercase = True
+assert TypingTest(ls, lyrics_mode.spec_for(bars)).words[0] == "hello,", "same: all lowercase"
+ls.settings.lyrics_capitals = "on"
+assert TypingTest(ls, lyrics_mode.spec_for(bars)).words[0] == "Hello,", "on: as sung"
+ls.settings.lowercase, ls.settings.lyrics_capitals = False, "off"
+assert TypingTest(ls, lyrics_mode.spec_for(bars)).words[0] == "hello,", "off: lowercase"
+assert TypingTest(ls, TestSpec("x", "words", 1, "custom", words=("Ab",))).words == ["Ab"],     "only lyrics"
+ls.settings.lyrics_capitals = "same"
 other = TypingTest(ls, TestSpec("x", "words", 3, "custom", words=("a", "b", "c")))
 assert other.punctuation() == "off" and other.tape() == "off" and other.line_breaks()[0] == (), \
     "only lyrics tests use them"

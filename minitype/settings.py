@@ -14,7 +14,8 @@ from .config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS,
                      ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS,
                      FADE_STARTS, FADE_ANGLES, FADE_CURVES, NUMBER_RANGES,
                      TEXT_CONTRASTS, SEE_THROUGH, HELP_POSITIONS, HELP_BORDERS,
-                     LYRICS_SOURCES, LYRICS_TAPE, LYRICS_PUNCT, LYRICS_LINES)
+                     LYRICS_SOURCES, LYRICS_TAPE, LYRICS_PUNCT, LYRICS_LINES,
+                     LYRICS_CAPITALS)
 from .terminal.style import theme_names
 from .words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 
@@ -59,6 +60,7 @@ CHOICES = {
     "lyrics_tape": LYRICS_TAPE,
     "lyrics_punctuation": LYRICS_PUNCT,
     "lyrics_lines": LYRICS_LINES,
+    "lyrics_capitals": LYRICS_CAPITALS,
     "text_lighten": SEE_THROUGH,
     "untyped_lighten": SEE_THROUGH,
     "fade_start_top": FADE_STARTS,
@@ -252,6 +254,7 @@ class Settings:
     karaoke: bool = True            # lyrics mode: a caret where the song is, from the lyrics' timestamps
     lyrics_tape: str = "same"       # lyrics mode's own tape (same: the tape setting)
     lyrics_punctuation: str = "same"   # ...and punctuation
+    lyrics_capitals: str = "same"   # ...and capitals: on as sung, off all lowercase
     lyrics_lines: str = "new line"  # a song's lines: each on a new line, a / between them, or run together
     spotify_client_id: str = ""     # your own app's, from developer.spotify.com/dashboard
     code_lang: str = "python"
