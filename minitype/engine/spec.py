@@ -11,7 +11,8 @@ class TestSpec:
     source: where the words come from - "words" (word list), "numbers",
             "custom" (uses `words`), "learn", "quote", "code", "slow"
             (your slowest words), "zen" (nothing; you type freely) or
-            "book" (one page of a book, in `words`).
+            "book" (one page of a book, in `words`) or "lyrics" (a song's
+            lyrics, in `lines`).
     """
     label: str
     kind: str
@@ -20,3 +21,8 @@ class TestSpec:
     words: Optional[Tuple[str, ...]] = None
     book: str = ""      # book mode: which book, and which page (0-based)
     page: int = 0
+    # lyrics mode: the song's lines as (seconds or None, text), for the words
+    # and the karaoke caret; song_at is (seconds into the song, when that was
+    # true) for a song that's already playing (spotify), else ()
+    lines: Tuple = ()
+    song_at: Tuple = ()

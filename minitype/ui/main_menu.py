@@ -1,6 +1,6 @@
 import os
 
-from ..config import CODE_LANGS, QUOTE_LENGTHS, TIMES, WORD_COUNTS
+from ..config import CODE_LANGS, LYRICS_SOURCES, QUOTE_LENGTHS, TIMES, WORD_COUNTS
 from ..engine.runner import MIN_SLOW_WORDS
 from ..engine.spec import TestSpec
 from ..nav import QUIT
@@ -8,6 +8,7 @@ from ..terminal.style import RESET
 from ..util import cycle
 from ..words import books
 from .book_menu import book_menu
+from .lyrics_mode import lyrics_test
 from .gallery import gallery
 from .learn_menu import learn_menu
 from .menu import Item, Menu, title_lines
@@ -111,6 +112,10 @@ def build_items(app):
               lambda: TestSpec(f"{s.word_amount} numbers", "words",
                                s.word_amount, "numbers"),
               s, "numbers only"),
+        _mode("l", "lyrics", lambda: s.lyrics_source, LYRICS_SOURCES, "lyrics_source",
+              lambda: lyrics_test(app), s,
+              "type out a song's lyrics: search for one, or what spotify is playing "
+              "(left/right). With karaoke on, a caret moves where the song is"),
         Item("7", "custom length", ask_length,
              help="any number of words, or any time like 45s", section="gamemode"),
         Item("8", "custom text", ask_text,

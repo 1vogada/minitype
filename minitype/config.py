@@ -19,6 +19,7 @@ QUOTE_LENGTHS = ["all", "short", "medium", "long"]
 QUOTE_SOURCES = ["built-in", "online"]
 QUOTE_GENRES = ["all", "funny", "deep", "philosophical", "movie", "book", "inspirational", "sci-fi"]
 CODE_LANGS = ["python", "javascript"]
+LYRICS_SOURCES = ["search", "spotify"]   # lyrics mode: type a song in, or what spotify is playing
 CARETS = ["underline", "block"]
 WORD_GAPS = ["blank", "dots", "underline"]   # what's drawn between words
 CORRECTED = ["marked", "normal", "red"]     # how a fixed mistake looks

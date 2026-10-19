@@ -72,7 +72,8 @@ assert "search  #colour " in f and "theme" in f, "one char deleted, bar still vi
 f, _ = run(typing("ab#") + [keys.BACKSPACE])
 assert "search  ab " in f
 f, _ = run(typing("ab#") + [keys.BACKSPACE, keys.BACKSPACE])
-assert "difficulty" in f and "search" not in f, "no # left: backspace cleared everything"
+assert "difficulty" in f and not any(l.strip().startswith("search ") for l in f.split("\n")), \
+    "no # left: backspace cleared everything (the search bar is gone)"
 # [ and ] never go into the search; they switch sections, search kept
 f, app = run(typing("#stats") + ["]", keys.ENTER], style="tabs")       # header, then results
 assert "search  #stats " in f and "[" not in f.split("\n")[3] and "]" not in f.split("\n")[3], f

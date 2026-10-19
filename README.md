@@ -103,10 +103,38 @@ clipped to the width.
 - **zen**: no target text, type whatever you like
 - **code**: Python or JavaScript snippets
 - **book**: type through your own books, a page at a time (see below)
+- **lyrics** (`l`): type out a song's lyrics - search for one ("song -
+  artist", or just the song), or what Spotify is playing (left/right on
+  the row). With **karaoke** on, a second caret moves through the words
+  where the song is, so you can race it (see below)
 - **numbers**, and **custom text** from a paste or a file
 - **learn**: keybr-style lessons that unlock letters as each one reaches a
   target speed, with optional capitals and punctuation
 - **slow words**: a drill built from the words you type slowest
+
+## Lyrics mode
+
+Lyrics come from [LRCLIB](https://lrclib.net), a free, open lyrics database
+- no key to sign up for - and most come with timestamps, which the karaoke
+caret follows: it starts with your first key at the song's first line, or,
+for a song Spotify is playing, where the song is right now. Lyrics are
+fetched for the test and never written to disk. Spotify itself has no
+lyrics API; it only says what's playing.
+
+To use Spotify (once): Spotify lets a hobby app have only five users, so
+minitype doesn't ship one - you make your own, free:
+
+1. go to [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard)
+   and create an app (pick Web API)
+2. add the redirect URI `http://127.0.0.1:8888/callback`
+3. copy its client ID into settings → words → lyrics → spotify → spotify
+   client id, then pick spotify on the lyrics row (or press enter on
+   settings → ... → spotify): your browser opens Spotify's login, and
+   minitype is linked
+
+It only reads what you're playing (`user-read-currently-playing`). The
+login is kept in `spotify.json` next to your settings; unlink it in the
+same place.
 
 ## Book mode
 

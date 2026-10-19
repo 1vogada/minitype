@@ -229,6 +229,7 @@ app.settings.hints = True
 # every settings row steps both ways
 for it in sm.build_items(app):
     if it.label in ("word list", "edit keys", "save to disk", "reset", "reset settings", "book filter",
+                    "spotify", "spotify client id",
                     "theme creator"):
         continue
     before = it.value()

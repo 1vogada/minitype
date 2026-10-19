@@ -75,7 +75,7 @@ rows = f.split("\n")
 sel = next(i for i, r in enumerate(rows) if r.startswith(" > "))
 label = max((l for l in HELP if f" {l}  " in rows[sel]), key=len)   # "theme background", not "theme"
 assert rows[sel].rstrip().endswith(f"| {label}"), rows[sel]
-assert HELP[label].split()[0] in "\n".join(rows[sel:sel + 6])
+assert any(w in "\n".join(rows[sel:sel + 6]) for w in FIRST[label]), rows[sel:sel + 6]   # a page or its setting
 for n in range(0, 45, 4):
     rows = run("sidebar", [keys.DOWN] * n).split("\n")
     sel = next(i for i, r in enumerate(rows) if r.startswith(" > "))

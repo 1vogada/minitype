@@ -31,7 +31,17 @@ agent's memory don't travel, so this section is the memory.
    live as you move, applied with `App.use_setup` (everything back to
    default, then the setup; bookmarks kept). The `Settings` defaults stay
    the baseline the tests use; `MINITYPE_FACTORY=1` starts from it with no
-   welcome screen. Sidebar with tabs on the left is
+   welcome screen.
+10. 2026-10-19: **lyrics mode** (main menu `l`): `words/lyrics.py` (LRCLIB:
+   /api/get, then /api/search ranked - same title, the artist you named,
+   whole (8+ lines), timestamped, else the artist most entries name;
+   LRC parsed into (seconds, line)), `spotify.py` (PKCE login with the
+   user's own client id - Spotify allows a hobby app 5 users since 2026 -
+   one-shot callback server on 127.0.0.1:8888, tokens in spotify.json;
+   now playing), `ui/lyrics_mode.py`. The karaoke caret is
+   `TypingTest.song_offset` (a mark, like the pace caret). No lyrics are
+   stored. `tests/lyrics_check.py` runs offline (fakes LRCLIB/Spotify,
+   real local callback). Sidebar with tabs on the left is
    the default layout
    (`Settings.ui_style` / `sidebar_tabs`); tests that check another layout
    set it themselves. Rows are still built in

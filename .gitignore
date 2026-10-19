@@ -11,6 +11,7 @@ venv/
 # your own settings and progress, kept next to the app
 /settings.json
 /save.json
+/spotify.json
 /*.json.tmp
 /books/
 /themes.json

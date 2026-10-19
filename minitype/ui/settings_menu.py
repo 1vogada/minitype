@@ -23,10 +23,11 @@ from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICU
                       ART_SCOPES, ART_STYLES, ART_COLOURS, THEME_BACKGROUNDS,
                       ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS,
                       FADE_STARTS, FADE_ANGLES, FADE_CURVES, NUMBER_RANGES,
-                      TEXT_CONTRASTS, SEE_THROUGH, HELP_POSITIONS, HELP_BORDERS)
+                      TEXT_CONTRASTS, SEE_THROUGH, HELP_POSITIONS, HELP_BORDERS,
+                      LYRICS_SOURCES)
 from ..terminal.art import ART_NAMES, THEME_ART
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
-from .. import storage
+from .. import spotify, storage
 from ..terminal import console, keys
 from ..terminal.style import INV, RESET
 from ..util import cycle, step_number
@@ -232,6 +233,28 @@ def raw_items(app):
                  help="built-in: a small public-domain set. online: "
                       "monkeytype's collection (needs internet)",
                  tags=("quote", "source", "online", "text")),
+        b.choice("lyrics from", "lyrics_source", LYRICS_SOURCES,
+                 help="lyrics mode: search for a song by name, or type what "
+                      "spotify is playing (needs linking, below)",
+                 tags=("lyrics", "song", "music", "spotify", "karaoke")),
+        b.flag("karaoke", "karaoke",
+               "lyrics mode: a caret moves through the words where the song "
+               "is (songs whose lyrics have timestamps); with spotify it "
+               "starts where the song is playing",
+               tags=("lyrics", "song", "music", "caret", "race", "sing")),
+        b.item("spotify client id", lambda: _client_id(app),
+               lambda: (app.settings.spotify_client_id[:8] + "...")
+               if app.settings.spotify_client_id else "not set",
+               help="your own spotify app's client id (spotify only lets a hobby "
+                    "app have five users, so minitype doesn't ship one): make a "
+                    "free app at developer.spotify.com/dashboard with the redirect "
+                    f"uri {spotify.REDIRECT}, paste its client id here. Enter to change it",
+               tags=("lyrics", "spotify", "music", "client", "id", "app")),
+        b.item("spotify", lambda: _toggle_spotify(app),
+               lambda: "linked" if spotify.linked() else "not linked",
+               help="enter links minitype to your spotify (opens your browser to "
+                    "log in) or unlinks it. Only reads what's playing",
+               tags=("lyrics", "spotify", "music", "link", "login", "account")),
         b.choice("quote genre", "quote_genre", QUOTE_GENRES,
                  help="theme of the quote: all, funny, deep, philosophical, "
                       "movie, book, inspirational, sci-fi",
@@ -693,6 +716,25 @@ def search_bar(st, menu):
     n = len(menu.visible())
     return [f"  {st.dim}search{RESET}  {menu.query}{INV} {RESET}"
             f"   {st.dim}{n} match{'es' if n != 1 else ''}{RESET}", ""]
+
+
+def _client_id(app):
+    """Change the spotify client id (an empty answer keeps it)."""
+    from .lyrics_mode import SPOTIFY_HELP
+    from .prompt import prompt
+    v = prompt(SPOTIFY_HELP, app.settings.spotify_client_id)
+    if v is not None and v.strip():
+        app.settings.spotify_client_id = v.strip()
+
+
+def _toggle_spotify(app):
+    """Link to spotify, or unlink if it is."""
+    if spotify.linked():
+        spotify.unlink()
+        app.notice = "unlinked from spotify"
+    else:
+        from .lyrics_mode import link
+        link(app)
 
 
 def reset_settings(app):

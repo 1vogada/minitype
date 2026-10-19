@@ -40,6 +40,7 @@ class TypingTest:
         self.learning = spec.source == "learn"
         self.note = ""
         self.quote = ""        # the quote as picked, for favouriting
+        self.timing = []       # lyrics: (seconds, char offset) where each line starts
         self.words = self._make_words()
         self.typed = [""] * len(self.words)
         self.wi = self.keys = self.bad_keys = 0
@@ -84,6 +85,8 @@ class TypingTest:
                 words = [w for w in words if w]
             else:
                 words = text.split()
+        elif src == "lyrics":
+            words = self._lyric_words()
         elif src == "code":
             self.note, words = code.pick(app.settings.code_lang)
         elif src == "slow":
@@ -98,6 +101,50 @@ class TypingTest:
         if app.settings.lowercase:
             words = [w.lower() for w in words]
         return words
+
+    def _lyric_words(self):
+        """A song's words, line after line, as a quote's are (punctuation off
+        strips it), noting where each timed line starts for the karaoke
+        caret."""
+        strip = self.app.settings.punctuation == "off"
+        words, at = [], 0
+        for t, text in self.spec.lines:
+            line = text.replace("—", " ").replace("--", " ").split()
+            if strip:
+                line = [w.strip(QUOTE_PUNCT).replace(",", "") for w in line]
+            line = [w for w in line if w]
+            if not line:
+                continue
+            if t is not None:
+                self.timing.append((t, at))
+            words += line
+            at += sum(len(w) + 1 for w in line)
+        self.timing.append((None, at))          # the end
+        self.note = self.spec.label             # the song, on the results
+        return words
+
+    def song_offset(self, now):
+        """Where the singer is, as a char offset into the words (the karaoke
+        caret), or None: a song already playing (spotify) carries on from
+        where it was; otherwise the song starts with your first key, at its
+        first line. Between two lines' starts it moves on evenly."""
+        timed = [(t, c) for t, c in self.timing if t is not None]
+        if not timed or self.start is None:
+            return None
+        if self.spec.song_at:
+            pos, at = self.spec.song_at
+            t = pos + (now - at)
+        else:
+            t = timed[0][0] + (now - self.start)
+        end = self.timing[-1][1]
+        last_t = timed[-1][0] + max(2.0, (end - timed[-1][1]) / 12)   # the last line: ~12 chars a second
+        points = timed + [(last_t, end)]
+        if t <= points[0][0]:
+            return points[0][1]
+        for (t0, c0), (t1, c1) in zip(points, points[1:]):
+            if t < t1:
+                return int(c0 + (c1 - c0) * (t - t0) / max(t1 - t0, 1e-6))
+        return end
 
     # ---------------------------------------------------------------- flow
 
@@ -182,6 +229,10 @@ class TypingTest:
                 marks.add(self.app.stats.ghost_chars(el))
             if s.pace:
                 marks.add(int(s.pace * 5 / 60 * el))
+            if spec.source == "lyrics" and s.karaoke:
+                sung = self.song_offset(now)
+                if sung is not None:
+                    marks.add(sung)
         flags = [f for f in (self.diff if self.diff != "normal" else "",
                              f"stop {self.stop}" if self.stop != "off" else "",
                              "blind" if s.blind else "",
