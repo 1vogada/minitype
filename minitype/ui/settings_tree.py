@@ -52,7 +52,8 @@ TREE = [
             ("words", "lyrics tape"), ("words", "lyrics punctuation"),
             ("words", "lyrics capitals"),
             ("spotify", "linking to spotify, for what's playing", [
-                ("words", "spotify"), ("words", "spotify client id")]),
+                ("words", "spotify"), ("words", "spotify client id"),
+                ("words", "download liked songs"), ("words", "clear kept lyrics")]),
         ], ("words", "lyrics from")),
         ("books", "the book you type through, and its text", [
             ("words", "book page"), ("words", "book filter"),

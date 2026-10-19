@@ -32,10 +32,12 @@ from . import storage
 PORT = 8888
 REDIRECT = f"http://127.0.0.1:{PORT}/callback"        # Spotify wants the loopback address, not "localhost"
 START = f"http://127.0.0.1:{PORT}/"     # the short link minitype opens: it sends you on to the login
-SCOPES = "user-read-currently-playing user-read-playback-state"
+SCOPES = "user-read-currently-playing user-read-playback-state user-library-read"
+LIBRARY = "user-library-read"   # your liked songs (logins from before it was asked for lack it)
 AUTH = "https://accounts.spotify.com/authorize"
 TOKEN = "https://accounts.spotify.com/api/token"
 NOW = "https://api.spotify.com/v1/me/player/currently-playing"
+LIKED = "https://api.spotify.com/v1/me/tracks"
 FILE = "spotify.json"
 LOGIN_WAIT = 180             # seconds to finish logging in in the browser
 
@@ -99,7 +101,13 @@ def _keep(d, client_id):
     _save({"client_id": client_id,
            "access_token": d["access_token"],
            "refresh_token": d.get("refresh_token") or old.get("refresh_token"),
-           "expires_at": time.time() + float(d.get("expires_in", 3600)) - 60})
+           "expires_at": time.time() + float(d.get("expires_in", 3600)) - 60,
+           "scope": d.get("scope") or old.get("scope", "")})
+
+
+def can(scope):
+    """Whether the kept login was given that permission."""
+    return scope in _load().get("scope", "").split()
 
 
 def pkce():
@@ -259,13 +267,48 @@ def now_playing():
     item = d.get("item") or {}
     if item.get("type") not in (None, "track"):          # a podcast: no lyrics
         return None
+    return dict(_track(item), progress=float(d.get("progress_ms") or 0) / 1000,
+                playing=bool(d.get("is_playing")), at=at)
+
+
+def _get_json(url):
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {_token()}"})
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        if e.code == 401:
+            raise SpotifyError("the spotify login ran out - link again") from e
+        if e.code == 403:
+            raise SpotifyError("spotify said no (403) - link again to allow it") from e
+        if e.code == 429:
+            raise SpotifyError("spotify says too many requests - wait a minute") from e
+        raise SpotifyError(f"spotify said {e.code}") from e
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        raise SpotifyError("couldn't reach spotify - are you online?") from e
+
+
+def _track(item):
+    """A song as minitype keeps it, from one of Spotify's track objects."""
     return {"id": item.get("id") or f"{item.get('name')}|{item.get('duration_ms')}",
             "title": item.get("name") or "",
             "artist": ", ".join(a.get("name", "") for a in item.get("artists") or []),
             "album": (item.get("album") or {}).get("name") or "",
-            "duration": (item.get("duration_ms") or 0) / 1000,
-            "progress": float(d.get("progress_ms") or 0) / 1000,
-            "playing": bool(d.get("is_playing")), "at": at}
+            "duration": (item.get("duration_ms") or 0) / 1000}
+
+
+def liked(progress=None):
+    """Your liked songs, newest first: a list of {id, title, artist, album,
+    duration}. progress(got, total) is called after each page of 50."""
+    out, url = [], f"{LIKED}?limit=50&offset=0"
+    while url:
+        d = _get_json(url)
+        out += [_track(x["track"]) for x in d.get("items") or []
+                if (x.get("track") or {}).get("type", "track") == "track"]
+        if progress:
+            progress(len(out), d.get("total") or len(out))
+        url = d.get("next")
+    return out
 
 
 class Follow:

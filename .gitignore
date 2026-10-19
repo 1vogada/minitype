@@ -12,6 +12,8 @@ venv/
 /settings.json
 /save.json
 /spotify.json
+/liked.json
+/lyrics/
 /*.json.tmp
 /books/
 /themes.json

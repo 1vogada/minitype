@@ -2,8 +2,8 @@
 lyrics database with no key to sign up for. Lyrics come with timestamps
 for most songs (LRC), which the karaoke caret follows.
 
-Lyrics are fetched when a test starts and kept for that test only - they
-are not written to disk.
+Fetched lyrics are kept on disk by lyrics_cache.py, so a song is only
+asked for once and works offline after.
 """
 
 import json
@@ -27,6 +27,10 @@ _SECTION = re.compile(r"^\s*[\[(](verse|chorus|bridge|intro|outro|hook|pre-choru
 
 class LyricsError(Exception):
     """Lyrics couldn't be had; the message says why, for the screen."""
+
+
+class NoLyrics(LyricsError):
+    """The lyrics site was asked and has none for the song."""
 
 
 @dataclass(frozen=True)
@@ -112,7 +116,7 @@ def fetch(title, artist="", album="", duration=0.0):
              and (d.get("plainLyrics") or d.get("syncedLyrics"))]
     if not found:
         who = f" by {artist}" if artist else ""
-        raise LyricsError(f"no lyrics found for \"{title}\"{who}")
+        raise NoLyrics(f"no lyrics found for \"{title}\"{who}")
 
     # with no artist given, the one most entries name is the original (a
     # song's covers are each one entry, the original is on album after album)

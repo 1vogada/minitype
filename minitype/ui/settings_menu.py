@@ -234,8 +234,9 @@ def raw_items(app):
                       "monkeytype's collection (needs internet)",
                  tags=("quote", "source", "online", "text")),
         b.choice("lyrics from", "lyrics_source", LYRICS_SOURCES,
-                 help="lyrics mode: search for a song by name, or type what "
-                      "spotify is playing (needs linking, below)",
+                 help="lyrics mode: search for a song by name, type what "
+                      "spotify is playing (needs linking, below), or liked: "
+                      "a random one of your liked songs (download them below)",
                  tags=("lyrics", "song", "music", "spotify", "karaoke")),
         b.flag("karaoke", "karaoke",
                "lyrics mode: a caret moves through the words where the song "
@@ -276,6 +277,17 @@ def raw_items(app):
                help="enter links minitype to your spotify (opens your browser to "
                     "log in) or unlinks it. Only reads what's playing",
                tags=("lyrics", "spotify", "music", "link", "login", "account")),
+        b.item("download liked songs", lambda: _download_liked(app), _kept,
+               help="downloads the lyrics of every song you've liked on spotify, "
+                    "for the liked source and for typing offline (links spotify "
+                    "again if it needs the permission). Songs already kept are "
+                    "skipped; esc stops, and running it again carries on",
+               tags=("lyrics", "spotify", "music", "liked", "download", "offline",
+                     "library", "save")),
+        b.item("clear kept lyrics", lambda: _clear_lyrics(app), lambda: "",
+               help="lyrics are kept on disk once fetched (in the lyrics folder "
+                    "next to your saves); this forgets them all",
+               tags=("lyrics", "cache", "clear", "delete", "offline", "kept")),
         b.choice("quote genre", "quote_genre", QUOTE_GENRES,
                  help="theme of the quote: all, funny, deep, philosophical, "
                       "movie, book, inspirational, sci-fi",
@@ -756,6 +768,32 @@ def _toggle_spotify(app):
     else:
         from .lyrics_mode import link
         link(app)
+
+
+def _download_liked(app):
+    from .lyrics_library import download
+    download(app)
+
+
+def _clear_lyrics(app):
+    """Ask, then forget every kept song's lyrics."""
+    from ..words import lyrics_cache
+    st = app.styles()
+    console.present(title_lines(app, st, "settings")
+                    + [f"  {st.dim}forget the lyrics of all {lyrics_cache.count()} kept "
+                       f"songs? y/n{RESET}"])
+    key = keys.read_key()
+    while key == keys.RESIZE:
+        key = keys.read_key()
+    if key == "y":
+        lyrics_cache.clear()
+        app.notice = "kept lyrics cleared"
+
+
+def _kept():
+    from ..words import lyrics_cache
+    n, liked = lyrics_cache.count(), len(lyrics_cache.liked())
+    return f"{n} songs kept" + (f", {liked} liked" if liked else "")
 
 
 def reset_settings(app):

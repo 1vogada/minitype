@@ -14,7 +14,7 @@ from .. import spotify
 from ..engine.spec import TestSpec
 from ..terminal import console
 from ..terminal.style import RESET
-from ..words import lyrics
+from ..words import lyrics, lyrics_cache
 from .prompt import prompt
 
 SPOTIFY_HELP = ("spotify client id - make a free app at developer.spotify.com/dashboard "
@@ -32,7 +32,8 @@ def song_at(now):
 
 
 def _fetch_playing(now):
-    return lyrics.fetch(now["title"], now["artist"].split(", ")[0], now["album"], now["duration"])
+    return lyrics_cache.fetch(now["title"], now["artist"].split(", ")[0], now["album"],
+                              now["duration"])
 
 
 def follow_for(spec):
@@ -204,11 +205,30 @@ def _from_spotify(app):
     return song, song_at(now)
 
 
+def _liked_song(app):
+    """A random one of your liked songs whose lyrics are downloaded, not the
+    last one you typed; None (with a notice) when there are none yet."""
+    import random
+    songs = lyrics_cache.liked_with_lyrics()
+    if not songs:
+        app.notice = ("no liked songs' lyrics yet - settings > words > lyrics > "
+                      "download liked songs")
+        return None
+    last = getattr(app, "last_liked", None)
+    pick = random.choice([s for s in songs if s.label != last] or songs)
+    app.last_liked = pick.label
+    return pick
+
+
 def lyrics_test(app):
     """The test for the lyrics mode, or None (backed out, or a notice says
     what went wrong)."""
     try:
-        if app.settings.lyrics_source == "spotify":
+        if app.settings.lyrics_source == "liked":
+            song, at = _liked_song(app), ()
+            if song is None:
+                return None
+        elif app.settings.lyrics_source == "spotify":
             got = _from_spotify(app)
             if got is None:
                 return None
@@ -219,7 +239,7 @@ def lyrics_test(app):
                 return None
             title, artist = lyrics.split_query(q)
             _say(app, f"looking up the lyrics of {title}...")
-            song, at = lyrics.fetch(title, artist), ()
+            song, at = lyrics_cache.fetch(title, artist), ()
     except lyrics.LyricsError as e:
         app.notice = str(e)
         return None

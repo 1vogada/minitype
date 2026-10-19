@@ -118,9 +118,18 @@ Lyrics come from [LRCLIB](https://lrclib.net), a free, open lyrics database
 - no key to sign up for - and most come with timestamps, which the karaoke
 caret follows: it starts with your first key at the song's first line, or,
 for a song Spotify is playing, where the song is right now - and the test
-starts at the line being sung, not at the top of the song. Lyrics are
-fetched for the test and never written to disk. Spotify itself has no
-lyrics API; it only says what's playing.
+starts at the line being sung, not at the top of the song. Spotify itself
+has no lyrics API; it only says what's playing.
+
+Lyrics are kept once fetched (a `lyrics` folder next to your saves), so a
+song you've typed works offline and when the lyrics site is down.
+**download liked songs** (settings → words → lyrics → spotify) fetches the
+lyrics of every song you've liked on Spotify in one go - it skips ones
+already kept, esc stops it and running it again carries on. Then the
+**liked** source (`lyrics from`, or cycle it on the main menu) types a
+random one of your liked songs, no music needed. Liked songs need one more
+Spotify permission than before, so a login from an older minitype is
+linked again the first time. **clear kept lyrics** forgets them all.
 
 To use Spotify (once): Spotify lets a hobby app have only five users, so
 minitype doesn't ship one - you make your own, free:

@@ -39,8 +39,15 @@ agent's memory don't travel, so this section is the memory.
    user's own client id - Spotify allows a hobby app 5 users since 2026 -
    one-shot callback server on 127.0.0.1:8888, tokens in spotify.json;
    now playing), `ui/lyrics_mode.py`. The karaoke caret is
-   `TypingTest.song_offset` (a mark, like the pace caret). No lyrics are
-   stored. `tests/lyrics_check.py` runs offline (fakes LRCLIB/Spotify,
+   `TypingTest.song_offset` (a mark, like the pace caret). Fetched lyrics
+   are kept on disk (`words/lyrics_cache.py`, one file per song in
+   `lyrics/`, "none" noted for a month); `ui/lyrics_library.py` downloads
+   every liked song's lyrics (needs the `user-library-read` scope -
+   `spotify.can` checks the kept login, older ones relink) and the
+   `liked` lyrics source picks one (`tests/liked_check.py`). Lyrics have
+   their own tape / punctuation / capitals (incl. forgive) and song-line
+   split (`lyrics_lines`); tab resyncs to Spotify, ctrl-i (Windows) goes to
+   the first line. `tests/lyrics_check.py` runs offline (fakes LRCLIB/Spotify,
    real local callback). Login: the browser opens a short local start
    page (`spotify.START`) that forwards to the long login link (Windows
    cut it at "&"); the screen asks you to press enter once logged in.
