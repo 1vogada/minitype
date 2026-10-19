@@ -121,6 +121,15 @@ for a song Spotify is playing, where the song is right now - and the test
 starts at the line being sung, not at the top of the song. Spotify itself
 has no lyrics API; it only says what's playing.
 
+The caret sings each line at the song's own pace (worked out from its
+timestamps - a rap song runs faster than a ballad), then waits for the
+next line instead of crawling through pauses and solos; lyrics timed word
+by word follow each word. Spotify's position comes back up to a second
+stale, by a different amount each time, so minitype keeps the least stale
+of its last few answers - a seek still snaps straight away. If the caret is
+still early or late (bluetooth adds ~0.2s, airplay ~2s), set **karaoke
+offset** (settings → words → lyrics, or ctrl-o mid-song).
+
 Lyrics are kept once fetched (a `lyrics` folder next to your saves), so a
 song you've typed works offline and when the lyrics site is down.
 **download liked songs** (settings → words → lyrics → spotify) fetches the

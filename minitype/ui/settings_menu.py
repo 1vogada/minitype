@@ -24,7 +24,8 @@ from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICU
                       ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS,
                       FADE_STARTS, FADE_ANGLES, FADE_CURVES, NUMBER_RANGES,
                       TEXT_CONTRASTS, SEE_THROUGH, HELP_POSITIONS, HELP_BORDERS,
-                      LYRICS_SOURCES, LYRICS_TAPE, LYRICS_PUNCT, LYRICS_LINES, LYRICS_CAPITALS)
+                      LYRICS_SOURCES, LYRICS_TAPE, LYRICS_PUNCT, LYRICS_LINES, LYRICS_CAPITALS,
+                      KARAOKE_OFFSETS)
 from ..terminal.art import ART_NAMES, THEME_ART
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
 from .. import spotify, storage
@@ -243,6 +244,15 @@ def raw_items(app):
                "is (songs whose lyrics have timestamps); with spotify it "
                "starts where the song is playing",
                tags=("lyrics", "song", "music", "caret", "race", "sing")),
+        b.choice("karaoke offset", "karaoke_offset", KARAOKE_OFFSETS,
+                 value=lambda: f"{app.settings.karaoke_offset:+d} ms"
+                 if app.settings.karaoke_offset else "0 ms",
+                 help="moves the karaoke caret on (+) when it's behind the "
+                      "singing, or back (-) when it's ahead - bluetooth adds "
+                      "about +200, airplay about +2000. Works mid-song: ctrl-o, "
+                      "change it, resume",
+                 tags=("lyrics", "song", "music", "karaoke", "sync", "offset",
+                       "delay", "latency", "timing")),
         b.choice("lyrics tape", "lyrics_tape", LYRICS_TAPE,
                  help="tape for lyrics tests only: same follows the tape "
                       "setting; off, on or from middle set their own",

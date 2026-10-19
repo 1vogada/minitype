@@ -48,7 +48,8 @@ TREE = [
             ("words", "quotes from"), ("words", "quote genre")]),
         ("lyrics", "the lyrics mode: search or spotify, karaoke, its own tape and "
                    "punctuation, linking spotify", [
-            ("words", "lyrics from"), ("words", "karaoke"), ("words", "song lines"),
+            ("words", "lyrics from"), ("words", "karaoke"), ("words", "karaoke offset"),
+            ("words", "song lines"),
             ("words", "lyrics tape"), ("words", "lyrics punctuation"),
             ("words", "lyrics capitals"),
             ("spotify", "linking to spotify, for what's playing", [

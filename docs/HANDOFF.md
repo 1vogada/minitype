@@ -46,7 +46,10 @@ agent's memory don't travel, so this section is the memory.
    `spotify.can` checks the kept login, older ones relink) and the
    `liked` lyrics source picks one (`tests/liked_check.py`). Lyrics have
    their own tape / punctuation / capitals (incl. forgive) and song-line
-   split (`lyrics_lines`); tab resyncs to Spotify, ctrl-i (Windows) goes to
+   split (`lyrics_lines`); the caret maths is `engine/karaoke.py` (line
+   ends from the song's median letters/s, enhanced-LRC word tags,
+   `karaoke_offset`; `Follow._steady` keeps the least stale of the last 3
+   Spotify answers - `tests/karaoke_check.py`); tab resyncs to Spotify, ctrl-i (Windows) goes to
    the first line. `tests/lyrics_check.py` runs offline (fakes LRCLIB/Spotify,
    real local callback). Login: the browser opens a short local start
    page (`spotify.START`) that forwards to the long login link (Windows

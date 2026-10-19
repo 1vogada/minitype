@@ -11,6 +11,7 @@ from ..nav import MENU, QUIT
 from ..terminal import console, keys
 from ..words import books, code, funbox
 from . import keyboard
+from . import karaoke
 from .render import draw
 from .result import TestResult
 from .scoring import score
@@ -44,6 +45,7 @@ class TypingTest:
         self.note = ""
         self.quote = ""        # the quote as picked, for favouriting
         self.timing = []       # lyrics: (seconds, char offset) where each line starts
+        self.points = []       # ...and where the karaoke caret is when (karaoke.py)
         self.follow = None     # lyrics from spotify: keeps up with it (spotify.Follow)
         self.breaks = set()    # lyrics: the words that start a line of the song
         self.words = self._make_words()
@@ -109,37 +111,22 @@ class TypingTest:
 
     def _lyric_words(self):
         """A song's words, line after line, as a quote's are (punctuation off
-        strips it), noting where each timed line starts for the karaoke
-        caret."""
+        strips it), with when they're sung for the karaoke caret (see
+        karaoke.py)."""
         strip = self.punctuation() == "off"
-        words, at = [], 0
-        for t, text in self.spec.lines:
-            line = text.replace("—", " ").replace("--", " ").split()
-            if strip:
-                line = [w.strip(QUOTE_PUNCT).replace(",", "") for w in line]
-            line = [w for w in line if w]
-            if not line:
-                if t is not None and words:
-                    self.timing.append((t, at))  # a break: the caret waits at the line's end
-                continue
-            if t is not None:
-                self.timing.append((t, at))
-            if words:
-                self.breaks.add(len(words))
-            words += line
-            at += sum(len(w) + 1 for w in line)
-        self.timing.append((None, at))          # the end
+        tidy = (lambda w: w.strip(QUOTE_PUNCT).replace(",", "")) if strip else None
+        words, self.breaks, starts, self.points = karaoke.layout(self.spec.lines, tidy)
+        self.timing = starts + [(None, sum(len(w) + 1 for w in words))]
         self.note = self.spec.label             # the song, on the results
         return words
 
-    def song_offset(self, now):
-        """Where the singer is, as a char offset into the words (the karaoke
-        caret), or None: a song spotify is playing is where spotify says
-        (followed while you type: paused, seeked, carried on); otherwise
-        the song starts with your first key, at its first line. Between two
-        lines' starts it moves on evenly."""
-        timed = [(t, c) for t, c in self.timing if t is not None]
-        if not timed or self.start is None:
+    def song_time(self, now):
+        """Seconds into the song at `now`, or None before the test starts: a
+        song spotify is playing is where spotify says (followed while you
+        type: paused, seeked, carried on); otherwise the song starts with
+        your first key, at its first line. The karaoke offset setting moves
+        it on (or back), for speakers that play late."""
+        if not self.points or self.start is None:
             return None
         if self.follow is not None:
             t = self.follow.position(now)
@@ -148,16 +135,14 @@ class TypingTest:
             playing = self.spec.song_at[2] if len(self.spec.song_at) > 2 else True
             t = pos + (now - at) if playing else pos
         else:
-            t = timed[0][0] + (now - self.start)
-        end = self.timing[-1][1]
-        last_t = timed[-1][0] + max(2.0, (end - timed[-1][1]) / 12)   # the last line: ~12 chars a second
-        points = timed + [(last_t, end)]
-        if t <= points[0][0]:
-            return points[0][1]
-        for (t0, c0), (t1, c1) in zip(points, points[1:]):
-            if t < t1:
-                return int(c0 + (c1 - c0) * (t - t0) / max(t1 - t0, 1e-6))
-        return end
+            t = self.points[0][0] + (now - self.start)
+        return t + self.app.settings.karaoke_offset / 1000
+
+    def song_offset(self, now):
+        """Where the singer is, as a char offset into the words (the karaoke
+        caret), or None."""
+        t = self.song_time(now)
+        return None if t is None else karaoke.position(self.points, t)
 
     # ---------------------------------------------------------------- flow
 

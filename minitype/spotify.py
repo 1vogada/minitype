@@ -250,9 +250,12 @@ def now_playing():
     on), or None when nothing is."""
     req = urllib.request.Request(NOW, headers={"Authorization": f"Bearer {_token()}"})
     try:
+        sent = time.time()
         with urllib.request.urlopen(req, timeout=10) as r:
             body = r.read()
-            at = time.time()
+            # spotify read the progress somewhere between asking and the
+            # answer: the middle is the best guess
+            at = (sent + time.time()) / 2
     except urllib.error.HTTPError as e:
         if e.code == 401:
             raise SpotifyError("the spotify login ran out - link again") from e
@@ -321,6 +324,8 @@ class Follow:
 
     EVERY = 2.0
     RETRY = 10.0                         # seconds between lyrics fetches that failed
+    SEEK = 2.0                           # an answer this far off: a seek, not jitter
+    KEEP = 3                             # answers the steady clock is read from
 
     def __init__(self, now, fetch, ask=None):
         self.now = dict(now)             # the latest answer (whole dicts swapped in: thread safe)
@@ -328,6 +333,7 @@ class Follow:
         self.missing = ""                # a new song with no lyrics: its name
         self.busy = False                # ...because the lyrics site couldn't be asked
         self._failed, self._again = None, 0.0   # a song whose fetch failed, and when to retry
+        self._starts = []                # when the song started, by the last few answers
         self._fetch = fetch
         self._ask = ask or now_playing
         self._stop = threading.Event()
@@ -377,7 +383,23 @@ class Follow:
                     self.now = dict(got, playing=False, at=time.time(),
                                     progress=self.position(time.time()))
                     continue
-            self.now = got
+            self.now = self._steady(got)
+
+    def _steady(self, got):
+        """An answer, its jitter taken out. Spotify's progress comes back up
+        to a second or so stale, by a different amount each time, so the
+        caret would twitch at every answer. While the same song plays on,
+        each answer says when the song started; the earliest of the last
+        few (the least stale) is kept. A pause, a new song or an answer far
+        off (a seek) starts over from that answer."""
+        start = got["at"] - got["progress"]
+        same = (got.get("playing") and self.now.get("playing")
+                and got.get("id") == self.now.get("id"))
+        if not same or not self._starts or abs(start - min(self._starts)) > self.SEEK:
+            self._starts = [start] if got.get("playing") else []
+            return got
+        self._starts = (self._starts + [start])[-self.KEEP:]
+        return dict(got, progress=got["at"] - min(self._starts))
 
     def stop(self):
         self._stop.set()

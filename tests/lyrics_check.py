@@ -74,7 +74,8 @@ assert t.timing == [(10.0, 0), (20.0, 12), (None, 18)], t.timing
 assert t.song_offset(0) is None, "nothing before the test starts"
 t.start = 1000.0
 assert t.song_offset(1000.0) == 0, "the song starts with your first key, at its first line"
-assert t.song_offset(1005.0) == 6, "halfway between two lines' starts: halfway between them"
+assert 0 < t.song_offset(1001.0) < 11, "partway through the line"
+assert t.song_offset(1005.0) == 11, "the line's sung, then the caret waits for the next"
 assert t.song_offset(1010.0) == 12 and t.song_offset(5000.0) == 18
 app.settings.karaoke = True
 assert t.song_offset(1005.0) in t.status(1005.0)[1], "the caret is drawn"
@@ -83,7 +84,7 @@ assert t.song_offset(1005.0) not in t.status(1005.0)[1]
 # a song already playing (spotify) carries on from where it is
 t2 = TypingTest(app, lyrics_mode.spec_for(song, (15.0, 500.0), now=503.0))
 t2.start = 503.0
-assert t2.song_offset(503.0) == 9, t2.song_offset(503.0)   # 18s into the song
+assert t2.song_offset(503.0) == 11, t2.song_offset(503.0)   # 18s into the song: waiting
 # joining a song partway: the test starts at the line being sung now
 three = lyrics.Song("Three", "B", lines=((10.0, "first line"), (20.0, "second line"),
                                         (30.0, "third line")))
@@ -91,7 +92,7 @@ mid = lyrics_mode.spec_for(three, (21.0, 500.0, True, "x"), now=504.0)    # 25s 
 assert [x for _, x in mid.lines] == ["second line", "third line"] and mid.amount == 2
 tm = TypingTest(app, mid)
 tm.start = 504.0
-assert tm.words[0] == "second" and tm.song_offset(504.0) == 6, tm.song_offset(504.0)
+assert tm.words[0] == "second" and tm.song_offset(504.0) == 11, tm.song_offset(504.0)   # sung, waiting
 assert len(lyrics_mode.spec_for(three, (5.0, 500.0, True, "x"), now=501.0).lines) == 3, \
     "before the first line: all of it"
 assert len(lyrics_mode.spec_for(three, (25.0, 500.0, False, "x"), now=900.0).lines) == 2, \
@@ -361,7 +362,7 @@ assert "ctrl-p pause music" in (tt.footer() or runner.LYRICS_FOOTER)
 paused_spec = lyrics_mode.spec_for(song, (15.0, 500.0, False, "1"))
 tp = TypingTest(app, paused_spec)
 tp.start = 600.0
-mid = tp.timing[1][1] // 2                                   # 15s: halfway through the first line
+mid = tp.timing[1][1] - 1                                    # 15s: the first line sung, waiting
 assert tp.song_offset(600.0) == tp.song_offset(900.0) == mid, "paused when the test began: held"
 
 # spotify moved on: the test switches to the new song

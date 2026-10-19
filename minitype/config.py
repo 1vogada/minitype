@@ -46,7 +46,7 @@ NUMBER_RANGES = {
     "fade_top": (0, 100), "fade_side": (0, 100), "fade_round": (0, 100),
     "fade_start": (1, 100), "fade_start_top": (1, 100), "fade_angle": (-80, 80),
     "fade_curve": (0, 10), "see_through": (0, 100), "text_lighten": (0, 100), "untyped_lighten": (0, 100), "pace": (0, 300), "effect_speed": (0.25, 4.0),
-    "daily_goal": (0, 600),
+    "daily_goal": (0, 600), "karaoke_offset": (-5000, 5000),
 }
 ART_SCOPES = ["off", "menus", "everywhere"]  # where the theme's picture shows
 ART_STYLES = ["revamp", "blocks", "detailed", "og", "combined", "upscaled"]   # hand-drawn line art,
@@ -69,6 +69,8 @@ TAPE_MODES = ["off", "on", "from middle"]
 LYRICS_TAPE = ["same"] + TAPE_MODES                 # lyrics mode's own tape; same: the tape setting
 LYRICS_PUNCT = ["same"] + PUNCTUATION_MODES         # ...and punctuation
 LYRICS_CAPITALS = ["same", "on", "forgive", "off"]  # ...and capitals (forgive: shown, shift optional; off: all lowercase)
+KARAOKE_OFFSETS = [-2000, -1500, -1000, -750, -500, -250, 0, 250, 500, 750, 1000,
+                   1500, 2000]   # ms the karaoke caret is moved on (+) or back (-)
 LYRICS_LINES = ["new line", "marker", "off"]       # how a song's lines are told apart
 UI_STYLES = ["list", "sidebar", "tabs"]
 SIDEBAR_TABS = ["off", "top", "left"]
