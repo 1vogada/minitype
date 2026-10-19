@@ -65,7 +65,14 @@ def spec_for(song, song_at=(), now=None):
     """A test of the song's lyrics, from where the song is now."""
     lines = from_here(song.lines, song_at, now)
     return TestSpec(song.label, "words", len(lines), "lyrics",
-                    lines=lines, song_at=tuple(song_at))
+                    lines=lines, song_at=tuple(song_at), whole=tuple(song.lines))
+
+
+def synced(spec, now, t=None):
+    """Tab in a song spotify is playing: the same song again, from the line
+    being sung now (`now` is the latest of what spotify says)."""
+    whole = spec.whole or spec.lines
+    return spec_for(lyrics.Song(spec.label, "", lines=whole), song_at(now), t)
 
 
 def ask_client_id(app):

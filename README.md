@@ -144,6 +144,8 @@ it and the karaoke caret stops ("music paused" in the header), seek and it
 follows, skip and the test switches to the next song's lyrics by itself.
 **ctrl-p** in a test pauses the music and the test together (the system's
 play/pause key, so it works with any player) and resuming resumes both.
+**tab** starts the song again from the line being sung right now - after
+a seek, or when you've fallen behind.
 
 ## Book mode
 

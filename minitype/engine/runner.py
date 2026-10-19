@@ -17,7 +17,7 @@ from .scoring import score
 
 FOOTER = "esc menu   tab restart   ctrl-bksp word   ctrl-o settings   ctrl-q hide"
 ZEN_FOOTER = "enter finish   esc menu   ctrl-o settings   ctrl-q hide"
-LYRICS_FOOTER = "esc menu   tab restart   ctrl-p pause music   ctrl-o settings   ctrl-q hide"
+LYRICS_FOOTER = "esc menu   tab sync to the song   ctrl-p pause music   ctrl-o settings   ctrl-q hide"
 BOOK_FOOTER = ("esc menu   tab restart   pgdn next page   pgup previous page   "
                "ctrl-q hide")
 REDRAW_EVERY = 0.1
@@ -262,7 +262,8 @@ class TypingTest:
         if (not s.hints or s.lowkey != "off") and not self.popped_hints:
             return ""
         if self.spec.source == "lyrics":
-            return LYRICS_FOOTER
+            return (LYRICS_FOOTER if self.follow is not None
+                    else LYRICS_FOOTER.replace("tab sync to the song", "tab restart"))
         return BOOK_FOOTER if self.spec.source == "book" else self.HINTS
 
     # ---------------------------------------------------------------- input
@@ -276,6 +277,9 @@ class TypingTest:
         if key == keys.ESC:
             return MENU
         if key == keys.TAB:
+            if self.follow is not None:       # a song spotify is playing: from where it is now
+                from ..ui.lyrics_mode import synced     # the ui imports the engine
+                return synced(self.spec, self.follow.now)
             return self.spec
         if key in (keys.CTRL_C, keys.CTRL_D):
             return QUIT

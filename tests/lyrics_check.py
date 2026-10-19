@@ -97,6 +97,26 @@ assert len(lyrics_mode.spec_for(three, (5.0, 500.0, True, "x"), now=501.0).lines
 assert len(lyrics_mode.spec_for(three, (25.0, 500.0, False, "x"), now=900.0).lines) == 2, \
     "paused: where it's paused"
 assert len(lyrics_mode.spec_for(three).lines) == 3, "typed in by name: all of it"
+# tab, following spotify: the same song from the line being sung now -
+# back to an earlier line too (the whole song is kept), forward past this one
+from minitype.engine import runner                               # noqa: E402
+from minitype.terminal import keys                               # noqa: E402
+
+
+class Where:
+    playing, missing, next, busy = True, "", None, False
+    now = {"progress": 12.0, "at": time.time(), "playing": False, "id": "x"}
+
+
+tm.follow = Where()
+back = tm.handle(keys.TAB, 505.0)
+assert [x for _, x in back.lines] == ["first line", "second line", "third line"], back.lines
+assert back.label == mid.label and back.song_at[:3] == (12.0, Where.now["at"], False)
+Where.now = dict(Where.now, progress=31.0)
+assert [x for _, x in tm.handle(keys.TAB, 506.0).lines] == ["third line"]
+assert "tab sync to the song" in runner.LYRICS_FOOTER
+tm.follow = None
+assert tm.handle(keys.TAB, 507.0) is mid, "not following spotify: tab restarts"
 # unsynced lyrics: words, no caret
 t3 = TypingTest(app, lyrics_mode.spec_for(lyrics.Song("s", "a", lines=((None, "just words"),))))
 t3.start = 1.0
