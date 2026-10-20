@@ -30,6 +30,8 @@ SPACE_TYPO = "_"          # how a wrong space shows with indicate typos
 SLOW_WORDS = 20       # how many of your slowest words a drill draws from
 MIN_SLOW_WORDS = 5    # tracked words needed before the drill is offered
 QUOTE_PUNCT = string.punctuation + "“”‘’—–…«»"
+LYRIC_QUOTES = str.maketrans({"’": "'", "‘": "'", "ʼ": "'", "`": "'", "´": "'",
+                              "“": '"', "”": '"', "„": '"'})   # lyrics: typeable quotes
 
 
 class TypingTest:
@@ -116,11 +118,17 @@ class TypingTest:
         return words
 
     def _lyric_words(self):
-        """A song's words, line after line, as a quote's are (punctuation off
-        strips it), with when they're sung for the karaoke caret (see
-        karaoke.py)."""
+        """A song's words, line after line, with when they're sung for the
+        karaoke caret (see karaoke.py). Curly quotes become the ones on your
+        keyboard; punctuation off strips it all - the apostrophes inside
+        words too ("there's" is typed theres), as you'd sing it."""
         strip = self.punctuation() == "off"
-        tidy = (lambda w: w.strip(QUOTE_PUNCT).replace(",", "")) if strip else None
+
+        def tidy(w):
+            w = w.translate(LYRIC_QUOTES)
+            if strip:
+                w = w.strip(QUOTE_PUNCT).replace(",", "").replace("'", "")
+            return w
         words, self.breaks, starts, self.points = karaoke.layout(self.spec.lines, tidy)
         self.timing = starts + [(None, sum(len(w) + 1 for w in words))]
         self.note = self.spec.label             # the song, on the results

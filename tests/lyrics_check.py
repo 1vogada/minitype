@@ -536,4 +536,15 @@ assert gt.song_offset(110.0) == gt.song_offset(114.0) == 12 < gt.song_offset(118
 from minitype.words import lyrics_cache                          # noqa: E402
 lyrics_cache.put("Old", "B", lyrics.Song("Old", "B", lines=((1.0, "♪"), (2.0, "hi ♪"))))
 assert lyrics_cache.get("Old", "B").lines == ((2.0, "hi"),)
+# ---------------------------------------------------------------- apostrophes in lyrics
+star = lyrics.Song("Starman", "Bowie", lines=((1.0, "There’s a starman waitin’ in the sky"),
+                                              (5.0, "He’d like to “come” and meet us")))
+ap = App()
+ap.settings.lyrics_punctuation = "off"
+assert TypingTest(ap, lyrics_mode.spec_for(star)).words ==     ["Theres", "a", "starman", "waitin", "in", "the", "sky", "Hed", "like", "to", "come",
+     "and", "meet", "us"], "off: no apostrophes to type, inside words either"
+ap.settings.lyrics_punctuation = "on"
+w = TypingTest(ap, lyrics_mode.spec_for(star)).words
+assert w[0] == "There's" and w[3] == "waitin'" and w[10] == '"come"', "on: the keyboard's quotes"
+assert all(c not in "".join(w) for c in "’‘“”")
 print("ALL OK")
