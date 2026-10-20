@@ -89,4 +89,12 @@ f.now = f._steady(answer(1110.0, 31.0))
 assert f.position(1111.0) == 32.0, "played on"
 f.now = f._steady(answer(1112.0, 1.0, id="2"))
 assert f.position(1112.0) == 1.0, "a new song: its own clock"
+# ---------------------------------------------------------------- the caret on typed letters
+from minitype.engine.render import Painter, UND                   # noqa: E402
+st = app.styles()
+p = Painter(st, app.settings, ["hello", "world"], ["hel", ""], 0, {1, 8}, False, False)
+typed_cell, untyped_cell = p.word(0)[1], p.word(1)[2]
+assert typed_cell[0] == st.typed(1, 0, 0, 0) + UND, "a typed letter stays lit, underlined"
+assert untyped_cell[0] == st.dim + UND, "an untyped one is dimmed"
+assert Painter(st, app.settings, ["ab", "cd"], ["ab", "c"], 1, {2}, False, False).gap(0)[0] == UND
 print("ALL OK")

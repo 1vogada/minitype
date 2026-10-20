@@ -192,7 +192,10 @@ class Painter:
             s, c = self._flourish(s, c, off, typed_ok,
                                   tc is None and i >= wi and not self.hidden)
             if off in self.marks:
-                s = st.dim + UND
+                # the pace / ghost / karaoke caret: an underline. On a letter
+                # you've typed it keeps the letter's colour (lit), only an
+                # untyped one is dimmed
+                s = (s or "") + UND if tc is not None else st.dim + UND
             cells.append((s, c, off))
         if self.mirror:
             cells.reverse()
@@ -204,7 +207,7 @@ class Painter:
         if i == self.wi and len(self.typed[i]) >= len(self.display[i]):
             return (self.caret_gap, " ", off)
         if off in self.marks:
-            return (self.st.dim + UND, " ", off)
+            return (UND if off < self.caret_off else self.st.dim + UND, " ", off)
         if self.split == "marker" and i + 1 in self.breaks:
             return (self.st.dim, LINE_MARK, off)      # where the song's next line starts
         if self.gap_style == "dots":
