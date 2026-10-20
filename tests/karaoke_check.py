@@ -97,4 +97,32 @@ typed_cell, untyped_cell = p.word(0)[1], p.word(1)[2]
 assert typed_cell[0] == st.typed(1, 0, 0, 0) + UND, "a typed letter stays lit, underlined"
 assert untyped_cell[0] == st.dim + UND, "an untyped one is dimmed"
 assert Painter(st, app.settings, ["ab", "cd"], ["ab", "c"], 1, {2}, False, False).gap(0)[0] == UND
+# ---------------------------------------------------------------- ctrl-[ / ctrl-] nudge the offset
+from unittest import mock                                         # noqa: E402
+from minitype.engine import runner                                # noqa: E402
+from minitype.terminal import _windows as win, keys               # noqa: E402
+app.settings.karaoke_offset = 0
+t.follow = type("F", (), {"playing": True, "missing": "", "next": None, "busy": False,
+                          "now": {}, "position": lambda self, x: 10.0})()
+for _ in range(3):
+    assert t.handle(keys.CTRL_RBRACKET, 200.0) is None
+assert app.settings.karaoke_offset == 75
+t.handle(keys.CTRL_LBRACKET, 200.0)
+assert app.settings.karaoke_offset == 50
+assert "sync +50 ms" in t.status(time.time())[0]
+assert "sync" not in t.status(time.time() + 5)[0], "only for a moment"
+app.settings.karaoke_offset = 4990
+t.handle(keys.CTRL_RBRACKET, 200.0)
+assert app.settings.karaoke_offset == 5000, "kept in range"
+assert "ctrl-[ ] offset" in runner.LYRICS_FOOTER
+t.follow = None
+app.settings.karaoke_offset = 0
+t.handle(keys.CTRL_RBRACKET, 200.0)
+assert app.settings.karaoke_offset == 0, "only following spotify"
+# windows tells ctrl-[ from esc by the key behind it
+for vk, want in ((win.VK_LBRACKET, keys.CTRL_LBRACKET), (0x1B, keys.ESC)):
+    with mock.patch.object(win, "_getch", lambda: ""),             mock.patch.object(win, "_key_for", lambda ch, v=vk: v if ch == "" else None),             mock.patch.object(win, "_with_shift", lambda v: False),             mock.patch.object(win, "ready", lambda: False):
+        assert win.read() == want, (vk, want)
+with mock.patch.object(win, "_getch", lambda: ""),         mock.patch.object(win, "_key_for", lambda ch: None),         mock.patch.object(win, "_with_shift", lambda v: False):
+    assert win.read() == keys.CTRL_RBRACKET
 print("ALL OK")

@@ -128,7 +128,9 @@ by word follow each word. Spotify's position comes back up to a second
 stale, by a different amount each time, so minitype keeps the least stale
 of its last few answers - a seek still snaps straight away. If the caret is
 still early or late (bluetooth adds ~0.2s, airplay ~2s), set **karaoke
-offset** (settings → words → lyrics, or ctrl-o mid-song).
+offset** (settings → words → lyrics) - or while typing a Spotify song,
+**ctrl-]** moves it 25 ms later and **ctrl-[** 25 ms earlier (ctrl-[ is
+Windows only: other terminals send it as esc).
 
 Lyrics are kept once fetched (a `lyrics` folder next to your saves), so a
 song you've typed works offline and when the lyrics site is down.

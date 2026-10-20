@@ -4,7 +4,7 @@ import ctypes
 import msvcrt
 from ctypes import wintypes
 
-from .keynames import (BACKSPACE, CSI, CTRL_BACKSPACE, CTRL_C, CTRL_D, CTRL_O, CTRL_P, CTRL_I, CTRL_Q,
+from .keynames import (BACKSPACE, CSI, CTRL_BACKSPACE, CTRL_C, CTRL_D, CTRL_O, CTRL_P, CTRL_I, CTRL_LBRACKET, CTRL_RBRACKET, CTRL_Q,
                        CTRL_W, DELETE, DOWN, END, ENTER, ESC, HOME, INSERT,
                        LEFT, PGDN, PGUP, RIGHT, SHIFT_ENTER, SHIFT_TAB, TAB,
                        UNKNOWN, UP)
@@ -20,6 +20,7 @@ _CONTROL = {
     "\x11": CTRL_Q,
     "\x0f": CTRL_O,
     "\x10": CTRL_P,
+    "\x1d": CTRL_RBRACKET,
     "\x17": CTRL_W,
 }
 
@@ -33,6 +34,7 @@ _EXTENDED = {
 
 VK_TAB = 0x09
 VK_I = 0x49
+VK_LBRACKET = 0xDB   # the [ key (VK_OEM_4)
 VK_RETURN = 0x0D
 VK_SHIFT = 0x10
 SHIFT_PRESSED = 0x0010
@@ -89,21 +91,31 @@ def _with_shift(vk):
         return False
 
 
-def _ctrl_i():
-    """Whether the tab character waiting came from ctrl-i, not the Tab key:
-    the console sends both as "\t", but its raw key event says which key
-    it was."""
+def _key_for(char):
+    """The key (its virtual key code) behind the next waiting `char`, or
+    None: the console sends ctrl-i as tab and ctrl-[ as esc, but its raw key
+    event says which key it was."""
     try:
         k32 = ctypes.windll.kernel32
         recs = (_InputRecord * 32)()
         n = wintypes.DWORD()
         if k32.PeekConsoleInputW(k32.GetStdHandle(-10), recs, 32, ctypes.byref(n)):
             for r in recs[:n.value]:
-                if r.type == KEY_EVENT and r.key.down and r.key.char == "\t":
-                    return r.key.vk == VK_I
+                if r.type == KEY_EVENT and r.key.down and r.key.char == char:
+                    return r.key.vk
     except (AttributeError, OSError):
         pass
-    return False
+    return None
+
+
+def _ctrl_i():
+    """Whether the tab character waiting came from ctrl-i, not the Tab key."""
+    return _key_for("\t") == VK_I
+
+
+def _ctrl_lbracket():
+    """Whether the esc character waiting came from ctrl-[, not the Esc key."""
+    return _key_for("\x1b") == VK_LBRACKET
 
 
 def _escape_sequence():
@@ -124,6 +136,7 @@ def read():
     shift_tab = _with_shift(VK_TAB)
     shift_enter = _with_shift(VK_RETURN)
     ctrl_i = _ctrl_i()
+    ctrl_lb = _ctrl_lbracket()
     c = _getch()
     if c in ("\x00", "\xe0"):
         return _EXTENDED.get(_getch(), UNKNOWN)
@@ -132,7 +145,7 @@ def read():
     if c == "\r":
         return SHIFT_ENTER if shift_enter else ENTER
     if c == "\x1b":
-        return _escape_sequence()
+        return CTRL_LBRACKET if ctrl_lb else _escape_sequence()
     if c in _CONTROL:
         return _CONTROL[c]
     if c < " ":

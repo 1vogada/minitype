@@ -4,7 +4,7 @@ import string
 import time
 
 from .. import media
-from ..config import MAX_EXTRA, RULE_GRACE
+from ..config import MAX_EXTRA, NUMBER_RANGES, RULE_GRACE
 from ..learn.progress import ORDER
 from ..learn.wordgen import lesson_words
 from ..nav import MENU, QUIT
@@ -19,7 +19,9 @@ from .scoring import correct_chars, score
 FOOTER = "esc menu   tab restart   ctrl-bksp word   ctrl-o settings   ctrl-q hide"
 ZEN_FOOTER = "enter finish   esc menu   ctrl-o settings   ctrl-q hide"
 LYRICS_FOOTER = ("esc menu   tab sync to the song   ctrl-i song start   ctrl-p pause music   "
-                 "ctrl-o settings   ctrl-q hide")
+                 "ctrl-[ ] offset   ctrl-o settings   ctrl-q hide")
+NUDGE = 25            # ms ctrl-[ / ctrl-] move the karaoke offset by
+NUDGE_SHOWN = 2.0     # seconds the header shows the new offset
 BOOK_FOOTER = ("esc menu   tab restart   pgdn next page   pgup previous page   "
                "ctrl-q hide")
 REDRAW_EVERY = 0.1
@@ -46,6 +48,7 @@ class TypingTest:
         self.quote = ""        # the quote as picked, for favouriting
         self.timing = []       # lyrics: (seconds, char offset) where each line starts
         self.points = []       # ...and where the karaoke caret is when (karaoke.py)
+        self.nudged = -1e9     # when ctrl-[ / ctrl-] last moved the karaoke offset
         self.follow = None     # lyrics from spotify: keeps up with it (spotify.Follow)
         self.breaks = set()    # lyrics: the words that start a line of the song
         self.words = self._make_words()
@@ -240,6 +243,15 @@ class TypingTest:
                 out.append(gap * (r - s0) / max(s1 - s0, 1e-6))
         return out
 
+    def nudge(self, ms):
+        """Ctrl-[ / ctrl-] following spotify: the karaoke offset back or on
+        by ms, kept in the settings; the header shows it for a moment."""
+        s = self.app.settings
+        lo, hi = NUMBER_RANGES["karaoke_offset"]
+        s.karaoke_offset = max(lo, min(hi, s.karaoke_offset + ms))
+        self.app.save_settings()
+        self.nudged = time.time()
+
     def next_char(self):
         """The key you should press next, " " for space, None at the end."""
         if self.wi >= len(self.words):
@@ -282,6 +294,8 @@ class TypingTest:
                 if sung is not None:
                     marks.add(sung)
         if self.follow is not None:
+            if now - self.nudged < NUDGE_SHOWN:
+                parts.append(f"sync {s.karaoke_offset:+d} ms")
             if not self.follow.playing:
                 parts.append("music paused")
             if self.follow.missing:
@@ -305,7 +319,8 @@ class TypingTest:
         if self.spec.source == "lyrics":
             return (LYRICS_FOOTER if self.follow is not None
                     else LYRICS_FOOTER.replace("tab sync to the song", "tab restart")
-                                       .replace("ctrl-i song start   ", ""))
+                                       .replace("ctrl-i song start   ", "")
+                                       .replace("ctrl-[ ] offset   ", ""))
         return BOOK_FOOTER if self.spec.source == "book" else self.HINTS
 
     # ---------------------------------------------------------------- input
@@ -323,6 +338,9 @@ class TypingTest:
                 from ..ui.lyrics_mode import synced     # the ui imports the engine
                 return synced(self.spec, self.follow.now)
             return self.spec
+        if key in (keys.CTRL_LBRACKET, keys.CTRL_RBRACKET) and self.follow is not None:
+            self.nudge(-NUDGE if key == keys.CTRL_LBRACKET else NUDGE)
+            return None
         if key == keys.CTRL_I and self.spec.source == "lyrics":
             from ..ui.lyrics_mode import from_start     # the ui imports the engine
             return from_start(self.spec)

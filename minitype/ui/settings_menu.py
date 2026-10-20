@@ -259,8 +259,9 @@ def raw_items(app):
                  if app.settings.karaoke_offset else "0 ms",
                  help="moves the karaoke caret on (+) when it's behind the "
                       "singing, or back (-) when it's ahead - bluetooth adds "
-                      "about +200, airplay about +2000. Works mid-song: ctrl-o, "
-                      "change it, resume",
+                      "about +200, airplay about +2000. Mid-song: ctrl-[ and "
+                      "ctrl-] move it 25 ms (ctrl-[ on windows only), or "
+                      "ctrl-o, change it, resume",
                  tags=("lyrics", "song", "music", "karaoke", "sync", "offset",
                        "delay", "latency", "timing")),
         b.choice("lyrics tape", "lyrics_tape", LYRICS_TAPE,
