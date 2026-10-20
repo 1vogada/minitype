@@ -28,3 +28,4 @@ class TestSpec:
     lines: Tuple = ()
     song_at: Tuple = ()
     whole: Tuple = ()
+    song: Tuple = ()    # lyrics: (title, artist, seconds long), for its tempo

@@ -330,6 +330,8 @@ class Settings:
     show_timer: bool = True
     show_progress: bool = True
     show_wpm: bool = True
+    show_bpm: bool = True        # lyrics: the song's tempo in the header (from deezer)
+    show_song_wpm: bool = True   # lyrics: the speed the song needs, from its timestamps
     show_combo: bool = True
 
     # ---- results screen sections

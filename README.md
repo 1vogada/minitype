@@ -132,6 +132,13 @@ offset** (settings → words → lyrics) - or while typing a Spotify song,
 **ctrl-]** moves it 25 ms later and **ctrl-[** 25 ms earlier (ctrl-[ is
 Windows only: other terminals send it as esc).
 
+The header shows the **speed the song needs** (its words over the time
+they're sung in, from the timestamps - "One" needs about 54 wpm, "Rap God"
+about 259) and its **bpm**. Spotify no longer gives new apps its tempo
+data, so the bpm comes from Deezer's free API (looked up in the
+background once per song, kept in tempo.json; some songs come back at
+double or half time). Each has a switch: settings → typing screen → hud.
+
 Lyrics are kept once fetched (a `lyrics` folder next to your saves), so a
 song you've typed works offline and when the lyrics site is down.
 **download liked songs** (settings → words → lyrics → spotify) fetches the

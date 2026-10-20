@@ -640,6 +640,14 @@ def raw_items(app):
                tags=("live", "hud", "stats")),
         b.flag("live wpm", "show_wpm", "your speed so far",
                tags=("speed", "live", "hud", "stats")),
+        b.flag("song wpm", "show_song_wpm",
+               "lyrics: the speed the song needs - its words over the time "
+               "they're sung in, from the lyrics' timestamps",
+               tags=("speed", "lyrics", "song", "music", "hud", "needed", "karaoke")),
+        b.flag("bpm", "show_bpm",
+               "lyrics: the song's tempo, from deezer (looked up once, then "
+               "kept); some songs come back at double or half time",
+               tags=("tempo", "lyrics", "song", "music", "hud", "beat", "beats")),
         b.flag("combo", "show_combo", "correct keys in a row (hidden while you race a ghost)",
                tags=("streak", "live", "hud", "stats")),
     ]

@@ -17,6 +17,8 @@ from minitype.engine.runner import TypingTest                # noqa: E402
 from minitype.ui import lyrics_mode, main_menu as mm         # noqa: E402
 from minitype.ui import settings_menu as sm                  # noqa: E402
 from minitype.words import lyrics                            # noqa: E402
+from minitype.words import tempo                             # noqa: E402
+tempo.bpm = lambda *a, **k: None                             # nothing here goes online
 
 LRC = "\n".join(f"[00:{10 + 3 * k:02d}.00] line {k} of the song" for k in range(10))
 

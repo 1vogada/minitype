@@ -13,6 +13,7 @@ venv/
 /save.json
 /spotify.json
 /liked.json
+/tempo.json
 /lyrics/
 /*.json.tmp
 /books/

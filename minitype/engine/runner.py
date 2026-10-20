@@ -49,6 +49,7 @@ class TypingTest:
         self.timing = []       # lyrics: (seconds, char offset) where each line starts
         self.points = []       # ...and where the karaoke caret is when (karaoke.py)
         self.nudged = -1e9     # when ctrl-[ / ctrl-] last moved the karaoke offset
+        self.bpm = None        # lyrics: the song's tempo, once looked up (in the background)
         self.follow = None     # lyrics from spotify: keeps up with it (spotify.Follow)
         self.breaks = set()    # lyrics: the words that start a line of the song
         self.words = self._make_words()
@@ -243,6 +244,29 @@ class TypingTest:
                 out.append(gap * (r - s0) / max(s1 - s0, 1e-6))
         return out
 
+    def song_wpm(self):
+        """The speed the song needs: its words (as typed, spaces too) over
+        the time from its first line to its last line sung, or None for
+        lyrics without timestamps."""
+        if len(self.points) < 2:
+            return None
+        secs = self.points[-1][0] - self.points[0][0]
+        chars = self.points[-1][1] - self.points[0][1]
+        return (chars / 5) / (secs / 60) if secs > 0 else None
+
+    def look_up_tempo(self):
+        """Ask for the song's tempo in the background; the header shows it
+        once it's in."""
+        if not self.spec.song or not self.app.settings.show_bpm:
+            return
+        import threading
+        from ..words import tempo
+        title, artist, secs = self.spec.song
+
+        def ask():
+            self.bpm = tempo.bpm(title, artist, secs)
+        threading.Thread(target=ask, daemon=True).start()
+
     def nudge(self, ms):
         """Ctrl-[ / ctrl-] following spotify: the karaoke offset back or on
         by ms, kept in the settings; the header shows it for a moment."""
@@ -293,6 +317,12 @@ class TypingTest:
                 sung = self.song_offset(now)
                 if sung is not None:
                     marks.add(sung)
+        if spec.source == "lyrics":
+            need = self.song_wpm() if s.show_song_wpm else None
+            if need:
+                parts.append(f"song {need:.0f} wpm")
+            if s.show_bpm and self.bpm:
+                parts.append(f"{self.bpm:.0f} bpm")
         if self.follow is not None:
             if now - self.nudged < NUDGE_SHOWN:
                 parts.append(f"sync {s.karaoke_offset:+d} ms")
@@ -705,6 +735,7 @@ def run_test(app, spec):
     app.current_test = (test, paint)       # for ctrl-o: pause, settings, resume?
     from ..ui.lyrics_mode import follow_for     # the ui imports the engine
     test.follow = follow_for(spec)
+    test.look_up_tempo()
     try:
         return _run(app, test, paint)
     finally:

@@ -64,6 +64,7 @@ TREE = [
         ("hud", "what shows around the words: counters and the keyboard", [
             ("header", "timer", "show timer"), ("header", "progress", "show progress"),
             ("header", "live wpm", "show live wpm"), ("header", "combo", "show combo"),
+            ("header", "song wpm", "show song wpm"), ("header", "bpm", "show bpm"),
             ("keyboard", "the on-screen keyboard and its layout", [
                 ("look", "keyboard", "on-screen keyboard"), ("look", "layout", "keyboard layout")],
              ("look", "keyboard")),
@@ -143,7 +144,8 @@ UI_TAB = [("look", "ui style"), ("look", "sidebar tabs"), ("look", "border"),
           ("look", "bold text"), ("look", "see-through"), ("look", "lighter text"),
           ("look", "lighter untyped"), ("look", "fade on"),
           ("header", "timer"), ("header", "progress"), ("header", "live wpm"),
-          ("header", "combo"), ("look", "keyboard"), ("look", "lowkey")]
+          ("header", "combo"), ("header", "song wpm"), ("header", "bpm"),
+          ("look", "keyboard"), ("look", "lowkey")]
 
 
 def _origin(it):
