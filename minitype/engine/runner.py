@@ -410,11 +410,33 @@ class TypingTest:
             self.start = time.time()
         el = time.time() - self.start
         self._active(self.start + el)
-        if key == " ":
+        if self.hacker():
+            self._hack(el)
+        elif key == " ":
             self._space(el)
         else:
             self._char(key, el, dt)
         return None
+
+    def hacker(self):
+        """The hacker funbox: every key finishes a word, like a hacker in a
+        film. Just for fun - a run isn't kept as a best or in your stats."""
+        return self.app.settings.funbox == "hacker" and self.spec.kind != "zen"
+
+    def _hack(self, el):
+        """Any key: the rest of the word you're on, and the space after it,
+        typed for you - all of it right."""
+        if self.wi >= len(self.words):
+            return
+        word = self.words[self.wi]
+        for _ in word[len(self.typed[self.wi]):] + " ":
+            self._press(el, True)
+            self._hit()
+        self.typed[self.wi] = word
+        self.wi += 1
+        self.word_start = None
+        if self.spec.kind == "words" and self.wi >= len(self.words):
+            self.done = True
 
     def _can_backspace(self):
         """Whether backspace works: the backspace setting decides, and
@@ -631,7 +653,8 @@ class TypingTest:
         classic, active = self.classic(elapsed)[0], self.active(elapsed)[0]
         if self.learning:
             self.app.learn.finish(self.n_before)
-        if not self.failed:
+        counted = not self.hacker()             # a hacker run is just for fun
+        if not self.failed and counted:
             self.app.stats.ghost[:] = self.samples
             self.app.stats.history.append(wpm)
             if self.spec.source == "book":
@@ -644,8 +667,10 @@ class TypingTest:
         result.classic, result.active = classic, active
         result.active_secs = self.active_seconds(elapsed)
         result.pb_before = self.app.history.pb(result)
-        self.app.history.add(result)
-        self.app.save()
+        result.counted = counted
+        if counted:
+            self.app.history.add(result)
+            self.app.save()
         return result
 
 

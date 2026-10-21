@@ -25,3 +25,4 @@ class TestResult:
     classic: float = 0.0                          # wpm over the whole clock
     active: float = 0.0                           # wpm over the time you were typing
     active_secs: float = 0.0                      # ...that time
+    counted: bool = True                          # kept in history and bests (not hacker)

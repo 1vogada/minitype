@@ -206,8 +206,11 @@ def raw_items(app):
                  tags=("fail", "accuracy", "mistakes", "rules")),
         b.choice("funbox", "funbox", FUNBOXES,
                  help="reversed: type words backwards. caps / random case: "
-                      "change the letters. mirror: words are drawn flipped",
-                 tags=("fun", "modifiers", "reversed", "caps", "mirror", "text")),
+                      "change the letters. mirror: words are drawn flipped. "
+                      "hacker: any key finishes the word you're on - mash "
+                      "away, just for fun (not kept as a best)",
+                 tags=("fun", "modifiers", "reversed", "caps", "mirror", "text",
+                       "hacker", "mash")),
         b.choice("memory", "memory", MEMORY_SECS,
                  _off_or(lambda: s.memory, "{}s"),
                  help="the words disappear this many seconds into the test",

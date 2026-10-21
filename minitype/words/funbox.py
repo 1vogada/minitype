@@ -1,5 +1,6 @@
 """Funbox modifiers that change the words you type. "mirror" doesn't change
-the words at all - the renderer flips how each one is drawn."""
+the words at all - the renderer flips how each one is drawn - and nor does
+"hacker": any key you press finishes the word you're on (the runner)."""
 
 import random
 
