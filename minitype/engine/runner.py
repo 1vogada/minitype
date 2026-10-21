@@ -419,24 +419,32 @@ class TypingTest:
         return None
 
     def hacker(self):
-        """The hacker funbox: every key finishes a word, like a hacker in a
-        film. Just for fun - a run isn't kept as a best or in your stats."""
-        return self.app.settings.funbox == "hacker" and self.spec.kind != "zen"
+        """The hacker funboxes, like a hacker in a film: every key is the
+        right one ("hacker") or finishes a word ("god hacker"). Just for fun
+        - a run isn't kept as a best or in your stats."""
+        return (self.app.settings.funbox in ("hacker", "god hacker")
+                and self.spec.kind != "zen")
 
     def _hack(self, el):
-        """Any key: the rest of the word you're on, and the space after it,
-        typed for you - all of it right."""
+        """Any key: the right letter (or the space after a word) - or, as a
+        god hacker, the rest of the word and its space - all of it right."""
         if self.wi >= len(self.words):
             return
-        word = self.words[self.wi]
-        for _ in word[len(self.typed[self.wi]):] + " ":
+        word, typed = self.words[self.wi], self.typed[self.wi]
+        if self.app.settings.funbox == "god hacker" or len(typed) >= len(word):
+            rest = word[len(typed):] + " "
+        else:
+            rest = word[len(typed)]
+        for _ in rest:
             self._press(el, True)
             self._hit()
-        self.typed[self.wi] = word
-        self.wi += 1
-        self.word_start = None
-        if self.spec.kind == "words" and self.wi >= len(self.words):
-            self.done = True
+        self.typed[self.wi] = (typed + rest).rstrip(" ")
+        last = self.spec.kind == "words" and self.wi == len(self.words) - 1
+        if rest.endswith(" ") or (last and self.typed[self.wi] == word):
+            self.wi += 1                      # the word's done: on to the next
+            self.word_start = None
+            if self.spec.kind == "words" and self.wi >= len(self.words):
+                self.done = True
 
     def _can_backspace(self):
         """Whether backspace works: the backspace setting decides, and

@@ -56,7 +56,7 @@ def headline(app, st, r):
 
 def pb_lines(app, st, r):
     if not r.counted:
-        return [f"  {st.dim}hacker mode - just for fun, not kept{RESET}"]
+        return [f"  {st.dim}{app.settings.funbox} mode - just for fun, not kept{RESET}"]
     if not app.settings.res_pb or r.failed or r.spec.source == "zen":
         return []
     if r.wpm > r.pb_before:

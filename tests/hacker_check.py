@@ -1,5 +1,6 @@
-"""The hacker funbox: any key finishes the word you're on, and a hacker
-run isn't kept as a best or in the stats."""
+"""The hacker funboxes: any key types the right letter (hacker) or finishes
+the word you're on (god hacker), and neither run is kept as a best or in
+the stats."""
 
 import os
 import sys
@@ -16,9 +17,9 @@ from minitype.engine.spec import TestSpec                        # noqa: E402
 from minitype.terminal import keys                               # noqa: E402
 from minitype.ui import results                                  # noqa: E402
 
-assert "hacker" in FUNBOXES
+assert "hacker" in FUNBOXES and "god hacker" in FUNBOXES
 app = App()
-app.settings.funbox = "hacker"
+app.settings.funbox = "god hacker"
 spec = TestSpec("w", "words", 3, "custom", words=("alpha", "beta", "gamma"))
 t = TypingTest(app, spec)
 assert t.words == ["alpha", "beta", "gamma"], "the words themselves don't change"
@@ -40,7 +41,7 @@ t2 = TypingTest(app, TestSpec("w", "words", 2, "custom", words=("hello", "you"))
 app.settings.funbox = "off"
 t2.handle("h", time.time())
 t2.handle("e", time.time())
-app.settings.funbox = "hacker"
+app.settings.funbox = "god hacker"
 t2.handle("z", time.time())
 assert t2.typed[0] == "hello" and t2.wi == 1
 # a time test keeps going; zen isn't touched
@@ -59,4 +60,24 @@ for ch in "ok":
     t3.handle(ch, time.time())
 assert t3.result().counted and len(app.history.runs) == runs + 1
 assert keys.is_char("x")
+# hacker: any key is the right letter, one at a time
+app.settings.funbox = "hacker"
+h = TypingTest(app, TestSpec("w", "words", 2, "custom", words=("hi", "yo")))
+for ch in "zz":
+    h.handle(ch, time.time())
+assert h.typed[0] == "hi" and h.wi == 0, "letters, not the whole word"
+h.handle("q", time.time())
+assert h.wi == 1, "at a word's end, any key is the space"
+for ch in "ab":
+    h.handle(ch, time.time())
+assert h.finished(time.time()) and h.typed[1] == "yo", "the last word ends the test"
+assert h.keys == 5 and h.bad_keys == 0 and h.combo == 5
+rh = h.result()
+assert not rh.counted and "hacker mode" in " ".join(results.pb_lines(app, app.styles(), rh))
+# a time test: letter after letter, spaces between
+ht = TypingTest(app, TestSpec("t", "time", 15, "words"))
+n = sum(len(w) + 1 for w in ht.words[:3])
+for _ in range(n):
+    ht.handle("x", time.time())
+assert ht.wi == 3 and ht.typed[:3] == ht.words[:3]
 print("ALL OK")

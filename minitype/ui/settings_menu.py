@@ -207,8 +207,9 @@ def raw_items(app):
         b.choice("funbox", "funbox", FUNBOXES,
                  help="reversed: type words backwards. caps / random case: "
                       "change the letters. mirror: words are drawn flipped. "
-                      "hacker: any key finishes the word you're on - mash "
-                      "away, just for fun (not kept as a best)",
+                      "hacker: any key types the right letter. god hacker: "
+                      "any key finishes the whole word. Mash away - just for "
+                      "fun (not kept as a best)",
                  tags=("fun", "modifiers", "reversed", "caps", "mirror", "text",
                        "hacker", "mash")),
         b.choice("memory", "memory", MEMORY_SECS,

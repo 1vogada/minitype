@@ -239,9 +239,10 @@ Skipping pages:
 - with stop on error: word, backspace always works inside a wrong word, so
   you can't get stuck on it (even with backspace off or on expert)
 - minimum speed and minimum accuracy: fall below and the test fails
-- funbox: reversed words, CAPS, rAnDoM case, mirrored text, and **hacker** -
-  any key finishes the word you're on, so mashing the keyboard types the
-  text like a film hacker (just for fun: not kept as a best or in your stats)
+- funbox: reversed words, CAPS, rAnDoM case, mirrored text, and the film
+  hackers: **hacker** - any key types the right letter - and **god hacker** -
+  any key finishes the whole word (just for fun: not kept as a best or in
+  your stats)
 - memory: the words disappear a few seconds in
 - punctuation, numbers, blind mode, all lowercase (every word in lower
   case, whatever the source)
