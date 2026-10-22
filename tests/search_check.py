@@ -37,7 +37,7 @@ typing = list
 f, app = run(typing("p"))
 assert app.settings.punctuation == "off", "p no longer toggles punctuation"
 f0, _ = run([])
-assert " > difficulty" in f0, f0.split("\n")[3:6]
+assert " > test ›" in f0, f0.split("\n")[3:6]
 
 # plain search: only names containing the text stay; search bar hidden
 f, _ = run(typing("car"))
@@ -48,7 +48,7 @@ shown = [re.sub(r"\s{2,}.*", "", l[3:]).strip() for l in f.split("\n")
 assert set(shown) == {"caret", "pace caret", "caret effect"}, shown
 assert "search  car" in f, "any search shows the bar"
 # sections with no matches disappear, matches keep their headings
-assert "typing screen" in f and "rules" not in f.split("\n")
+assert "in-game" in f and "rules" not in f.split("\n")
 
 # several words must all be in the name
 f, _ = run(typing("pace car"))
@@ -57,7 +57,8 @@ assert [r[3:].split("  ")[0] for r in rows] == ["pace caret"], rows
 
 # backspace without # clears everything at once
 f, _ = run(typing("caret") + [keys.BACKSPACE])
-assert "difficulty" in f and "theme" in f, "whole search cleared"
+assert "pace caret" in f and "ghost" in f and "search" not in f, "whole search cleared"
+assert "settings › in-game › screen › caret" in f, "back in the page the setting lives in"
 
 # #tags: tag or section name; search bar shows; backspace deletes one char
 f, _ = run(typing("#colour"))
@@ -72,7 +73,7 @@ assert "search  #colour " in f and "theme" in f, "one char deleted, bar still vi
 f, _ = run(typing("ab#") + [keys.BACKSPACE])
 assert "search  ab " in f
 f, _ = run(typing("ab#") + [keys.BACKSPACE, keys.BACKSPACE])
-assert "difficulty" in f and not any(l.strip().startswith("search ") for l in f.split("\n")), \
+assert "test ›" in f and not any(l.strip().startswith("search ") for l in f.split("\n")), \
     "no # left: backspace cleared everything (the search bar is gone)"
 # [ and ] never go into the search; they switch sections, search kept
 f, app = run(typing("#stats") + ["]", keys.ENTER], style="tabs")       # header, then results
@@ -80,10 +81,10 @@ assert "search  #stats " in f and "[" not in f.split("\n")[3] and "]" not in f.s
 assert app.settings.res_chart is False, "] ] moved to results, enter toggled its first row"
 f, app = run(typing("#stats") + ["]", "[", keys.ENTER], style="tabs")
 assert app.settings.show_timer is False, "[ came back to header"
-f, app = run(["]", "]", "]", keys.ENTER], style="list")
-assert app.settings.theme != App().settings.theme, "] ] ] jumps to the theme tab in list style too"
-f, app = run([keys.SHIFT_TAB, keys.ENTER], style="tabs")
-assert app.settings.ui_style != App().settings.ui_style, "shift-tab wraps back to the ui tab (the last)"
+f, app = run(["]", keys.ENTER, keys.ENTER], style="list")
+assert app.settings.ui_style != "list", "] jumps to menus in list style too: layout › ui style"
+f, app = run([keys.SHIFT_TAB, keys.ENTER, keys.ENTER], style="tabs")
+assert app.settings.daily_goal != App().settings.daily_goal, "shift-tab wraps back to data (the last): goal"
 # tag plus words: both must hold
 f, _ = run(typing("#caret pace"))
 assert "pace caret" in f and "ghost" not in f
@@ -110,11 +111,11 @@ for style, tabs in (("tabs", "off"), ("sidebar", "top"), ("sidebar", "left"), ("
     f, _ = run(typing("#stats"), style=style, tabs=tabs)
     print(f"== #stats, {style}/{tabs} ==\n" + f)
     assert "challenges" not in f and "drills" not in f, (style, tabs)
-    assert "typing screen" in f and "results" in f
+    assert "in-game" in f and "menus" in f
     # sidebar-left starts on the section buttons: one more enter steps into the rows
     into_rows = [keys.ENTER] if tabs == "left" else []
     f, app = run(typing("#stats") + [keys.TAB] + into_rows + [keys.ENTER],
                  style=style, tabs=tabs)
-    # tab moved to the results section (the ui tab is last), enter toggled its first row
+    # tab moved to menus, where the results screen's rows are; enter toggled its first match
     assert app.settings.res_chart is False, (style, tabs)
 print("ALL OK")

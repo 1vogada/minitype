@@ -68,9 +68,11 @@ assert (s.art_fade, s.fade_top, s.fade_side, s.fade_round) == ("corner", 50, 30,
 s = Settings(); s.apply({"art_fade": "x", "fade_top": 140, "fade_round": -5})
 assert (s.art_fade, s.fade_top, s.fade_round) == ("edges", 50, 50), "out of range falls back"
 pages = {p.name: p for p in sm.build_tree(sm.raw_items(App()))}
-fade = next(c for c in pages["art"].children if getattr(c, "name", "") == "fade")
+look = next(c for c in pages["menus"].children if getattr(c, "name", "") == "look")
+art = next(c for c in look.children if getattr(c, "name", "") == "art")
+fade = next(c for c in art.children if getattr(c, "name", "") == "fade")
 rows = {it.label: it for it in fade.leaves()}
-assert list(rows) == ["fade (all pictures)", "fade", "fade round", "fade curve", "fade top",
+assert list(rows) == ["fade (all pictures)", "fade amount", "fade round", "fade curve", "fade top",
                       "fade start top", "fade side", "fade start", "fade angle"], list(rows)
 assert [c.name for c in fade.children if hasattr(c, "children")] == ["top edge", "side edge"],     "the art's fade is a page of its own, with a page for each edge"
 assert rows["fade start"].value() == "100%" and rows["fade start top"].value() == "100%"

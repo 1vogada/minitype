@@ -93,7 +93,7 @@ assert matching and "sci-fi" in matching[0][2]
 items = sm.build_items(app)
 quote_genre_item = next((it for it in items if it.label == "quote genre"), None)
 assert quote_genre_item is not None, "quote genre item missing from settings items"
-assert quote_genre_item.section == "words", f"expected in words section, got {quote_genre_item.section}"
+assert quote_genre_item.section == "in-game", f"expected in in-game section, got {quote_genre_item.section}"
 
 # Step choice forward and back
 before = app.settings.quote_genre

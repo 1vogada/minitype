@@ -187,8 +187,8 @@ assert "bad: art should be" in err and "huge: art can be at most" in err, err
 os.remove(path)
 
 # ---------------------------------------------------------------- settings rows and the creator
-rows_ = {it.label: it for it in sm.build_items(App()) if it.section != "ui"}
-assert rows_["border"].section == "interface" and rows_["show art"].section == "art"
+rows_ = {it.label: it for it in sm.build_items(App())}
+assert rows_["border"].section == "menus" and rows_["show art"].section == "menus"
 assert rows_["border"].value() == "rounded" and rows_["show art"].value() == "menus"
 app = App()
 d = tc.Draft.from_theme("ocean")

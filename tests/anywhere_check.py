@@ -100,7 +100,7 @@ assert b.settings.theme == names[-1], b.settings.theme      # default, back twic
 c = App()
 items = {it.label: it for it in sm.build_items(c)}
 row = items["all lowercase"]
-assert row.section == "words" and row.value() == "off"
+assert row.section == "in-game" and row.value() == "off"
 row.action(); assert c.settings.lowercase and "lower" in c.settings.flags()
 t = TypingTest(c, TestSpec("c", "words", 3, "custom", ("Hello", "WORLD", "MiXeD")))
 assert t.words == ["hello", "world", "mixed"], t.words
@@ -261,7 +261,7 @@ from minitype.settings import Settings
 z = Settings(); z.apply({"art_picture": "moon", "art_recolour": "own"}); assert (z.art_picture, z.art_recolour) == ("moon", "own")
 z = Settings(); z.apply({"art_picture": "nope", "art_recolour": "x"}); assert (z.art_picture, z.art_recolour) == ("theme", "theme")
 items = {it.label: it for it in sm.build_items(App())}
-assert items["picture"].section == items["picture colours"].section == "art"
+assert items["picture"].section == items["picture colours"].section == "menus"
 # in the gallery: ] [ step the picture, c its colours; enter keeps, esc not
 q = App(); q.settings.theme = "candy"
 seq = iter(["]", "]", "[", "c", keys.ENTER])

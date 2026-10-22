@@ -96,7 +96,7 @@ assert "themes.json" in row.help_text()
 # the toggle is in the look section and reaches what the test screen draws with
 items = sm.build_items(app)
 acc = next(it for it in items if it.label == "accent letters")
-assert acc.section == "theme" and acc.value() == "off"
+assert acc.section == "menus" and acc.value() == "off"
 app.settings.theme = "nord"
 before = app.styles().ok
 acc.action()

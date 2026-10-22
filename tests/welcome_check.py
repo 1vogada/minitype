@@ -70,7 +70,7 @@ assert app.settings.book_marks == {"1984": 6500}, "bookmarks aren't a setting to
 
 # ---------------------------------------------------------------- reset settings
 row = next(it for it in sm.build_items(app) if it.label == "reset settings")
-assert row.section == "progress"
+assert row.section == "data"
 _, frames = drive(app, ["n"], fn=lambda a: sm.reset_settings(a))
 assert "y/n" in frames[0] and app.settings.theme == SETUPS["clean"]["theme"], "n: nothing happens"
 got, frames = drive(app, ["y", keys.DOWN, keys.ENTER], fn=lambda a: sm.reset_settings(a))

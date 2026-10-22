@@ -48,8 +48,9 @@ def _pages(page):
 
 for _top in build_tree(raw_items(App())):        # rows that open a page show its help too
     for _p in _pages(_top):
-        HELP.setdefault(_p.name, _p.help)
-        FIRST.setdefault(_p.name, set()).add(_p.help.split()[0])
+        for _name in (_p.name, _p.name + " ›"):         # its row reads "name ›"
+            HELP.setdefault(_name, _p.help)
+            FIRST.setdefault(_name, set()).add(_p.help.split()[0])
 
 
 def check_inline(frame):
@@ -83,7 +84,7 @@ for n in range(0, 45, 4):
 
 # narrow: sidebar falls back to list with inline help, long help wraps
 SIZE[:] = [30, 12]
-f = run("sidebar", [keys.DOWN, keys.ENTER, keys.DOWN])     # gameplay › rules › backspace
+f = run("sidebar", [keys.ENTER, keys.ENTER, keys.DOWN, keys.DOWN])   # in-game › test › rules › backspace
 rows = f.split("\n")
 sel = next(i for i, r in enumerate(rows) if r.startswith(" > "))
 assert "normal:" in rows[sel + 1] and all(len(r) <= 29 for r in rows), rows

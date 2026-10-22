@@ -117,7 +117,7 @@ assert strip(bar).split() == [">>", "one", "two"] and INV not in bar, strip(bar)
 from minitype.settings import Settings
 assert Settings().art_behind is False
 from minitype.ui import settings_menu as sm
-assert any(it.label == "art behind text" and it.section == "art" for it in sm.build_items(App()))
+assert any(it.label == "art behind text" and it.section == "menus" for it in sm.build_items(App()))
 b = App(); b.settings.theme = "summit"; b.settings.art_behind = True; b.styles()
 W, H = 80, 24
 base = strip(present(["  x"] * 3, W, H)).split("\n")

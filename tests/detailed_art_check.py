@@ -96,7 +96,7 @@ assert len(console._decor["art"]) == len(detailed("island")) + 2
 # ---------------------------------------------------------------- the fun section has the toggle
 items = {it.label: it for it in sm.build_items(app)}
 row = items["art style"]
-assert row.section == "art" and row.value() == "detailed"
+assert row.section == "menus" and row.value() == "detailed"
 row.action(); assert app.settings.art_style == "og"
 row.action(); assert app.settings.art_style == "combined"
 row.action(); assert app.settings.art_style == "upscaled", "the new style is offered"
@@ -142,7 +142,7 @@ codes_f = {c for p in console._decor["art"] for row in p._codes for c in row}
 assert len(codes_s) > len(codes_f) and codes_f <= set(flat.values()) | {""}
 app.settings.art_colours = "shaded"
 items = {it.label: it for it in sm.build_items(app)}
-assert items["art shading"].section == "art" and items["art shading"].value() == "shaded"
+assert items["art shading"].section == "menus" and items["art shading"].value() == "shaded"
 # every picture spans the bottom, in four sizes
 for name in ART:
     d = detailed(name)

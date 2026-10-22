@@ -23,16 +23,20 @@ deep = Page("deep", [row("d1"), row("d2")], "the deepest page")
 inner = Page("inner", [row("i1"), deep], "a page in a page")
 pages = [Page("one", [row("a"), inner, row("b")]), Page("two", [row("c")])]
 m = TreeMenu(pages, {}, "t")
-assert [it.label for it in m.items] == ["a", "inner", "b", "c"]
-assert m.items[1].value() == SUB_MARK and m.items[1].help_text() == "a page in a page"
-m.handle(keys.DOWN); m.handle(keys.ENTER)                    # open inner
+assert [it.label for it in m.items] == ["a", "b", f"inner {SUB_MARK}", "c"], "settings first, then pages"
+assert m.items[2].value() == "3 settings" and m.items[2].help_text() == "a page in a page"
+assert m.items[2].gap and not getattr(m.items[0], "gap", False), "a blank line before the pages"
+m.handle(keys.DOWN); m.handle(keys.DOWN)
+m.handle(keys.RIGHT); assert m.path() == ["one"] and not hits, "right on a page row does nothing"
+m.handle(keys.ENTER)                                         # open inner
 assert m.selected.label == "i1" and m.path() == ["one", "inner"]
-assert [it.label for it in m.items] == ["i1", "deep", "c"], "the other tab keeps its own rows"
-m.handle(keys.DOWN); m.handle(keys.RIGHT)                    # right opens a page too
+assert [it.label for it in m.items] == ["i1", "deep ›", "c"], "the other tab keeps its own rows"
+assert m.items[1].value() == "2 settings"
+m.handle(keys.DOWN); m.handle(keys.ENTER)
 assert m.selected.label == "d1" and m.path() == ["one", "inner", "deep"]
 m.handle(keys.ENTER); assert hits == ["d1"], "a setting's own action still runs"
-assert m.back_out() and m.selected.label == "deep", "esc: up one page, on the row that opened it"
-assert m.back_out() and m.selected.label == "inner" and m.path() == ["one"]
+assert m.back_out() and m.selected.label == "deep ›", "esc: up one page, on the row that opened it"
+assert m.back_out() and m.selected.label == "inner ›" and m.path() == ["one"]
 assert not m.back_out(), "at the top: esc leaves (one column)"
 m.handle(keys.ENTER); assert m.path() == ["one", "inner"]
 m.items[m.cursor].back = None                                # a row with nothing to step back
@@ -41,16 +45,19 @@ m.handle(keys.ENTER)
 m.set_query("d2")                                            # search: every depth
 assert [it.label for it in m.visible() and [m.items[i] for i in m.visible()]] == ["d2"]
 m.set_query("")
-assert m.path() == ["one", "inner"], "the search leaves where you were alone"
+assert m.path() == ["one", "inner", "deep"] and m.selected.label == "d2", \
+    "clearing a search opens the pages down to the row you were on"
 # two columns: esc goes up a page, then to the tabs, then out
 m2 = TreeMenu(pages, {}, "t2", style="sidebar")
 m2.sidebar_tabs = "left"
 console.term_size = lambda: (120, 30)
 assert m2.columns and m2.on_sections
 m2.handle(keys.ENTER); assert not m2.on_sections
-m2.handle(keys.DOWN); m2.handle(keys.ENTER); assert m2.path() == ["one", "inner"]
+m2.handle(keys.DOWN); m2.handle(keys.DOWN); m2.handle(keys.ENTER); assert m2.path() == ["one", "inner"]
 assert m2.back_out() and m2.path() == ["one"] and not m2.on_sections
-assert m2.back_out() and m2.on_sections
+m2.handle(keys.RIGHT); assert m2.path() == ["one"], "right on a page row does nothing here too"
+m2.handle(keys.LEFT); assert m2.on_sections, "left on a page row at the top: back to the tabs"
+m2.handle(keys.ENTER); assert m2.back_out() and m2.on_sections, "esc does the same"
 assert not m2.back_out()
 
 # ---------------------------------------------------------------- as deep as you like
@@ -76,28 +83,16 @@ line = strip(sm.breadcrumb(Styles("mono"), dm)[0]).strip()
 assert line.startswith("settings › … ›") and line.endswith(f"level {len(dm.path())}") \
     and len(dm.path()) > 20 and len(line) <= 60, line
 
-# ---------------------------------------------------------------- a page with a switch
-state = {"on": False}
-flip = lambda: state.update(on=not state["on"])
-sw = Item("", "keyboard", flip, lambda: "on" if state["on"] else "off", back=flip)
-kb = Page("keyboard", [sw, Item("", "layout", lambda: None, lambda: "qwerty")], "the keyboard", main=sw)
-km = TreeMenu([Page("hud", [kb])], {}, "kb")
-assert km.selected.label == "keyboard" and km.selected.value() == "off  ›"
-km.handle(keys.RIGHT); assert state["on"] and km.path() == ["hud"], "right: the switch, not the page"
-km.handle(keys.LEFT); assert not state["on"] and km.path() == ["hud"], "left: the switch back"
-km.handle(keys.ENTER); assert km.path() == ["hud", "keyboard"], "enter opens the rest"
-assert [it.label for it in km.items] == ["keyboard", "layout"]
-
 # ---------------------------------------------------------------- the settings tree
 app = App()
 tree = sm.build_tree(sm.raw_items(app))
 tops = [p.name for p in tree]
-assert tops == ["gameplay", "words", "typing screen", "theme", "effects", "art",
-                "interface", "results", "progress", "ui"], tops
+assert tops == ["in-game", "menus", "data"], tops
 assert "other" not in tops, "every row is placed"
+assert all(isinstance(c, Page) for p in tree for c in p.children), "the tabs hold only pages"
 raw = sm.raw_items(app)
-leaves = [it for p in sm.build_tree(raw) if p.name != "ui" for it in p.leaves()]
-assert len(leaves) == len(raw), "every row exactly once (outside the ui tab)"
+leaves = [it for p in sm.build_tree(raw) for it in p.leaves()]
+assert len(leaves) == len(raw) == len({id(it) for it in leaves}), "every row exactly once"
 assert len(sm.arrange(sm.build_items(app))) == len(sm.build_items(app)), "arranging twice changes nothing"
 # a row nobody filed still shows, in "other"
 extra = Item("", "brand new feature", lambda: None, lambda: "on", section="new")
@@ -123,14 +118,16 @@ def frames(presses, w=110, h=30):
     return [strip(o) for o in out if o.startswith("\x1b[H")]
 
 
-art = [keys.DOWN] * 5 + [keys.RIGHT]                      # the art tab, into its rows
-f = frames(art + [keys.DOWN] * 3 + [keys.ENTER] + [keys.DOWN] * 4 + [keys.ENTER])
+# the menus tab, into its rows; down to look, open it; down to art, open it
+art = [keys.DOWN, keys.RIGHT] + [keys.DOWN] * 3 + [keys.ENTER, keys.DOWN, keys.ENTER]
+f = frames(art + [keys.DOWN] * 2 + [keys.ENTER] + [keys.DOWN] * 4 + [keys.ENTER])
 # frame k is the screen after the k-th key (frame 0 before any)
 crumb = lambda frame: next((l.strip(" │") for l in frame.split("\n") if "settings ›" in l), "")
 n = len(art)                                              # frames after reaching art's rows
-assert crumb(f[n + 4]).startswith("settings › art › fade") and "top edge" not in crumb(f[n + 4]), f[n + 4]
-assert "fade (all pictures)" in f[n + 4] and "top edge" in f[n + 4], "fade's rows, and its pages"
-assert crumb(f[n + 9]).startswith("settings › art › fade › top edge") and "fade start top" in f[n + 9], f[n + 9]
-assert crumb(f[n + 10]).startswith("settings › art › fade") and "top edge" not in crumb(f[n + 10]), "esc: up to fade"
-assert crumb(f[n + 11]) == "" and "art and text" in f[n + 11], "esc esc: back on art's own page"
+assert crumb(f[n]).startswith("settings › menus › look › art") and "art and text ›" in f[n], f[n]
+assert crumb(f[n + 3]).startswith("settings › menus › look › art › fade"), f[n + 3]
+assert "fade (all pictures)" in f[n + 3] and "top edge ›" in f[n + 3], "fade's rows, and its pages"
+assert crumb(f[n + 8]).endswith("fade › top edge") and "fade start top" in f[n + 8], f[n + 8]
+assert crumb(f[n + 9]).endswith("art › fade"), "esc: up to fade"
+assert crumb(f[n + 10]).endswith("look › art") and "art and text ›" in f[n + 10], "esc esc: back on art's page"
 print("ALL OK")

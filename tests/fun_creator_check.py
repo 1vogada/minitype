@@ -131,12 +131,12 @@ for _it in sm.build_items(app):
     rows_.setdefault(_it.label, _it)       # effects' own "fade" comes before art's
 for label in ("bounce", "shake", "pop", "fade", "glitch",
               "effect speed", "flow direction"):
-    assert rows_[label].section == "effects" and rows_[label].preview, label
-assert rows_["caret effect"].section == "typing screen" and rows_["caret effect"].preview, \
+    assert rows_[label].section == "in-game" and rows_[label].preview, label
+assert rows_["caret effect"].section == "in-game" and rows_["caret effect"].preview, \
     "the caret effect sits with the caret"
 assert rows_["effect speed"].value() == "1x"
 rows_["effect speed"].action(); assert s.effect_speed == 1.5
-assert rows_["theme creator"].section == "theme"
+assert rows_["theme creator"].section == "menus"
 s.theme = "bubbly"
 assert len(rows_["theme"].preview()) == 2, "the sample bounces too"
 assert strip("".join(a if a != " " else b for a, b in zip(*map(strip, rows_["theme"].preview())))) == SAMPLE

@@ -121,7 +121,7 @@ def settings_frame(where, w=110, h=26, **extra):
 def corners(rows):
     """The help box's top-left corner character and where it is."""
     for i, r in enumerate(rows):
-        j = r.find("expert:")
+        j = r.find("what a wrong")       # enter opened in-game › test: its rules row's help
         if j >= 0:
             above = rows[i - 1]
             return above[j - 2], i - 1, j - 2

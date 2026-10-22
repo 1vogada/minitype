@@ -3,9 +3,9 @@
 **Start with `docs/HANDOFF.md` → "Pick up here"**: what was left open last
 session, what to do next, and how the owner works.
 
-**Known issue:** the art fade settings (Settings → art fade tab: fade, fade
-top, fade start top, fade side, fade start, fade angle, fade round, fade
-curve; `d` in the gallery) each amount is a strength (0% = no fade, 100% = no
+**Known issue:** the art fade settings (Settings → menus → look → art →
+fade: fade amount, fade top, fade start top, fade side, fade start, fade
+angle, fade round, fade curve; `d` in the gallery) each amount is a strength (0% = no fade, 100% = no
 art as far as fade start reaches, in between = more and more faded, on an
 exponential curve with the subject kept whole until the very end) - that
 part is as intended, and it has been run and steered in a real terminal.

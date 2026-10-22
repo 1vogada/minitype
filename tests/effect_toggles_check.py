@@ -6,9 +6,9 @@ from minitype.ui import settings_menu as sm
 
 app = App()
 s = app.settings
-rows = {it.label: it for it in sm.build_items(app) if it.section != "ui"}   # the originals
+rows = {it.label: it for it in sm.build_items(app) }
 row = rows["theme background"]
-assert row.section == "theme" and row.value() == "theme" and row.preview
+assert row.section == "menus" and row.value() == "theme" and row.preview
 row.action(); assert s.theme_background == "always"
 row.action(); assert s.theme_background == "off"
 row.action(); assert s.theme_background == "theme"
@@ -16,7 +16,7 @@ for label, field in (("gradients", "theme_gradient"),
                      ("gradient flow", "theme_flow"), ("heat", "theme_heat"),
                      ("bold / italic", "theme_text_style")):
     row = rows[label]
-    assert row.section == "theme" and row.value() == "on" and getattr(s, field), label
+    assert row.section == "menus" and row.value() == "on" and getattr(s, field), label
     assert row.preview, f"{label} shows the sample line"
     row.action(); assert row.value() == "off" and not getattr(s, field), label
     row.back(); assert getattr(s, field), label

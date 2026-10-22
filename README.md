@@ -70,15 +70,16 @@ minitype
   values.
 - **during a test**: esc pauses it (the clock stops; the box asks
   "Paused - resume?": enter or esc resumes, No leaves); with nothing typed
-  yet, or with settings → gameplay → pause on esc off, esc goes
+  yet, or with settings → in-game → test → rules → pause on esc off, esc goes
   straight to the menu. Tab restarts, ctrl-backspace deletes a word; in
   zen mode enter finishes
-- **settings** are pages inside pages, like a game's options menu: the
-  tabs (gameplay, words, typing screen, theme, effects, art, interface,
-  results, progress, and ui: every look switch in one place) hold
-  settings and further pages - a row ending in ›
-  opens one (enter or right), esc or left goes back up a level, and the
-  path shows under the title (settings › art › fade › top edge). Search
+- **settings** are pages inside pages, like a game's options menu: three
+  general tabs (in-game, menus, data) hold topic pages, and those hold the
+  settings, or more pages where a topic splits again. A row that opens a
+  page reads "name ›" with how many settings are in it, after a blank
+  line; the arrows never change anything on it. Enter opens it, esc or
+  left goes back up a level, and the path shows under the title
+  (settings › menus › look › art › fade › top edge). Search
   finds a setting at any depth; old section names and page names work as
   search tags (#look, #fun, #fade). The layout is one table,
   `minitype/ui/settings_tree.py`: adding a setting is a row and its place

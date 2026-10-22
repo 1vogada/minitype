@@ -41,12 +41,10 @@ assert (s.text_contrast, s.text_bold, s.fade_on) == ("flip", True, False)
 s.apply({"text_contrast": "loud"})
 assert s.text_contrast == "flip"
 items = sm.arrange(sm.build_items(App()))
-where = {it.label: it.section for it in items if it.section != "ui"}
-in_ui = {it.label for it in items if it.section == "ui"}
-assert {"text contrast", "bold text", "see-through", "fade (all pictures)", "text panel",
-        "art behind text", "ui style", "border"} <= in_ui, in_ui
-assert where["text contrast"] == "art" and where["bold text"] == "art"
-assert where["fade (all pictures)"] == "art"
+where = {it.label: it.section for it in items}
+assert where["text contrast"] == "menus" and where["bold text"] == "menus"
+assert where["fade (all pictures)"] == "menus"
+assert len({id(it) for it in items}) == len(items), "every setting shows once"
 
 # ---------------------------------------------------------------- on screen
 W, H = 120, 30
@@ -174,5 +172,5 @@ from minitype.engine.render import Painter
 p = Painter(st2, a2.settings, ["ab", "cd"], ["", ""], 0, {}, False, False)
 assert any(st2.untyped in c[0] for c in p.word(1)), "untyped words use it"
 items2 = sm.build_items(App())
-assert {it.section for it in items2 if it.label == "lighter untyped"} == {"theme", "ui"}
+assert {it.section for it in items2 if it.label == "lighter untyped"} == {"menus"}
 print("ALL OK")

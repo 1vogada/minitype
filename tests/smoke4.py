@@ -199,12 +199,12 @@ for style in ("list", "sidebar", "tabs"):
 SIZE[:] = [80, 24]
 app.settings.ui_style = "tabs"
 menu = Menu(sm.build_items(app), {}, "s", style="tabs")
-assert menu.selected.section == "gameplay"
-menu.handle("]"); assert menu.selected.section == "words"
+assert menu.selected.section == "in-game"
+menu.handle("]"); assert menu.selected.section == "menus"
 for _ in range(10):
     menu.handle(keys.DOWN)
-assert menu.selected.section == "words"
-menu.handle(keys.PGUP); assert menu.selected.section == "gameplay"
+assert menu.selected.section == "menus"
+menu.handle(keys.PGUP); assert menu.selected.section == "in-game"
 app.settings.ui_style = "list"
 # main menu: right changes time, enter starts it; hotkeys start modes
 app.cursors.clear()
@@ -228,7 +228,7 @@ assert "arrows move" not in last_text()
 app.settings.hints = True
 # every settings row steps both ways
 for it in sm.build_items(app):
-    if it.label in ("word list", "edit keys", "save to disk", "reset", "reset settings", "book filter",
+    if it.label in ("word list", "edit keys", "save to disk", "reset bad words", "reset settings", "book filter",
                     "spotify", "spotify client id", "download liked songs",
                     "clear kept lyrics",
                     "theme creator"):

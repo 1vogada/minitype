@@ -39,7 +39,7 @@ console.size = lambda: tuple(SIZE)
 console.present = lambda *a, **k: None
 app = App()
 app.settings.ui_style = "list"                # one column: down, right changes the row
-seq = iter([keys.DOWN, keys.ENTER, keys.RIGHT])   # into gameplay › rules; stop on error: off -> letter
+seq = iter([keys.ENTER, keys.ENTER, keys.DOWN, keys.RIGHT])   # in-game › test › rules; stop on error: off -> letter
 
 
 def stop_after(*a, **k):
@@ -92,25 +92,24 @@ for style, tabs in (("list", "off"), ("sidebar", "off"), ("sidebar", "top"),
                     ("sidebar", "left"), ("tabs", "off")):
     m = Menu(items, {}, "s", style=style)
     m.sidebar_tabs = tabs
-    assert m.selected.section == "gameplay"
-    m.handle(keys.TAB); assert m.selected.section == "words", (style, tabs)
-    m.handle("]"); assert m.selected.section == "typing screen"
-    m.handle(keys.PGDN); assert m.selected.section == "theme"
-    m.handle(keys.SHIFT_TAB); assert m.selected.section == "typing screen"
-    m.handle("["); m.handle(keys.PGUP); assert m.selected.section == "gameplay"
-    m.handle(keys.SHIFT_TAB); assert m.selected.section == "ui", "wraps"
+    assert m.selected.section == "in-game"
+    m.handle(keys.TAB); assert m.selected.section == "menus", (style, tabs)
+    m.handle("]"); assert m.selected.section == "data"
+    m.handle(keys.PGDN); assert m.selected.section == "in-game", "wraps"
+    m.handle(keys.SHIFT_TAB); assert m.selected.section == "data", "wraps back"
+    m.handle("["); assert m.selected.section == "menus"
+    m.handle(keys.PGUP); assert m.selected.section == "in-game"
     paged = style == "tabs" or tabs != "off"
-    m.handle(keys.TAB)                          # back to gameplay
     if tabs == "left":
         m.handle(keys.ENTER)                    # starts on the buttons: into the rows
-    for _ in range(20):                         # more than gameplay has
+    for _ in range(70):                         # more than in-game has
         m.handle(keys.DOWN)
-    assert (m.selected.section == "gameplay") == paged, (style, tabs, m.selected.section)
+    assert (m.selected.section == "in-game") == paged, (style, tabs, m.selected.section)
 # left/right still change values; on the "edit keys" row (no back) they switch tabs when paged
 m = Menu(items, {}, "s", style="sidebar"); m.sidebar_tabs = "left"
 before = app.settings.difficulty
 m.handle(keys.RIGHT); assert app.settings.difficulty == before, "right on the buttons: into the rows"
-m.handle(keys.RIGHT); assert app.settings.difficulty != before and m.selected.section == "gameplay"
+m.handle(keys.RIGHT); assert app.settings.difficulty != before and m.selected.section == "in-game"
 # Tab on results (horizontal) still restarts, it's not a section key there
 r = Menu([__import__("minitype.ui.menu", fromlist=["Item"]).Item(keys.TAB, "restart", lambda: "R")],
          horizontal=True)
@@ -128,8 +127,8 @@ def frame(style, tabs, presses, w=90, h=24):
     a.settings.art = "off"     # plain help lines (boxed with art: help_box_check)
     a.settings.ui_style, a.settings.sidebar_tabs = style, tabs
     out = []
-    # two esc: in the rows of the two-column layout the first only steps out
-    seq = iter(presses + [keys.ESC, keys.ESC])
+    # esc climbs out of the pages, then out of the rows, then leaves
+    seq = iter(presses + [keys.ESC] * 6)
     with mock.patch.object(keys, "read_key", lambda *x, **k: next(seq)), \
             mock.patch.object(console, "present", lambda lines, focus=None, pinned=(): out.append((lines, focus, pinned))):
         sm.settings_menu(a)
@@ -139,23 +138,24 @@ def frame(style, tabs, presses, w=90, h=24):
 
 for tabs in ("top", "left"):
     into_rows = [keys.ENTER] if tabs == "left" else []   # left starts on the buttons
-    lines, focus = frame("sidebar", tabs, [keys.TAB] + into_rows + [keys.DOWN, keys.DOWN])
+    # menus › layout, down to its border row
+    lines, focus = frame("sidebar", tabs, [keys.TAB] + into_rows + [keys.ENTER, keys.DOWN, keys.DOWN])
     print(f"===== sidebar tabs {tabs}, 90 wide =====")
     print("\n".join(lines))
     assert lines[focus].lstrip().startswith(">") or "> " in lines[focus] or ">" in lines[focus], lines[focus]
-    assert "all lowercase" in lines[focus], lines[focus]
+    assert "border" in lines[focus], lines[focus]
     if tabs == "top":
-        assert "words" in lines[3] and "all lowercase" in "\n".join(lines)
-        assert "difficulty" not in "\n".join(lines), "one section at a time"
-        assert "| all lowercase" in lines[focus], "panel level with the selection"
+        assert "menus" in lines[3] and "border" in "\n".join(lines)
+        assert "test ›" not in "\n".join(lines), "one section at a time"
+        assert "| border" in lines[focus], "panel level with the selection"
     else:
-        assert any(l.startswith("   gameplay") for l in lines)
-        assert "difficulty" not in "\n".join(lines)
-        assert "every word in lower case" in lines[focus + 1], lines[focus + 1]
+        assert any(l.startswith("   in-game") for l in lines)
+        assert "test ›" not in "\n".join(lines)
+        assert "a frame around" in lines[focus + 1], lines[focus + 1]
 
 # narrow: sidebar+tabs falls back to the tabs layout, never wider than the screen
 lines, focus = frame("sidebar", "left", [keys.TAB], w=40, h=14)
 print("===== sidebar tabs left, 40 wide =====")
 print("\n".join(lines))
-assert "numbers" not in lines[focus] and "word list" in lines[focus]
+assert "layout ›" in lines[focus], lines[focus]      # menus' first row
 print("ALL OK")

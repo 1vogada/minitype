@@ -367,6 +367,8 @@ class Menu:
                 section = item.section
                 if section and not item.tab:    # a tab row says it all itself
                     lines.append(f"  {st.dim}{section}{RESET}")
+            if getattr(item, "gap", False) and lines:
+                lines.append("")                # a page row's blank line (tree_menu)
             sel = i == self.cursor
             if sel:
                 focus = len(lines)

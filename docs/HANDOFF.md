@@ -22,11 +22,17 @@ agent's memory don't travel, so this section is the memory.
    TreeMenu: a Menu over pages; each top page remembers how deep you are;
    rows ending in › open a page; esc / left go up) and
    `minitype/ui/settings_tree.py` (TREE: the whole grouping in one table;
-   unplaced rows land in an "other" tab). Tabs: gameplay, words, typing
-   screen, theme, effects, art, interface, results, progress, ui (all look
-   switches, last). A new install gets the welcome screen
+   unplaced rows land in an "other" tab). Regrouped 2026-10-22 at the
+   owner's ask: three general tabs - in-game (test, words, practice,
+   screen), menus (layout, help, results screen, look › colours / art),
+   data (goal, saving, reset) - holding only pages, the pages holding the
+   settings. No "ui" copy tab any more: every setting lives in one place.
+   Page rows read "name ›" + a settings count after a blank line, have no
+   value, and ignore right (enter opens; left / esc go up, left at the top
+   back to the tabs). Clearing a search opens the pages down to the row
+   you were on. A new install gets the welcome screen
    (`ui/welcome.py`, from `app.main` when `App.load` finds nothing saved -
-   `app.first_run` - and from settings → progress → reset settings): pick
+   `app.first_run` - and from settings → data → reset → reset settings): pick
    one of `settings.SETUPS` ("clean", "art": both the owner's own), shown
    live as you move, applied with `App.use_setup` (everything back to
    default, then the setup; bookmarks kept). The `Settings` defaults stay
@@ -184,8 +190,7 @@ agent's memory don't travel, so this section is the memory.
   the text; floating help goes over its edge) and returns the box's
   columns per row; overlay_art(..., dim=) darkens the art there
   (`_dimmed`, PANEL_DIM) and the letters draw over it like art behind text.
-- Settings tab "ui": copies of the UI_TAB rows (settings_menu) added
-  by arrange(); tests that index rows by label skip section "ui".
+- (The settings "ui" tab of copied rows was removed on 2026-10-22.)
   see_through (0-100%) sets how bright the art shows through the help
   box, text panel and dialogs (`console._see_through`, `_over`).
 - text_lighten: `console.present` lightens the text colours of menu

@@ -36,7 +36,7 @@ from .book_menu import edit_book_filter, filter_label
 from .key_editor import key_editor
 from .anywhere import warn
 from .menu import Item, title_lines
-from .settings_tree import TREE, UI_TAB, arrange, build_tree   # noqa: F401  (TREE, UI_TAB: for tests)
+from .settings_tree import TREE, arrange, build_tree   # noqa: F401  (TREE: for tests)
 from .tree_menu import TreeMenu
 from .preview import theme_sample
 from .screen import menu_loop

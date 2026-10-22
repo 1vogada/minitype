@@ -8,14 +8,12 @@ sections (the tabs down the side in the two-column layout).
 
 TreeMenu is a Menu over such pages. Every top page remembers how deep you
 went into it (its trail of open pages), and the rows shown for it are its
-innermost open page's. A row that opens a page shows SUB_MARK; enter or
-right opens it, esc (or left, on a row with no value to step) goes back up
-one level - then out to the tabs, then out of the screen, as before. A
-search looks through every setting at every depth.
-
-A page can have a `main` setting - one of its rows - as a game menu's HUD
-element does ("keyboard: on ›"): its row shows that setting's value, left
-and right change it right there, and enter opens the page with the rest.
+innermost open page's. A row that opens a page reads "name ›" with how
+many settings are in it, and sits after the page's settings, a blank line
+down. It has no value: the arrows never change anything on it. Enter opens
+it; esc (or left, on a row with no value to step) goes back up one level -
+then out to the tabs, then out of the screen, as before. A search looks
+through every setting at every depth.
 
 Building one: TreeMenu([Page("typing", [row, row, Page("drills", [...])]),
 ...]). To add a setting, make its row and put it in a page; to regroup,
@@ -30,11 +28,10 @@ SUB_MARK = "›"
 
 class Page:
     """A page of rows: Items, and Pages of their own. `help` shows on the
-    row that opens it; `main`, one of its rows, makes that row a switch as
-    well (see the module notes)."""
+    row that opens it."""
 
-    def __init__(self, name, children=(), help="", main=None):
-        self.name, self.children, self.help, self.main = name, list(children), help, main
+    def __init__(self, name, children=(), help=""):
+        self.name, self.children, self.help = name, list(children), help
 
     def leaves(self):
         """Every setting under this page, at any depth, in order."""
@@ -80,17 +77,10 @@ class TreeMenu(Menu):
             def open_page():
                 self.trail[top].append(page)
                 self._refresh(first_of=top)
-            main = page.main
-            if main is not None:              # a switch that opens its page
-                item = Item("", page.name, main.action,
-                            lambda: f"{main.value()}  {SUB_MARK}", back=main.back,
-                            help=(page.help or main.help_text()) + ". Left and right "
-                                 "change it, enter opens the rest",
-                            section=top, enter=open_page, tags=("page",))
-            else:
-                item = Item("", page.name, open_page, lambda: SUB_MARK,
-                            help=page.help or f"{page.count()} settings", section=top,
-                            tags=("page",))
+            n = page.count()
+            item = Item("", f"{page.name} {SUB_MARK}", open_page,
+                        lambda: f"{n} setting{'' if n == 1 else 's'}",
+                        help=page.help, section=top, tags=("page",))
             item.page = page
             self._openers[key] = item
         return self._openers[key]
@@ -103,8 +93,12 @@ class TreeMenu(Menu):
             if self.query:
                 rows = list(top.leaves())
             else:
-                rows = [self._opener(top.name, c) if isinstance(c, Page) else c
-                        for c in self.trail[top.name][-1].children]
+                children = self.trail[top.name][-1].children
+                settings = [c for c in children if not isinstance(c, Page)]
+                pages = [self._opener(top.name, c) for c in children if isinstance(c, Page)]
+                for i, opener in enumerate(pages):
+                    opener.gap = bool(settings) and i == 0   # a blank line between
+                rows = settings + pages
             for row in rows:
                 row.section = top.name
             items += rows
@@ -122,9 +116,27 @@ class TreeMenu(Menu):
         at = next((i for i, it in enumerate(self.items) if it is keep), 0)
         self._move_to(at) if self.items else None
 
+    @staticmethod
+    def _pages_to(page, item):
+        """The pages from `page` down to the one holding `item`, or None."""
+        for child in page.children:
+            if child is item:
+                return [page]
+            if isinstance(child, Page):
+                inner = TreeMenu._pages_to(child, item)
+                if inner:
+                    return [page] + inner
+        return None
+
     def set_query(self, query):
         searching = bool(query) != bool(self.query)
+        picked = self.selected if searching and not query and self.items else None
         self.query = query
+        if picked is not None:                # search cleared: open the pages down to it
+            top = next((p for p in self.pages if p.name == picked.section), None)
+            path = self._pages_to(top, picked) if top else None
+            if path:
+                self.trail[top.name] = path
         if searching:
             self._refresh()
         super().set_query(query)
@@ -151,10 +163,15 @@ class TreeMenu(Menu):
         return super().back_out()
 
     def handle(self, key):
-        if (key == keys.LEFT and self.items and not self.query
-                and self.selected.back is None
-                and not (self.columns and self.on_sections) and self.up()):
-            return True, None                 # left on a row with nothing to step: up a page
+        on_rows = self.items and not self.query and not (self.columns and self.on_sections)
+        if on_rows and key == keys.LEFT and self.selected.back is None:
+            if self.up():
+                return True, None             # left on a row with nothing to step: up a page
+            if self.columns and hasattr(self.selected, "page"):
+                self.on_sections = True       # a page row at the top: back to the tabs
+                return True, None
+        if on_rows and key == keys.RIGHT and hasattr(self.selected, "page"):
+            return True, None                 # a page row: only enter opens it
         return super().handle(key)
 
     def nav_hint(self):
