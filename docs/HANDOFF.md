@@ -32,7 +32,11 @@ agent's memory don't travel, so this section is the memory.
    back to the tabs). Clearing a search opens the pages down to the row
    you were on. With side tabs on the left, the pages you came through
    stay as columns beside the one you're on (`TreeMenu._render_sidebar_left`);
-   when they don't fit, the outermost go first (`ROWS_ROOM`). A new install gets the welcome screen
+   when they don't fit, the outermost go first (`ROWS_ROOM`). A page row
+   under the cursor shows what's in it in a dim column further right
+   (`_preview_column`: settings with values, then pages), so right steps
+   into what you already see; it's dropped before the page you're on
+   loses room. A new install gets the welcome screen
    (`ui/welcome.py`, from `app.main` when `App.load` finds nothing saved -
    `app.first_run` - and from settings → data → reset → reset settings): pick
    one of `settings.SETUPS` ("clean", "art": both the owner's own), shown

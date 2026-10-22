@@ -141,4 +141,10 @@ assert 0 <= at(">> menus") < at(">> look ›") < at(">> art ›") < at(">> fade 
 # narrow: the outermost columns give way, the page you're on keeps its room
 cols = columns(frames(into_fade, w=80)[len(into_fade)])
 assert ">> fade ›" in cols and "menus" not in cols and "look ›" not in cols, cols
+# a page row under the cursor shows what's in it, further right; right steps in
+on_test = [keys.RIGHT]                                    # in-game's rows: on "test ›"
+cols = columns(frames(on_test, w=130)[1])
+assert 0 <= at("> test ›") < at("rules ›") and at("mistakes ›") == at("rules ›"), cols
+cols = columns(frames(on_test + [keys.RIGHT], w=130)[2])  # into test: on "rules ›"
+assert at(">> test ›") < at("> rules ›") < at("difficulty") and "stop on error  off" in cols, cols
 print("ALL OK")

@@ -183,22 +183,52 @@ class TreeMenu(Menu):
         the way (the one you went into marked), then the page you're on. When
         they don't all fit, the outermost columns go first, buttons included:
         the page you're on always keeps ROWS_ROOM."""
-        trail = [] if self.query or not self.items else self.trail.get(self.selected.section, [])
-        cols = [self._page_column(st, page, inner) for page, inner in zip(trail, trail[1:])]
-        if not cols:
+        if self.query or not self.items:
             return super()._render_sidebar_left(st, width, label_width)
-        cols.insert(0, self._section_column(st))
+        trail = self.trail.get(self.selected.section, [])
+        rows = self._in_section(self.selected.section)
+        cols = [self._section_column(st)]
+        cols += [self._page_column(st, page, inner) for page, inner in zip(trail, trail[1:])]
+        # a page row under the cursor shows what's in it, further right
+        peek = None
+        if not self.on_sections and hasattr(self.selected, "page"):
+            peek = self._preview_column(st, self.selected.page)
+            own = max(3 + max(label_width, len(self.items[i].label) + 2)
+                      + len(self.items[i].value() if self.items[i].value else "") for i in rows) + 2
+            own = max(own, ROWS_ROOM)
+            room = lambda: width - sum(w + 3 for _, w in cols) - own - 3
+            while len(cols) > 1 and room() < peek[1]:
+                cols.pop(0)
+            if room() < peek[1]:
+                peek = None
         while cols and width - sum(w + 3 for _, w in cols) < ROWS_ROOM:
             cols.pop(0)
         on = self.on_sections and len(cols) == len(trail)   # the buttons still show
-        lines, focus = self._rows(st, self._in_section(self.selected.section), label_width,
-                                  width=width - sum(w + 3 for _, w in cols), headings=False,
-                                  active=not on)
+        lines, focus = self._rows(st, rows, label_width,
+                                  width=own if peek else width - sum(w + 3 for _, w in cols),
+                                  headings=False, active=not on)
         if on:
             focus = self.sections().index(self.selected.section)
+        if peek:
+            lines = self._beside(st, lines, peek[0], own)
         for col, w in reversed(cols):
             lines = self._beside(st, col, lines, w)
         return lines, focus
+
+    def _preview_column(self, st, page):
+        """What's in the page under the cursor, dim: its settings with their
+        values, then its pages. Right steps into it. Returns (lines, width)."""
+        settings = [c for c in page.children if not isinstance(c, Page)]
+        pages = [c for c in page.children if isinstance(c, Page)]
+        lw = max((len(c.label) for c in settings), default=0) + 2
+        lines = [f"   {st.dim}{c.label.ljust(lw)}{c.value() if c.value else ''}{RESET}"
+                 for c in settings]
+        if settings and pages:
+            lines.append("")
+        lines += [f"   {st.dim}{c.name} {SUB_MARK}{RESET}" for c in pages]
+        texts = [c.label.ljust(lw) + (c.value() if c.value else "") for c in settings] \
+            + [c.name + " " + SUB_MARK for c in pages]
+        return lines, max(map(len, texts), default=0) + 4
 
     def _page_column(self, st, page, inner):
         """A page you came through: its rows by name, dim, and the page you
