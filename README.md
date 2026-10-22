@@ -77,7 +77,7 @@ minitype
   general tabs (in-game, menus, data) hold topic pages, and those hold the
   settings, or more pages where a topic splits again. A row that opens a
   page reads "name ›" with how many settings are in it, after a blank
-  line; the arrows never change anything on it. Enter opens it, esc or
+  line; the arrows never change anything on it. Enter or right opens it, esc or
   left goes back up a level, and the path shows under the title
   (settings › menus › look › art › fade › top edge). Search
   finds a setting at any depth; old section names and page names work as

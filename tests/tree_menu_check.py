@@ -27,8 +27,8 @@ assert [it.label for it in m.items] == ["a", "b", f"inner {SUB_MARK}", "c"], "se
 assert m.items[2].value() == "3 settings" and m.items[2].help_text() == "a page in a page"
 assert m.items[2].gap and not getattr(m.items[0], "gap", False), "a blank line before the pages"
 m.handle(keys.DOWN); m.handle(keys.DOWN)
-m.handle(keys.RIGHT); assert m.path() == ["one"] and not hits, "right on a page row does nothing"
-m.handle(keys.ENTER)                                         # open inner
+m.handle(keys.RIGHT)                                         # right opens a page, like enter
+assert not hits, "right on a page row changes nothing"
 assert m.selected.label == "i1" and m.path() == ["one", "inner"]
 assert [it.label for it in m.items] == ["i1", "deep ›", "c"], "the other tab keeps its own rows"
 assert m.items[1].value() == "2 settings"
@@ -55,7 +55,8 @@ assert m2.columns and m2.on_sections
 m2.handle(keys.ENTER); assert not m2.on_sections
 m2.handle(keys.DOWN); m2.handle(keys.DOWN); m2.handle(keys.ENTER); assert m2.path() == ["one", "inner"]
 assert m2.back_out() and m2.path() == ["one"] and not m2.on_sections
-m2.handle(keys.RIGHT); assert m2.path() == ["one"], "right on a page row does nothing here too"
+m2.handle(keys.RIGHT); assert m2.path() == ["one", "inner"], "right opens it here too"
+m2.handle(keys.LEFT); assert m2.path() == ["one"], "left: back up"
 m2.handle(keys.LEFT); assert m2.on_sections, "left on a page row at the top: back to the tabs"
 m2.handle(keys.ENTER); assert m2.back_out() and m2.on_sections, "esc does the same"
 assert not m2.back_out()

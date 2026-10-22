@@ -28,7 +28,7 @@ agent's memory don't travel, so this section is the memory.
    data (goal, saving, reset) - holding only pages, the pages holding the
    settings. No "ui" copy tab any more: every setting lives in one place.
    Page rows read "name ›" + a settings count after a blank line, have no
-   value, and ignore right (enter opens; left / esc go up, left at the top
+   value (enter or right opens; left / esc go up, left at the top
    back to the tabs). Clearing a search opens the pages down to the row
    you were on. A new install gets the welcome screen
    (`ui/welcome.py`, from `app.main` when `App.load` finds nothing saved -

@@ -10,8 +10,8 @@ TreeMenu is a Menu over such pages. Every top page remembers how deep you
 went into it (its trail of open pages), and the rows shown for it are its
 innermost open page's. A row that opens a page reads "name ›" with how
 many settings are in it, and sits after the page's settings, a blank line
-down. It has no value: the arrows never change anything on it. Enter opens
-it; esc (or left, on a row with no value to step) goes back up one level -
+down. It has no value: the arrows never change anything on it. Enter or
+right opens it; esc (or left, on a row with no value to step) goes back up one level -
 then out to the tabs, then out of the screen, as before. A search looks
 through every setting at every depth.
 
@@ -171,7 +171,7 @@ class TreeMenu(Menu):
                 self.on_sections = True       # a page row at the top: back to the tabs
                 return True, None
         if on_rows and key == keys.RIGHT and hasattr(self.selected, "page"):
-            return True, None                 # a page row: only enter opens it
+            return True, self.selected.activate()   # a page row: right opens it, like enter
         return super().handle(key)
 
     def nav_hint(self):
