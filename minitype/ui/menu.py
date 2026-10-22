@@ -295,8 +295,11 @@ class Menu:
         it stays next to the selection however far the menu has scrolled.
 
         With corner art on, it's boxed and floating (console.FLOAT): the
-        art keeps its size and the box goes over it, readable on top."""
+        art keeps its size and the box goes over it, readable on top. With
+        the help box in a corner it goes there, art or not."""
         text = item.help_text()
+        if (text or item.preview) and self.help_pos != "inline":
+            return self._help_corner(st, text, item, width)
         indent = HELP_INDENT if self.show_keys else HELP_INDENT - 1
         boxed = console.art_shown()
         room = max(10, width - indent - (4 if boxed else 2))
@@ -306,8 +309,6 @@ class Menu:
             lines += item.preview()
         if not boxed or not lines:
             return [" " * indent + ln for ln in lines]
-        if self.help_pos != "inline":
-            return self._help_corner(st, text, item, width)
         inner = min(max(map(console.visible_len, lines)), room)
         edge = " " * (indent - 2) + console.FLOAT
         return [edge + ln for ln in self._help_box(lines, inner, st.dim, corner=False)]

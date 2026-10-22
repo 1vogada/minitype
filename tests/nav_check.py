@@ -139,6 +139,14 @@ assert corners(settings_frame("top right", help_border="frame", border="heavy"))
 # a frame with two-column sides can't be a text box's: single lines instead
 assert corners(settings_frame("top right", help_border="frame", border="thick"))[0] == "┌"
 assert "help border" in [it.label for it in sm.build_items(App())]
+# with the art off the help still goes to the corner it's set to, at the top or the bottom
+for where in HELP_POSITIONS[1:]:
+    for border in ("rounded", "off"):
+        rows = settings_frame(where, art="off", border=border)
+        got, top, col = corners(rows)
+        assert got == "╔", (where, border, got)
+        assert (top < 3) == where.startswith("top"), (where, border, top)
+        assert (col > 40) == where.endswith("right"), (where, border, col)
 
 # in a corner with the text panel on, the box keeps clear of both panels:
 # beside the text panel on the left, above the key hints' panel at the bottom

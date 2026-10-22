@@ -178,8 +178,8 @@ def present(lines, focus=None, pinned=(), scene="menu"):
     view = lines[top:top + body_h]
     d = _decor
     art = d["art"] if art_shown(scene) else None
-    if pinned or art or d["border"]:
-        view += [""] * (body_h - len(view))     # full height: pinned / art / frame
+    if pinned or art or d["border"] or corner[1]:
+        view += [""] * (body_h - len(view))     # full height: pinned / art / frame / corner box
     view += pinned
     rows = [clip(line, w - 1) for line in view]
     # what a corner help box must keep clear of: per row, the first column
