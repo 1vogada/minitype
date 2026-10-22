@@ -82,7 +82,8 @@ for where in HELP_POSITIONS[1:]:
         hints = next(i for i, r in enumerate(rows) if "arrows" in r)
         assert bottom < hints and bottom >= hints - 3, (where, bottom, hints)
     if where.endswith("right"):
-        assert rows[t].rstrip().endswith("╗│"), (where, rows[t])   # against the right edge
+        # a column short of the right edge: as far from it as the top row is from the top
+        assert rows[t].rstrip().endswith("╗ │"), (where, rows[t])
     else:
         # beside the menu text, never over it
         for r in range(t, bottom + 1):

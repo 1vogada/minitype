@@ -39,6 +39,7 @@ _decor = {"border": None, "border_style": "", "art": None, "art_scope": "menus",
 _last_frame = []        # the last present()'s arguments, for repaint()
 _corner = {"where": None, "lines": []}
 _corner_last = []   # a help box for a corner of the next frame
+CORNER_SIDE_GAP = 1     # blank columns between a corner box and the side
 _overlay = []           # lines of a box drawn over the middle of every frame (a dialog)
 
 
@@ -654,11 +655,13 @@ def _in_corner(rows, taken, corner, width, bottom):
     where, box = corner
     bw, bh = max(visible_len(b) for b in box), len(box)
     top = 0 if where.startswith("top") else max(0, bottom - bh)
+    # a column of space at the side: a cell is about twice as tall as it is
+    # wide, so that matches the gap above or below the box to the frame
     if where.endswith("right"):
-        left = max(0, width - bw)
+        left = max(0, width - bw - CORNER_SIDE_GAP)
     else:
         need = max((taken.get(r, 0) for r in range(top, top + bh)), default=0)
-        left = min(need, max(0, width - bw))
+        left = min(max(need, CORNER_SIDE_GAP), max(0, width - bw))
     return _stamp(rows, box, top, left)
 
 
