@@ -867,11 +867,17 @@ def draw(app, st, menu):
     return lines, focus
 
 
-def settings_menu(app):
-    menu = TreeMenu(build_tree(raw_items(app)), app.cursors, "settings")
+def settings_menu(app, outer=()):
+    """The settings screen. `outer`: the menus it was opened from, as
+    TreeMenu takes them, drawn to the left of its tabs (left on the tabs
+    goes back to them)."""
+    menu = TreeMenu(build_tree(raw_items(app)), app.cursors, "settings", outer=outer)
     ENTRY.update(name=None, text="")
 
     def extra(key):
+        if (key == keys.LEFT and menu.outer and menu.columns and menu.on_sections
+                and not menu.query):
+            return True, BACK                 # left on the tabs: back to the menu it came from
         handled, result = number_keys(app, menu, key)
         return (handled, result) if handled else search_keys(menu, key)
     menu_loop(app, menu, lambda st, m: draw(app, st, m), HINTS,

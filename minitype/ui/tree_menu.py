@@ -51,11 +51,14 @@ class TreeMenu(Menu):
     """A Menu over top pages (its sections), each opened as deep as you
     went into it. See the module notes."""
 
-    def __init__(self, pages, memory=None, name=None, style="list"):
+    def __init__(self, pages, memory=None, name=None, style="list", outer=()):
         self.pages = list(pages)
         self.trail = {p.name: [p] for p in self.pages}   # top page -> open pages, outermost first
         self._openers = {}
         self.query = ""
+        # the menus this one was opened from, outermost first, each (its
+        # rows' names, the one that opened this): drawn left of the tabs
+        self.outer = list(outer)
         super().__init__(self._view(), memory, name, style=style)
 
     # -- where you are
@@ -179,16 +182,19 @@ class TreeMenu(Menu):
     # -- drawing: the pages you came through stay beside the one you're on
 
     def _render_sidebar_left(self, st, width, label_width):
-        """The section buttons, then a column for every page you opened on
-        the way (the one you went into marked), then the page you're on. When
-        they don't all fit, the outermost columns go first, buttons included:
-        the page you're on always keeps ROWS_ROOM."""
+        """The menus this was opened from (`outer`), the section buttons,
+        then a column for every page you opened on the way (the one you went
+        into marked), then the page you're on. When they don't all fit, the
+        outermost columns go first, buttons included: the page you're on
+        always keeps ROWS_ROOM."""
         if self.query or not self.items:
             return super()._render_sidebar_left(st, width, label_width)
         trail = self.trail.get(self.selected.section, [])
         rows = self._in_section(self.selected.section)
-        cols = [self._section_column(st)]
+        cols = [self._names_column(st, names, picked) for names, picked in self.outer]
+        cols.append(self._section_column(st))
         cols += [self._page_column(st, page, inner) for page, inner in zip(trail, trail[1:])]
+        after_buttons = len(trail) - 1                  # the page columns
         # a page row under the cursor shows what's in it, further right
         peek = None
         if not self.on_sections and hasattr(self.selected, "page"):
@@ -203,7 +209,7 @@ class TreeMenu(Menu):
                 peek = None
         while cols and width - sum(w + 3 for _, w in cols) < ROWS_ROOM:
             cols.pop(0)
-        on = self.on_sections and len(cols) == len(trail)   # the buttons still show
+        on = self.on_sections and len(cols) > after_buttons   # the buttons still show
         lines, focus = self._rows(st, rows, label_width,
                                   width=own if peek else width - sum(w + 3 for _, w in cols),
                                   headings=False, active=not on)
@@ -231,6 +237,14 @@ class TreeMenu(Menu):
         texts = [c.label.ljust(lw) + (c.value() if c.value else "") for c in settings] \
             + [c.name + " " + SUB_MARK for c in pages]
         return lines, max(map(len, texts), default=0) + 4
+
+    @staticmethod
+    def _names_column(st, names, picked):
+        """A menu this one was opened from: its rows by name, dim, the one
+        that opened this marked. Returns (lines, width)."""
+        lines = [f" {st.title}>> {n}{RESET}" if n == picked else f"   {st.dim}{n}{RESET}"
+                 for n in names]
+        return lines, max(map(len, names)) + 5
 
     def _page_column(self, st, page, inner):
         """A page you came through: its rows by name, dim, and the page you

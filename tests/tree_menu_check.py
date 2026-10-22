@@ -147,4 +147,31 @@ cols = columns(frames(on_test, w=130)[1])
 assert 0 <= at("> test ›") < at("rules ›") and at("mistakes ›") == at("rules ›"), cols
 cols = columns(frames(on_test + [keys.RIGHT], w=130)[2])  # into test: on "rules ›"
 assert at(">> test ›") < at("> rules ›") < at("difficulty") and "stop on error  off" in cols, cols
+
+# opened from the main menu, its sections stay on the left; left on the tabs goes back to it
+from minitype.ui import main_menu as mm                       # noqa: E402
+
+
+def main_frames(presses, w=140, h=30):
+    console.term_size = lambda: (w, h)
+    console._last_size = (w, h)
+    a = App()
+    a.settings.ui_style, a.settings.sidebar_tabs, a.settings.theme = "sidebar", "left", "mono"
+    out = []
+    seq = iter(presses + [keys.ESC] * 8 + ["q"] * 3)
+    with mock.patch.object(keys, "read_key", lambda *x, **k: next(seq)), \
+            mock.patch.object(console, "write", out.append), \
+            mock.patch.object(console, "flush", lambda: None):
+        mm.main_menu(a)
+    return [strip(o) for o in out if o.startswith("\x1b[H")]
+
+
+to_settings = [keys.DOWN] * 3 + [keys.RIGHT]                 # gamemode, practice, gallery, settings
+f = main_frames(to_settings + [keys.RIGHT, keys.RIGHT])      # into in-game, then test
+cols = columns(f[len(to_settings) + 2])
+assert 0 <= at(">> settings") < at(">> in-game") < at(">> test ›") < at("> rules ›"), cols
+assert "gamemode" in cols and "profile" in cols, cols
+f = main_frames(to_settings + [keys.LEFT])
+assert "minitype" in f[len(to_settings) + 1] and "in-game" not in f[len(to_settings) + 1], \
+    "left on the settings tabs: back to the main menu"
 print("ALL OK")

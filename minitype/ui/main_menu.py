@@ -87,7 +87,12 @@ def build_items(app):
             return None
         return TestSpec("slow words", "words", s.word_amount, "slow")
 
-    return [
+    def settings():
+        # the main menu's sections stay on screen, left of the settings
+        return settings_menu(app, outer=[(list(dict.fromkeys(it.section for it in items)),
+                                          "settings")])
+
+    items = [
         _mode("1", "time", lambda: f"{s.time_amount}s", TIMES, "time_amount",
               lambda: TestSpec(f"{s.time_amount} seconds", "time", s.time_amount),
               s, "type as many words as you can before the timer runs out"),
@@ -139,7 +144,7 @@ def build_items(app):
              help="every theme full screen as it really looks, with its art: "
                   "flip through, remix the picture, enter to use one",
              section="gallery", tab=True),
-        Item("s", "settings", lambda: settings_menu(app),
+        Item("s", "settings", settings,
              value=lambda: " ".join(s.flags()),
              help="rules, text, drills, theme, art, effects and more",
              section="settings", tab=True),
@@ -148,6 +153,7 @@ def build_items(app):
              section="profile", tab=True),
         Item("q", "quit", lambda: QUIT, section="quit", tab=True),
     ]
+    return items
 
 
 def draw(app, st, menu):
