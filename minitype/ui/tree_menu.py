@@ -216,12 +216,14 @@ class TreeMenu(Menu):
         return lines, focus
 
     def _preview_column(self, st, page):
-        """What's in the page under the cursor, dim: its settings with their
-        values, then its pages. Right steps into it. Returns (lines, width)."""
+        """What's in the page under the cursor: its settings with their
+        values, then its pages, drawn as their own rows are (dim names, the
+        values in the plain text colour). Right steps into it. Returns
+        (lines, width)."""
         settings = [c for c in page.children if not isinstance(c, Page)]
         pages = [c for c in page.children if isinstance(c, Page)]
         lw = max((len(c.label) for c in settings), default=0) + 2
-        lines = [f"   {st.dim}{c.label.ljust(lw)}{c.value() if c.value else ''}{RESET}"
+        lines = [f"   {st.dim}{c.label.ljust(lw)}{RESET}{c.value() if c.value else ''}"
                  for c in settings]
         if settings and pages:
             lines.append("")
