@@ -131,4 +131,14 @@ assert "fade (all pictures)" in f[n + 3] and "top edge ›" in f[n + 3], "fade's
 assert crumb(f[n + 8]).endswith("fade › top edge") and "fade start top" in f[n + 8], f[n + 8]
 assert crumb(f[n + 9]).endswith("art › fade"), "esc: up to fade"
 assert crumb(f[n + 10]).endswith("look › art") and "art and text ›" in f[n + 10], "esc esc: back on art's page"
+# the pages you came through stay beside it, the one you went into marked
+into_fade = art + [keys.DOWN] * 2 + [keys.ENTER]
+columns = lambda frame: "\n".join(l for l in frame.split("\n") if "settings ›" not in l)
+cols = columns(frames(into_fade, w=140)[len(into_fade)])
+at = lambda text: max((l.find(text) for l in cols.split("\n")), default=-1)   # its column
+assert 0 <= at(">> menus") < at(">> look ›") < at(">> art ›") < at(">> fade ›") \
+    < at("> fade (all pictures)"), cols
+# narrow: the outermost columns give way, the page you're on keeps its room
+cols = columns(frames(into_fade, w=80)[len(into_fade)])
+assert ">> fade ›" in cols and "menus" not in cols and "look ›" not in cols, cols
 print("ALL OK")

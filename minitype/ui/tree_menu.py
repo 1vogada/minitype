@@ -21,9 +21,11 @@ move it - nothing else knows where a row lives.
 """
 
 from ..terminal import keys
+from ..terminal.style import RESET
 from .menu import Item, Menu
 
 SUB_MARK = "›"
+ROWS_ROOM = 44      # the page you're on needs this much; columns before it give way
 
 
 class Page:
@@ -173,6 +175,46 @@ class TreeMenu(Menu):
         if on_rows and key == keys.RIGHT and hasattr(self.selected, "page"):
             return True, self.selected.activate()   # a page row: right opens it, like enter
         return super().handle(key)
+
+    # -- drawing: the pages you came through stay beside the one you're on
+
+    def _render_sidebar_left(self, st, width, label_width):
+        """The section buttons, then a column for every page you opened on
+        the way (the one you went into marked), then the page you're on. When
+        they don't all fit, the outermost columns go first, buttons included:
+        the page you're on always keeps ROWS_ROOM."""
+        trail = [] if self.query or not self.items else self.trail.get(self.selected.section, [])
+        cols = [self._page_column(st, page, inner) for page, inner in zip(trail, trail[1:])]
+        if not cols:
+            return super()._render_sidebar_left(st, width, label_width)
+        cols.insert(0, self._section_column(st))
+        while cols and width - sum(w + 3 for _, w in cols) < ROWS_ROOM:
+            cols.pop(0)
+        on = self.on_sections and len(cols) == len(trail)   # the buttons still show
+        lines, focus = self._rows(st, self._in_section(self.selected.section), label_width,
+                                  width=width - sum(w + 3 for _, w in cols), headings=False,
+                                  active=not on)
+        if on:
+            focus = self.sections().index(self.selected.section)
+        for col, w in reversed(cols):
+            lines = self._beside(st, col, lines, w)
+        return lines, focus
+
+    def _page_column(self, st, page, inner):
+        """A page you came through: its rows by name, dim, and the page you
+        went into from it marked. Returns (lines, width)."""
+        settings = [c for c in page.children if not isinstance(c, Page)]
+        pages = [c for c in page.children if isinstance(c, Page)]
+        lines = []
+        for c in settings + pages:
+            if c is inner:
+                lines.append(f" {st.title}>> {c.name} {SUB_MARK}{RESET}")
+            elif isinstance(c, Page):
+                lines.append(f"   {st.dim}{c.name} {SUB_MARK}{RESET}")
+            else:
+                lines.append(f"   {st.dim}{c.label}{RESET}")
+        names = [c.name + " " + SUB_MARK if isinstance(c, Page) else c.label for c in page.children]
+        return lines, max(map(len, names)) + 4
 
     def nav_hint(self):
         hint = super().nav_hint()

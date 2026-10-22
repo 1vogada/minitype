@@ -30,7 +30,9 @@ agent's memory don't travel, so this section is the memory.
    Page rows read "name ›" + a settings count after a blank line, have no
    value (enter or right opens; left / esc go up, left at the top
    back to the tabs). Clearing a search opens the pages down to the row
-   you were on. A new install gets the welcome screen
+   you were on. With side tabs on the left, the pages you came through
+   stay as columns beside the one you're on (`TreeMenu._render_sidebar_left`);
+   when they don't fit, the outermost go first (`ROWS_ROOM`). A new install gets the welcome screen
    (`ui/welcome.py`, from `app.main` when `App.load` finds nothing saved -
    `app.first_run` - and from settings → data → reset → reset settings): pick
    one of `settings.SETUPS` ("clean", "art": both the owner's own), shown

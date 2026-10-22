@@ -438,6 +438,16 @@ class Menu:
     def _render_sidebar_left(self, st, width, label_width):
         """Section buttons down the left; the chosen section's rows, with
         the selected row's help under it, on the right."""
+        left, lw = self._section_column(st)
+        right, focus = self._rows(st, self._in_section(self.selected.section), label_width,
+                                  width=width - lw - 3, headings=False,
+                                  active=not self.on_sections)
+        if self.on_sections:
+            focus = self.sections().index(self.selected.section)
+        return self._beside(st, left, right, lw), focus
+
+    def _section_column(self, st):
+        """The section buttons, one per line, and how wide they need to be."""
         cur = self.selected.section
         secs = self.sections()
         lw = max(len(s or "-") for s in secs) + 5
@@ -451,12 +461,7 @@ class Menu:
                 left.append(f" {st.title}>{INV} {name} {RESET}")
             else:                             # in its rows: marked, the row is lit
                 left.append(f" {st.title}>> {name}{RESET}")
-        right, focus = self._rows(st, self._in_section(cur), label_width,
-                                  width=width - lw - 3, headings=False,
-                                  active=not on)
-        if on:
-            focus = secs.index(cur)
-        return self._beside(st, left, right, lw), focus
+        return left, lw
 
     def render_inline(self, st):
         """All items on one line, for short choice rows."""
