@@ -12,6 +12,7 @@ from ..terminal import console, keys
 from ..words import books, code, funbox
 from . import keyboard
 from . import karaoke, speed
+from .replay import Recorder, Replay
 from .render import draw
 from .result import TestResult
 from .scoring import correct_chars, score
@@ -62,6 +63,7 @@ class TypingTest:
         self.presses = {}
         self.samples = []
         self.events = []
+        self.recorder = Recorder()   # every key's effect, for the replay
         self.key_times = []     # every typing key (backspaces too), for active wpm
         self.song_marks = []    # lyrics: (song seconds, char offset you're on) at each of them
         self.start = None
@@ -676,6 +678,8 @@ class TypingTest:
         result.active_secs = self.active_seconds(elapsed)
         result.pb_before = self.app.history.pb(result)
         result.counted = counted
+        result.replay = Replay(self.words, self.recorder.frames, self.tape(),
+                               *self.line_breaks())
         if counted:
             self.app.history.add(result)
             self.app.save()
@@ -844,6 +848,7 @@ def _run(app, test, paint):
                 continue
             return MENU
         nav = test.handle(key, time.time())
+        test.recorder.snap(test, time.time())
         if nav is not None:
             return nav
     return test.result()

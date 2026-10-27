@@ -475,6 +475,14 @@ settings; if one has a mistake, the theme row's help says what's wrong.
   colours, or (picture colours: own) in the colours of the theme it comes
   from
 - **profile**: totals, top and average speed, a speed chart, all your PBs
+- **replay** (`r` on the results): watch the test you just typed again,
+  key by key at its own pace - mistakes, fixes and all. Space pauses,
+  left / right seek, up / down change the speed (0.5x to 4x), tab starts
+  it over, esc goes back
+- **streaks**: how many days in a row you've typed (on the profile, and
+  next to today's time on the menu), and a calendar of the days you typed
+  on the profile - a column a week, darker the longer you typed (against
+  the daily goal when there is one)
 - daily goal in minutes, shown on the menu and results
 
 ## Your files

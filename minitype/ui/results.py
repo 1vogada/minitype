@@ -7,10 +7,13 @@ from ..terminal.style import RESET
 from ..words import books
 from .menu import Hints, Item, Menu, title_lines
 from .profile import goal_line, sparkline
+from .replay import replay_screen
 
 HINTS = "left/right choose   enter select   tab restart   esc menu"
 FAV_KEY = "f"
 FAV_HINT = "   f favourite"
+REPLAY_KEY = "r"
+REPLAY_HINT = "   r replay"
 
 
 def is_fav(app, result):
@@ -190,8 +193,10 @@ def show_results(app, result):
     while True:
         st = app.styles()
         lines, choices = draw(app, st, result, menu)
+        can_replay = bool(result.replay and result.replay.frames)
         console.present(lines, 0, choices + hints.lines(
-            st, HINTS + (FAV_HINT if result.quote else "")))
+            st, HINTS + (FAV_HINT if result.quote else "")
+            + (REPLAY_HINT if can_replay else "")))
         key = keys.read_key()
         if key == keys.RESIZE:
             continue
@@ -199,6 +204,9 @@ def show_results(app, result):
             return MENU
         if key == keys.CTRL_C:
             return QUIT
+        if key == REPLAY_KEY and can_replay:
+            replay_screen(app, result.replay)
+            continue
         if key == FAV_KEY and result.quote:
             toggle_fav(app, result)
             continue
