@@ -2,6 +2,7 @@
 profile screen and the daily goal."""
 
 import time
+from datetime import date
 
 MAX_RUNS = 2000
 
@@ -76,6 +77,28 @@ class History:
     def today_seconds(self):
         start = _day_start()
         return sum(r["secs"] for r in self.runs if r["t"] >= start)
+
+    def day_seconds(self):
+        """{local date: seconds typed that day}."""
+        days = {}
+        for r in self.runs:
+            d = date.fromtimestamp(r["t"])
+            days[d] = days.get(d, 0) + r["secs"]
+        return days
+
+    def streak(self, today=None):
+        """(days in a row you've typed, the longest run of days ever). The
+        current one still counts until today ends, if you typed yesterday."""
+        days = sorted(self.day_seconds())
+        today = today or date.today()
+        best = run = 0
+        prev = None
+        for d in days:
+            run = run + 1 if prev is not None and (d - prev).days == 1 else 1
+            best, prev = max(best, run), d
+        last = days[-1] if days else None
+        current = run if last is not None and (today - last).days <= 1 else 0
+        return current, best
 
     def best_by_mode(self):
         best = {}
