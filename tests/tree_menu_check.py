@@ -172,6 +172,47 @@ cols = columns(f[len(to_settings) + 2])
 assert 0 <= at(">> settings") < at(">> in-game") < at(">> test ›") < at("> rules ›"), cols
 assert "gamemode" in cols and "profile" in cols, cols
 f = main_frames(to_settings + [keys.LEFT])
-assert "minitype" in f[len(to_settings) + 1] and "in-game" not in f[len(to_settings) + 1], \
+assert "minitype" in f[len(to_settings) + 1] and "layout ›" not in f[len(to_settings) + 1], \
     "left on the settings tabs: back to the main menu"
+
+# on the main menu the settings section shows the settings' own tabs, not a
+# row of rule flags; with the mouse, a click on one opens settings there
+on_settings = [keys.DOWN] * 3
+f = main_frames(on_settings)[len(on_settings)]
+lines = f.splitlines()
+row = lambda w: next(i for i, l in enumerate(lines) if re.search(rf"\b{w}\b", l))
+assert row("in-game") < row("menus") < row("data"), f
+assert lines[row("menus")].index("menus") > lines[row("gamemode")].index("gamemode"), f
+a = App()
+a.settings.lowercase = True                                  # a rule flag ("lower") used to show
+assert "lower" not in main_frames(on_settings)[len(on_settings)]
+from minitype.terminal import keynames                       # noqa: E402
+out = []
+frames = lambda: [strip(o).split("\n") for o in out if o.startswith("\x1b[H")]
+
+
+def click(word):
+    rows = frames()[-1]
+    r = next(i for i, l in enumerate(rows) if re.search(rf"\b{word}\s*$", l.rstrip(" │")))
+    m = keynames.Mouse(keynames.CLICK)
+    m.x, m.y = rows[r].index(word) + 1, r
+    return m
+
+
+seq = iter(on_settings + ["menus", keys.ESC, keys.ESC, keys.ESC, keys.ESC])
+read = lambda: (lambda k: click(k) if k == "menus" else k)(next(seq))
+a = App()
+a.settings.ui_style, a.settings.sidebar_tabs, a.settings.theme = "sidebar", "left", "mono"
+console.term_size = lambda: (100, 24)
+console._last_size = (100, 24)
+with mock.patch.dict(keys._mouse, live=True), \
+        mock.patch.object(keys.backend, "mouse", lambda on: on), \
+        mock.patch.object(keys.backend, "read", read), \
+        mock.patch.object(keys.backend, "ready", lambda: True), \
+        mock.patch.object(console, "write", out.append), \
+        mock.patch.object(console, "flush", lambda: None):
+    mm.main_menu(a)
+keys.mouse(False)
+opened = "\n".join(frames()[len(on_settings) + 1])
+assert "settings" in opened and "> menus" in opened and "layout ›" in opened, opened
 print("ALL OK")

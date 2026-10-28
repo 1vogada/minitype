@@ -872,11 +872,14 @@ def draw(app, st, menu):
     return lines, focus
 
 
-def settings_menu(app, outer=()):
+def settings_menu(app, outer=(), tab=None):
     """The settings screen. `outer`: the menus it was opened from, as
     TreeMenu takes them, drawn to the left of its tabs (left on the tabs
-    goes back to them)."""
+    goes back to them). `tab`: the tab to open on, else the last one."""
     menu = TreeMenu(build_tree(raw_items(app)), app.cursors, "settings", outer=outer)
+    if tab in menu.sections():
+        menu._move_to(menu._in_section(tab)[0])
+        menu.on_sections = True
     ENTRY.update(name=None, text="")
 
     def extra(key):

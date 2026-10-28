@@ -64,6 +64,9 @@ class Item:
     preview: Optional[Callable[[], list]] = None  # styled lines shown under the help
     tab: bool = False                           # a section of its own (quit): its
                                                 # section button runs it
+    peek: Optional[Callable[[Any], list]] = None  # a tab's column in the sidebar instead of
+                                                # its row: peek(st) gives the lines (settings'
+                                                # own tabs)
 
     def activate(self):
         return (self.enter or self.action)()
@@ -482,7 +485,11 @@ class Menu:
         """Section buttons down the left; the chosen section's rows, with
         the selected row's help under it, on the right."""
         left, lw = self._section_column(st)
-        right, focus = self._rows(st, self._in_section(self.selected.section), label_width,
+        rows = self._in_section(self.selected.section)
+        item = self.items[rows[0]]
+        if len(rows) == 1 and item.tab and item.peek:
+            return self._beside(st, left, item.peek(st), lw),                 self.sections().index(self.selected.section)
+        right, focus = self._rows(st, rows, label_width,
                                   width=width - lw - 3, headings=False,
                                   active=not self.on_sections)
         if self.on_sections:

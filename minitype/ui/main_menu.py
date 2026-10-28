@@ -4,6 +4,7 @@ from ..config import CODE_LANGS, LYRICS_SOURCES, QUOTE_LENGTHS, TIMES, WORD_COUN
 from ..engine.runner import MIN_SLOW_WORDS
 from ..engine.spec import TestSpec
 from ..nav import QUIT
+from ..terminal import console, keys
 from ..terminal.style import RESET
 from ..util import cycle
 from ..words import books
@@ -16,6 +17,7 @@ from .profile import goal_line, profile_screen
 from .prompt import prompt
 from .screen import menu_loop
 from .settings_menu import settings_menu
+from .settings_tree import TREE
 
 HINTS = ("enter start   tab next section   ` ~ theme   ctrl-o settings   "
          "esc quit   ctrl-q hide")
@@ -87,10 +89,23 @@ def build_items(app):
             return None
         return TestSpec("slow words", "words", s.word_amount, "slow")
 
+    opening = {"tab": None}     # the settings tab a click on its peek picked
+
     def settings():
         # the main menu's sections stay on screen, left of the settings
+        tab, opening["tab"] = opening["tab"], None
         return settings_menu(app, outer=[(list(dict.fromkeys(it.section for it in items)),
-                                          "settings")])
+                                          "settings")], tab=tab)
+
+    def open_at(tab):
+        opening["tab"] = tab
+        return keys.ENTER                       # settings is the section shown: enter opens it
+
+    def settings_tabs(st):
+        """What the settings hold, in their place: their tabs, each
+        clickable straight into it."""
+        return [console.hit(f"   {st.dim}{name}{RESET}", lambda n=name: open_at(n))
+                for name, _, _ in TREE]
 
     items = [
         _mode("1", "time", lambda: f"{s.time_amount}s", TIMES, "time_amount",
@@ -144,8 +159,7 @@ def build_items(app):
              help="every theme full screen as it really looks, with its art: "
                   "flip through, remix the picture, enter to use one",
              section="gallery", tab=True),
-        Item("s", "settings", settings,
-             value=lambda: " ".join(s.flags()),
+        Item("s", "settings", settings, peek=settings_tabs,
              help="rules, text, drills, theme, art, effects and more",
              section="settings", tab=True),
         Item("p", "profile", lambda: profile_screen(app),
