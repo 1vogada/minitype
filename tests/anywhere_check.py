@@ -1,6 +1,6 @@
 """ctrl-o (settings from anywhere, pausing a test and asking to resume),
 ~ for the theme before, the all-lowercase rule."""
-import os, re, tempfile, time
+import contextlib, os, re, tempfile, time
 os.environ["MINITYPE_DIR"] = tempfile.mkdtemp()
 from unittest import mock
 from minitype.terminal import console, keys, style
@@ -33,6 +33,7 @@ def play(app, presses, clock):
         return k
     with mock.patch.object(keys.backend, "read", read), \
             mock.patch.object(keys.backend, "ready", lambda: True), \
+            mock.patch.object(keys, "stamping", contextlib.nullcontext), \
             mock.patch.object(keys, "key_ready", lambda: True), \
             mock.patch.object(time, "time", lambda: clock[0]), \
             mock.patch.object(console, "write", out.append), \

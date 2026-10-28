@@ -67,6 +67,7 @@ class TypingTest:
         self.key_times = []     # every typing key (backspaces too), for active wpm
         self.song_marks = []    # lyrics: (song seconds, char offset you're on) at each of them
         self.start = None
+        self.last_key = None    # when the last letter or space was pressed
         self.failed = False
         self.fail_reason = ""
         self.done = False       # ended from inside a key press
@@ -166,7 +167,7 @@ class TypingTest:
         """Carry on after `pause` seconds away (the settings): every clock
         the test keeps moves on by that much, as if no time had passed."""
         self.start += pause
-        for name in ("prev_t", "word_start"):
+        for name in ("prev_t", "word_start", "last_key"):
             if getattr(self, name) is not None:
                 setattr(self, name, getattr(self, name) + pause)
         if self.last_error >= 0:
@@ -179,6 +180,17 @@ class TypingTest:
             return True
         return bool(self.start and self.spec.kind == "time"
                     and now - self.start >= self.spec.amount)
+
+    def elapsed(self, now):
+        """The test's length: a timed one is never longer than its time, and
+        one you typed to the end ends at its last key - however long the
+        screen took to catch up."""
+        el = now - self.start
+        if self.spec.kind == "time":
+            return min(el, self.spec.amount)
+        if self.spec.kind == "words" and self.wi >= len(self.words) and self.last_key:
+            return self.last_key - self.start
+        return el
 
     def check_rules(self, now):
         """Minimum speed and accuracy, once the test has had a moment."""
@@ -393,12 +405,12 @@ class TypingTest:
         if key == keys.BACKSPACE:
             if self._can_backspace():
                 self._backspace()
-                self._active(time.time())
+                self._active(now)
             return None
         if key in (keys.CTRL_BACKSPACE, keys.CTRL_W):
             if self._can_backspace():
                 self._wipe_word()
-                self._active(time.time())
+                self._active(now)
             return None
         if key in (keys.ENTER, keys.SHIFT_ENTER) and self.spec.kind == "zen":
             self.done = True
@@ -409,9 +421,13 @@ class TypingTest:
         self.popped_hints = False
 
         if self.start is None:
-            self.start = time.time()
-        el = time.time() - self.start
-        self._active(self.start + el)
+            self.start = now
+        if self.spec.kind == "time" and now - self.start >= self.spec.amount:
+            self.done = True                  # pressed after the time ran out
+            return None
+        el = now - self.start
+        self.last_key = now
+        self._active(now)
         if self.hacker():
             self._hack(el)
         elif key == " ":
@@ -658,7 +674,7 @@ class TypingTest:
         was typed."""
         if self.start is None:
             return MENU
-        elapsed = time.time() - self.start
+        elapsed = self.elapsed(time.time())
         wpm, raw, acc = self.score(elapsed)
         classic, active = self.classic(elapsed)[0], self.active(elapsed)[0]
         if self.learning:
@@ -782,7 +798,8 @@ def run_test(app, spec):
     test.follow = follow_for(spec)
     test.look_up_tempo()
     try:
-        return _run(app, test, paint)
+        with keys.stamping():
+            return _run(app, test, paint)
     finally:
         app.current_test = None
         if test.follow is not None:
@@ -821,7 +838,9 @@ def _run(app, test, paint):
         size = console.size()
         st = app.styles()
         every = REDRAW_ANIMATED if st.animated else REDRAW_EVERY
-        if dirty or now - last_draw > every:
+        # keys already waiting are taken first: they're timed as they came,
+        # so drawing between them would only fall further behind
+        if (dirty and not keys.key_ready()) or now - last_draw > every:
             paint(now)
             last_draw = now
             dirty = False
@@ -847,8 +866,8 @@ def _run(app, test, paint):
             if pause(app, test, paint):
                 continue
             return MENU
-        nav = test.handle(key, time.time())
-        test.recorder.snap(test, time.time())
+        nav = test.handle(key, keys.key_time())
+        test.recorder.snap(test, keys.key_time())
         if nav is not None:
             return nav
     return test.result()

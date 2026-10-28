@@ -12,6 +12,9 @@ raw mode and back.
 
 import atexit
 import os
+import queue
+import sys
+import threading
 import time
 
 from . import console
@@ -25,7 +28,7 @@ __all__ = [
     "DELETE", "ENTER", "SHIFT_ENTER", "TAB", "SHIFT_TAB", "ESC", "BACKSPACE",
     "CTRL_BACKSPACE", "CTRL_C", "CTRL_D", "CTRL_O", "CTRL_P", "CTRL_I", "CTRL_LBRACKET", "CTRL_RBRACKET", "CTRL_Q", "CTRL_W", "UNKNOWN",
     "RESIZE", "setup", "restore", "key_ready", "read_key", "is_char",
-    "on_settings_key",
+    "on_settings_key", "stamping", "key_time",
 ]
 
 if os.name == "nt":
@@ -46,8 +49,73 @@ def restore():
     backend.restore()
 
 
+# While a test runs, a thread reads the keys and notes when each came, so
+# a slow frame doesn't make your typing look slow: the test goes by when
+# you pressed a key, not when it got round to it. Keys read and not yet
+# taken wait in _stamped, and read_key takes them from there first.
+_stamped = queue.Queue()
+_stamper = {"thread": None, "stop": None}
+_last = {"t": 0.0}      # when the key read_key last returned came
+STAMP_POLL = 0.0005     # how often the thread looks for a key
+SWITCH = 0.001          # how often python lets the thread in while a test runs
+
+
+def _stamp(stop):
+    while not stop.is_set():
+        if backend.ready():
+            key = backend.read()
+            _stamped.put((key, time.time()))
+        else:
+            time.sleep(STAMP_POLL)
+
+
+class stamping:
+    """with keys.stamping(): ... keys are read and timed in the background
+    (see key_time)."""
+
+    def __enter__(self):
+        if _stamper["thread"] is None:
+            stop = threading.Event()
+            self._switch = sys.getswitchinterval()
+            sys.setswitchinterval(SWITCH)
+            t = threading.Thread(target=_stamp, args=(stop,), daemon=True)
+            _stamper.update(thread=t, stop=stop)
+            self.own = True
+            t.start()
+        else:
+            self.own = False                # already on (a test inside a test)
+        return self
+
+    def __exit__(self, *exc):
+        if self.own:
+            _stamper["stop"].set()
+            _stamper["thread"].join()
+            _stamper.update(thread=None, stop=None)
+            sys.setswitchinterval(self._switch)
+        return False
+
+
 def key_ready():
-    return backend.ready()
+    return not _stamped.empty() or (_stamper["thread"] is None and backend.ready())
+
+
+def key_time():
+    """When the key read_key last returned was pressed (as time.time())."""
+    return _last["t"]
+
+
+def _next_key():
+    try:
+        key, _last["t"] = _stamped.get_nowait()
+        return key
+    except queue.Empty:
+        pass
+    if _stamper["thread"] is not None:
+        key, _last["t"] = _stamped.get()
+        return key
+    key = backend.read()
+    _last["t"] = time.time()
+    return key
 
 
 _settings = {"open": None, "busy": False}
@@ -75,7 +143,7 @@ def read_key(panic=True, resize=True):
                 checked = now
                 if console.size() != start:
                     return RESIZE
-    key = backend.read()
+    key = _next_key()
     if panic and key == CTRL_Q:
         console.bail()
     if key == CTRL_O and _settings["open"] and not _settings["busy"]:

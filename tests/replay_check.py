@@ -19,13 +19,15 @@ def play(app, presses, gap=0.25):
     """Run a test through the real loop, a key every `gap` seconds."""
     seq = iter(presses)
 
-    def read_key(*a, **k):
+    def read():
         clock[0] += gap
         return next(seq)
+    import contextlib
     with mock.patch.object(runner.time, "time", lambda: clock[0]), \
             mock.patch.object(runner.time, "sleep", lambda s: None), \
+            mock.patch.object(keys, "stamping", contextlib.nullcontext), \
             mock.patch.object(keys, "key_ready", lambda: True), \
-            mock.patch.object(keys, "read_key", read_key), \
+            mock.patch.object(keys.backend, "read", read), \
             mock.patch.object(console, "write", lambda s: None), \
             mock.patch.object(console, "flush", lambda: None):
         return runner.run_test(app, SPEC)
