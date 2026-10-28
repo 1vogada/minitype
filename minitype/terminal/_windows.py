@@ -49,6 +49,7 @@ VK_I = 0x49
 VK_LBRACKET = 0xDB   # the [ key (VK_OEM_4)
 VK_RETURN = 0x0D
 VK_SHIFT = 0x10
+VK_MENU = 0x12       # alt
 SHIFT_PRESSED = 0x0010
 KEY_EVENT = 0x0001
 MOUSE_EVENT = 0x0002
@@ -179,8 +180,12 @@ def _pump():
             return
         take, found = 0, []
         for r in recs[:n.value]:
-            if r.type == KEY_EVENT and (r.key.down or r.key.char not in ("", "\0")):
-                break                               # a key (or an alt-code's character)
+            # a key, or an alt-code's character (on alt's release). Other
+            # releases carry their character too but msvcrt passes over
+            # them: left there, the mouse behind them would never be read
+            if r.type == KEY_EVENT and (r.key.down or (r.key.vk == VK_MENU
+                                                       and r.key.char not in ("", "\0"))):
+                break
             take += 1
             if r.type == MOUSE_EVENT:
                 found.append(_MouseRecord.from_buffer_copy(r.mouse))

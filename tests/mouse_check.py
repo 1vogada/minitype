@@ -307,7 +307,8 @@ if os.name == "nt":
     QUICK = W.ENABLE_QUICK_EDIT_MODE | W.ENABLE_EXTENDED_FLAGS | 0x7
     key_a = rec(W.KEY_EVENT, down=True, char="a", vk=0x41)
     k32 = K32([rec(W.MOUSE_EVENT, x=5, y=107, buttons=W.LEFT_BUTTON, flags=0),
-               rec(W.KEY_EVENT, down=False, char="\0", vk=0x41),     # a release: taken
+               rec(W.KEY_EVENT, down=False, char="a", vk=0x41),      # a release: taken
+               rec(W.KEY_EVENT, down=False, char="\r", vk=0x0D),     # (they carry their character)
                rec(W.MOUSE_EVENT, x=5, y=107, buttons=0, flags=0),   # the button up
                rec(W.MOUSE_EVENT, x=5, y=107, buttons=0xFF880000, flags=W.MOUSE_WHEELED),
                key_a,
@@ -338,6 +339,11 @@ if os.name == "nt":
                                                       W.MOUSE_WHEELED))
         assert wheel(240) == [WHEEL_UP, WHEEL_UP] and wheel(-360) == [WHEEL_DOWN] * 3
         assert wheel(40) == [] and wheel(40) == [] and wheel(40) == [WHEEL_UP]
+        # alt's release with an alt-code's character is a key: left for msvcrt
+        k32.records = [rec(W.KEY_EVENT, down=False, char="é", vk=W.VK_MENU),
+                       rec(W.MOUSE_EVENT, x=1, y=101, buttons=W.LEFT_BUTTON, flags=0)]
+        W._pump()
+        assert len(k32.records) == 2 and not W._events, "the alt-code waits for msvcrt"
         keys.restore()                                    # leaving: the mode as it was
         assert k32.set[-1] == QUICK and not W._mouse["on"] and not console.clickable()
     keys.backend = fake
