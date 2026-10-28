@@ -16,7 +16,7 @@ os.environ["MINITYPE_DIR"] = tempfile.mkdtemp()
 from unittest import mock                                    # noqa: E402
 from minitype.engine.spec import TestSpec                    # noqa: E402
 from minitype.terminal import _posix, console, keys          # noqa: E402
-from minitype.terminal.keynames import CLICK, HOVER, MOUSE, WHEEL_DOWN, WHEEL_UP, Mouse   # noqa: E402
+from minitype.terminal.keynames import CLICK, HOVER, MOUSE, RIGHT_CLICK, WHEEL_DOWN, WHEEL_UP, Mouse   # noqa: E402
 from minitype.context import App                             # noqa: E402
 from minitype.ui import anywhere                             # noqa: E402
 from minitype.ui import main_menu as mm                      # noqa: E402
@@ -142,6 +142,15 @@ got = menu_loop(a, menu, lambda st, m: mm.draw(a, st, m), mm.HINTS, on_back=lamb
 assert isinstance(got, TestSpec) and got.kind == "zen", got
 assert not fake.q
 
+# a right click, anywhere, is esc: out of the rows onto the sections, then out
+menu = Menu(mm.build_items(a), {}, "main")
+menu.on_sections = False
+fake.q = [Mouse(RIGHT_CLICK, 30, 6),
+          check(lambda: menu.on_sections or 1 / 0, Mouse(RIGHT_CLICK, 70, 2))]
+assert menu_loop(a, menu, lambda st, m: mm.draw(a, st, m), mm.HINTS,
+                 on_back=lambda: "quit") == "quit"
+assert not fake.q
+
 # in the text panel, over the art: the clicks land where the rows are drawn
 a.settings.art, a.settings.art_panel, a.settings.theme = "menus", True, "ocean"
 menu = Menu(mm.build_items(a), {}, "main")
@@ -202,9 +211,11 @@ fake.q = [at("Yes")]
 assert anywhere.resume_dialog(a, behind) is True
 fake.q = [over("No"), check(lambda: "> No" in "\n".join(frame()) or 1 / 0, keys.ENTER)]
 assert anywhere.resume_dialog(a, behind) is False, "pointing at No picks it"
+fake.q = [Mouse(RIGHT_CLICK, 40, 11)]
+assert anywhere.resume_dialog(a, behind) is True, "a right click: as esc, back to the test"
 
 # ---------------------------------------------------------------- never a key in a test
-fake.q = [Mouse(CLICK, 1, 1), Mouse(WHEEL_UP, 1, 1), Mouse(MOUSE, 1, 1), "a",
+fake.q = [Mouse(CLICK, 1, 1), Mouse(RIGHT_CLICK, 1, 1), Mouse(MOUSE, 1, 1), "a",
           Mouse(WHEEL_DOWN, 1, 1), "b", Mouse(WHEEL_UP, 1, 1)]
 with keys.stamping():
     while fake.q:
@@ -222,7 +233,9 @@ P = _posix
 assert repr(P._mouse_event(0, 3, 4)) == "'click'" and P._mouse_event(0, 3, 4).x == 3
 assert P._mouse_event(64, 0, 0) == WHEEL_UP and P._mouse_event(65, 0, 0) == WHEEL_DOWN
 assert P._mouse_event(0, 0, 0, press=False) == MOUSE, "a release"
-assert P._mouse_event(32, 0, 0) == MOUSE and P._mouse_event(2, 0, 0) == MOUSE, "drag, right"
+assert P._mouse_event(32, 0, 0) == MOUSE and P._mouse_event(1, 0, 0) == MOUSE, "drag, middle"
+assert P._mouse_event(2, 5, 6) == RIGHT_CLICK and P._mouse_event(2, 0, 0, press=False) == MOUSE
+assert P._mouse_event(34, 0, 0) == MOUSE, "a right drag"
 assert P._mouse_event(16, 0, 0) == CLICK, "ctrl-click is a click"
 assert P._mouse_event(35, 4, 2) == HOVER, "a move, no button"
 
@@ -331,6 +344,10 @@ if os.name == "nt":
         assert W._decode(W._MouseRecord(1, 1, W.LEFT_BUTTON, 0, 0x2)) == [CLICK]
         assert W._decode(W._MouseRecord(2, 1, W.LEFT_BUTTON, 0, W.MOUSE_MOVED)) == []
         assert W._decode(W._MouseRecord(2, 1, 0, 0, 0)) == [], "the release"
+        right = W._decode(W._MouseRecord(4, 2, W.RIGHT_BUTTON, 0, 0))
+        assert right == [RIGHT_CLICK] and (right[0].x, right[0].y) == (4, 2), right
+        assert W._decode(W._MouseRecord(4, 2, W.RIGHT_BUTTON, 0, 0)) == [], "held: once"
+        assert W._decode(W._MouseRecord(4, 2, 0, 0, 0)) == [], "its release"
         moved = W._decode(W._MouseRecord(3, 1, 0, 0, W.MOUSE_MOVED))
         assert moved == [HOVER] and (moved[0].x, moved[0].y) == (3, 1), "a move, no button"
         # the wheel: a record per notch, or several notches in one, or a

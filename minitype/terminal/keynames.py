@@ -27,9 +27,11 @@ CSI = {
 
 # The mouse (the mouse setting): read like keys, each event a Mouse - its
 # name with the cell it happened on. HOVER is the mouse moving with no
-# button down; MOUSE is anything else it does (a release, a drag, another
-# button), which read_key passes over.
+# button down, RIGHT_CLICK the right button (back, as esc); MOUSE is
+# anything else it does (a release, a drag, another button), which
+# read_key passes over.
 CLICK = "click"
+RIGHT_CLICK = "right-click"
 HOVER = "hover"
 WHEEL_UP, WHEEL_DOWN = "wheel-up", "wheel-down"
 MOUSE = "mouse"

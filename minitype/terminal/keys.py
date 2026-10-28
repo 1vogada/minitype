@@ -11,8 +11,9 @@ raw mode and back.
 
 The mouse (mouse(), the mouse setting) comes through read_key too: the
 wheel as up and down, a click as whatever the thing clicked stands for
-(console.hit) - a menu row's enter - and pointing at something as a
-redraw (RESIZE) when that changed the screen (a menu row is selected, as
+(console.hit) - a menu row's enter - a right click as esc (back), and
+pointing at something as a redraw (RESIZE) when that changed the screen
+(a menu row is selected, as
 the arrows would). A click on nothing, the mouse still pointing where it
 was, and anything else the mouse does, is passed over. While a test runs (stamping) the mouse is
 passed over altogether, so it never counts as a key; a box over the test
@@ -32,7 +33,7 @@ from . import console
 from .keynames import (BACKSPACE, CTRL_BACKSPACE, CTRL_C, CTRL_D, CTRL_O, CTRL_P, CTRL_I, CTRL_LBRACKET, CTRL_RBRACKET, CTRL_Q,
                        CTRL_W, DELETE, DOWN, END, ENTER, ESC, HOME, INSERT,
                        LEFT, PGDN, PGUP, RESIZE, RIGHT, SHIFT_ENTER, SHIFT_TAB,
-                       TAB, UNKNOWN, UP, CLICK, HOVER, WHEEL_DOWN, WHEEL_UP, Mouse)
+                       TAB, UNKNOWN, UP, CLICK, HOVER, RIGHT_CLICK, WHEEL_DOWN, WHEEL_UP, Mouse)
 
 __all__ = [
     "UP", "DOWN", "LEFT", "RIGHT", "HOME", "END", "PGUP", "PGDN", "INSERT",
@@ -199,6 +200,8 @@ def _from_mouse(event):
         return UP
     if event == WHEEL_DOWN:
         return DOWN
+    if event == RIGHT_CLICK:
+        return ESC                       # back, anywhere
     if event == CLICK:
         hit, key = console.click(event.x, event.y)
         if hit:

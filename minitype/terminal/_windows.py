@@ -19,7 +19,7 @@ from ctypes import wintypes
 from .keynames import (BACKSPACE, CSI, CTRL_BACKSPACE, CTRL_C, CTRL_D, CTRL_O, CTRL_P, CTRL_I, CTRL_LBRACKET, CTRL_RBRACKET, CTRL_Q,
                        CTRL_W, DELETE, DOWN, END, ENTER, ESC, HOME, INSERT,
                        LEFT, PGDN, PGUP, RIGHT, SHIFT_ENTER, SHIFT_TAB, TAB,
-                       UNKNOWN, UP, CLICK, HOVER, WHEEL_DOWN, WHEEL_UP, Mouse)
+                       UNKNOWN, UP, CLICK, HOVER, RIGHT_CLICK, WHEEL_DOWN, WHEEL_UP, Mouse)
 
 _CONTROL = {
     "\r": ENTER,
@@ -59,6 +59,7 @@ ENABLE_QUICK_EDIT_MODE = 0x0040
 ENABLE_EXTENDED_FLAGS = 0x0080      # needed for a change to quick edit to count
 # a mouse record's buttons and flags
 LEFT_BUTTON = 0x0001
+RIGHT_BUTTON = 0x0002
 MOUSE_MOVED = 0x0001
 MOUSE_WHEELED = 0x0004
 WHEEL_NOTCH = 120                   # one notch of the wheel
@@ -93,7 +94,7 @@ class _BufferInfo(ctypes.Structure):
                 ("biggest", wintypes._COORD)]
 
 
-_mouse = {"on": False, "saved": None, "held": False, "wheel": 0}
+_mouse = {"on": False, "saved": None, "held": False, "held_right": False, "wheel": 0}
 _events = []            # mouse events taken off the input, not yet read
 
 
@@ -126,7 +127,7 @@ def mouse(on):
         else:
             new = _mouse["saved"] | ENABLE_EXTENDED_FLAGS   # quick edit as it was
         if k32.SetConsoleMode(h, new):
-            _mouse.update(on=on, held=False, wheel=0)
+            _mouse.update(on=on, held=False, held_right=False, wheel=0)
             _events.clear()
     except (AttributeError, OSError):
         pass
@@ -149,22 +150,24 @@ def _window():
 def _decode(rec, origin=(0, 0)):
     """A mouse record as Mouse events: none for one that does nothing (a
     drag, a release, another button), a hover for a move, one for a click - the left button
-    going down, the second click of a double click too - and one per notch
+    going down, the second click of a double click too - a right click for
+    the right button going down, and one per notch
     for the wheel (a fast turn comes as one record of several notches; a
     touchpad's small turns add up to one)."""
     x, y = rec.x - origin[0], rec.y - origin[1]
-    left = bool(rec.buttons & LEFT_BUTTON)
+    left, right = bool(rec.buttons & LEFT_BUTTON), bool(rec.buttons & RIGHT_BUTTON)
     if rec.flags & MOUSE_WHEELED:
         _mouse["wheel"] += ctypes.c_short((rec.buttons >> 16) & 0xFFFF).value
         notches = int(_mouse["wheel"] / WHEEL_NOTCH)          # towards 0
         _mouse["wheel"] -= notches * WHEEL_NOTCH
         return [Mouse(WHEEL_UP if notches > 0 else WHEEL_DOWN, x, y)] * abs(notches)
     if rec.flags & MOUSE_MOVED:
-        _mouse["held"] = left                       # a drag isn't a click
+        _mouse.update(held=left, held_right=right)  # a drag isn't a click
         return [] if rec.buttons else [Mouse(HOVER, x, y)]
     pressed = left and not _mouse["held"]
-    _mouse["held"] = left
-    return [Mouse(CLICK, x, y)] if pressed else []
+    right_pressed = right and not _mouse["held_right"]
+    _mouse.update(held=left, held_right=right)
+    return ([Mouse(CLICK, x, y)] if pressed else [])         + ([Mouse(RIGHT_CLICK, x, y)] if right_pressed else [])
 
 
 def _pump():

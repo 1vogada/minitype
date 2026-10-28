@@ -96,7 +96,8 @@ minitype
   goes back up to it, and a click on a row in the dim preview of a page
   opens the page on that row. The gallery's rows step on when clicked.
   In the pause box, point at Yes or No to pick it and click to answer. The
-  wheel moves up and down wherever the arrows do. The mouse never counts
+  wheel moves up and down wherever the arrows do, and a right click goes
+  back, like esc. The mouse never counts
   while you type a test. With it on, the
   terminal can't select text with the mouse; switch it off to copy text.
   It works in Windows Terminal and the classic Windows console, and in

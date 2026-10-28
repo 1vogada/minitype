@@ -26,7 +26,7 @@ import sys
 from .keynames import (BACKSPACE, CSI, CTRL_BACKSPACE, CTRL_C, CTRL_D, CTRL_O, CTRL_P, CTRL_Q, CTRL_RBRACKET,
                        CTRL_W, DELETE, END, ENTER, ESC, HOME, INSERT, PGDN,
                        PGUP, SHIFT_ENTER, SHIFT_TAB, TAB, UNKNOWN,
-                       CLICK, HOVER, MOUSE, WHEEL_DOWN, WHEEL_UP, Mouse)
+                       CLICK, HOVER, MOUSE, RIGHT_CLICK, WHEEL_DOWN, WHEEL_UP, Mouse)
 
 ESC_WAIT = 0.03         # seconds to wait for the rest of an escape sequence
 MAX_PARAMS = 16
@@ -158,6 +158,8 @@ def _mouse_event(button, x, y, press=True):
         return Mouse(HOVER, x, y)                # moving, no button down
     if press and not button & 32 and button & 3 == 0:
         return Mouse(CLICK, x, y)
+    if press and not button & 32 and button & 3 == 2:
+        return Mouse(RIGHT_CLICK, x, y)
     return Mouse(MOUSE, x, y)          # a release, a drag, another button
 
 
