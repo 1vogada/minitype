@@ -18,6 +18,12 @@ into actions:
     [ ] pgup pgdn    the same
     hotkey           jump to that item and activate it
 
+With the mouse on (the mouse setting), pointing at a row selects it, as
+the arrows would (its help shows), and a click on it is enter. Pointing at
+a section (a button down the side, a tab in the bar) picks it; a click on
+a button is enter on it (into its rows, or the button's own action). The
+wheel moves up and down (see keys).
+
 Styles:
     list     every item in one column under section headings
     sidebar  items on the left, details of the selected one on the right;
@@ -242,6 +248,39 @@ class Menu:
             return True, (item.back() if item.back is not None else None)
         return None
 
+    def _point(self, i):
+        """The mouse over row i: selects it (stepping into the rows from the
+        section buttons). Returns whether that changed anything."""
+        if i == self.cursor and not (self.columns and self.on_sections):
+            return False
+        self._move_to(i)
+        self.on_sections = False
+        return True
+
+    def _click(self, i):
+        """A click on row i: enter on it."""
+        self._point(i)
+        return keys.ENTER
+
+    def _point_section(self, section):
+        """The mouse over another section's button or tab: picks it (the
+        selection goes to the buttons). Returns whether that changed
+        anything."""
+        if section == self.selected.section:
+            return False
+        self._move_to(self._in_section(section)[0])
+        self.on_sections = True
+        return True
+
+    def _click_section(self, section):
+        """A click on a section's button: enter on it - into its rows, or
+        the button's own action. On a tab in the bar it only picks it."""
+        self._point_section(section)
+        if not self.columns:
+            return None
+        self.on_sections = True
+        return keys.ENTER
+
     def back_out(self):
         """Esc in the rows of the two-column layout steps back to the
         section buttons. Returns True if it did, False if esc should do
@@ -373,7 +412,8 @@ class Menu:
             sel = i == self.cursor
             if sel:
                 focus = len(lines)
-            lines.append(self._row(st, item, sel, label_width, with_value, active))
+            lines.append(console.hit(self._row(st, item, sel, label_width, with_value, active),
+                                     lambda i=i: self._click(i), lambda i=i: self._point(i)))
             if sel and inline_help:
                 lines += self._help_under(st, item, width)
         return lines, focus
@@ -385,8 +425,10 @@ class Menu:
         tabs = []
         for sec in self.sections():
             name = sec or "-"
-            tabs.append(f"{st.title}>> {name}{RESET}" if sec == cur
-                        else f"{st.dim}   {name}{RESET}")
+            tabs.append(console.hit(f"{st.title}>> {name}{RESET}" if sec == cur
+                                    else f"{st.dim}   {name}{RESET}",
+                                    lambda sec=sec: self._click_section(sec),
+                                    lambda sec=sec: self._point_section(sec)))
         return " " + "  ".join(tabs)
 
     def _panel(self, st, item, width):
@@ -457,11 +499,13 @@ class Menu:
         for s in secs:
             name = s or "-"
             if s != cur:
-                left.append(f"   {st.dim}{name}{RESET}")
+                button = f"   {st.dim}{name}{RESET}"
             elif on:                          # choosing a section: pointer and highlight
-                left.append(f" {st.title}>{INV} {name} {RESET}")
+                button = f" {st.title}>{INV} {name} {RESET}"
             else:                             # in its rows: marked, the row is lit
-                left.append(f" {st.title}>> {name}{RESET}")
+                button = f" {st.title}>> {name}{RESET}"
+            left.append(console.hit(button, lambda s=s: self._click_section(s),
+                                    lambda s=s: self._point_section(s)))
         return left, lw
 
     def render_inline(self, st):
@@ -469,9 +513,10 @@ class Menu:
         cells = []
         for i, item in enumerate(self.items):
             if i == self.cursor:
-                cells.append(f"{st.title}>{INV}{item.key} {item.label}{RESET}")
+                cell = f"{st.title}>{INV}{item.key} {item.label}{RESET}"
             else:
-                cells.append(f"{st.dim} {item.key} {item.label}{RESET}")
+                cell = f"{st.dim} {item.key} {item.label}{RESET}"
+            cells.append(console.hit(cell, lambda i=i: self._click(i), lambda i=i: self._point(i)))
         return "  " + "  ".join(cells)
 
 

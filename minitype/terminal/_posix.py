@@ -11,6 +11,12 @@ Windows), and ctrl- or alt-backspace send 0x08 or "ESC 0x7f".
 Plain terminals send the same byte for enter and shift-enter. Terminals
 that report modified keys (kitty, wezterm, foot, iTerm2 with CSI u, or
 xterm's modifyOtherKeys) send a separate sequence, which is decoded.
+
+With the mouse on (mouse()), the terminal is asked to report clicks, the
+wheel and every move (xterm's mouse tracking, mode 1003, in the SGR form
+of mode 1006: "ESC [ < button ; x ; y M"); they're decoded as Mouse events. A
+terminal without SGR sends the old form ("ESC [ M" and three bytes),
+which is decoded too.
 """
 
 import os
@@ -19,7 +25,8 @@ import sys
 
 from .keynames import (BACKSPACE, CSI, CTRL_BACKSPACE, CTRL_C, CTRL_D, CTRL_O, CTRL_P, CTRL_Q, CTRL_RBRACKET,
                        CTRL_W, DELETE, END, ENTER, ESC, HOME, INSERT, PGDN,
-                       PGUP, SHIFT_ENTER, SHIFT_TAB, TAB, UNKNOWN)
+                       PGUP, SHIFT_ENTER, SHIFT_TAB, TAB, UNKNOWN,
+                       CLICK, HOVER, MOUSE, WHEEL_DOWN, WHEEL_UP, Mouse)
 
 ESC_WAIT = 0.03         # seconds to wait for the rest of an escape sequence
 MAX_PARAMS = 16
@@ -54,9 +61,13 @@ _MODIFIED = {
     27: (ESC, ESC, ESC),
 }
 
+MOUSE_ON = "\x1b[?1003h\x1b[?1006h"     # report clicks, the wheel and moves, SGR form
+MOUSE_OFF = "\x1b[?1006l\x1b[?1003l"
+
 _fd = None
 _saved = None
 _pending = []           # characters read ahead and put back
+_mouse = {"on": False}
 
 
 def setup():
@@ -75,8 +86,20 @@ def setup():
     termios.tcsetattr(_fd, termios.TCSANOW, mode)
 
 
+def mouse(on):
+    """Ask the terminal to report the mouse, or to stop. Returns whether
+    it's on - never when the output isn't a terminal."""
+    on = bool(on)
+    if on != _mouse["on"] and sys.stdout.isatty():
+        sys.stdout.write(MOUSE_ON if on else MOUSE_OFF)
+        sys.stdout.flush()
+        _mouse["on"] = on
+    return _mouse["on"]
+
+
 def restore():
     global _saved
+    mouse(False)
     if _saved is None:
         return
     import termios
@@ -125,6 +148,19 @@ def _modified(code, mods):
     return keys[0]
 
 
+def _mouse_event(button, x, y, press=True):
+    """A mouse report as a Mouse event (x and y from 0). Button 0 is the
+    left one, 64 and 65 the wheel; 32 is added while it moves, and 4, 8
+    and 16 for shift, alt and ctrl."""
+    if button & 64:
+        return Mouse(WHEEL_DOWN if button & 1 else WHEEL_UP, x, y)
+    if button & 32 and button & 3 == 3:
+        return Mouse(HOVER, x, y)                # moving, no button down
+    if press and not button & 32 and button & 3 == 0:
+        return Mouse(CLICK, x, y)
+    return Mouse(MOUSE, x, y)          # a release, a drag, another button
+
+
 def _csi():
     params = ""
     while True:
@@ -135,6 +171,15 @@ def _csi():
         params += c
         if len(params) > MAX_PARAMS:
             return UNKNOWN
+    if params.startswith("<") and final in "Mm":      # SGR mouse
+        try:
+            button, x, y = (int(n) for n in params[1:].split(";"))
+        except ValueError:
+            return UNKNOWN
+        return _mouse_event(button, x - 1, y - 1, final == "M")
+    if final == "M" and not params:                   # the old mouse form
+        button, x, y = (ord(_getch()) - 32 for _ in range(3))
+        return _mouse_event(button, x - 1, y - 1, button & 3 != 3)
     nums = [int(p) if p.isdigit() else 1 for p in params.split(";")] if params else []
     if final == "~":
         if len(nums) == 3 and nums[0] == 27:           # xterm modifyOtherKeys

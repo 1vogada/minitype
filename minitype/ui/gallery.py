@@ -77,9 +77,10 @@ def gallery(app):
             "",
             *["  " + row for row in theme_sample(app)],
             "",
-            *[_value_row(st, label, values, getattr(s, field), hint,
-                         art if isinstance(art, str) else "")
-              for field, label, values, _, _, hint in ROWS],
+            *[console.hit(_value_row(st, label, values, getattr(s, field), hint,
+                                     art if isinstance(art, str) else ""),
+                          lambda fwd=fwd: fwd[0])          # a click steps it on
+              for field, label, values, fwd, _, hint in ROWS],
         ]
         console.present(lines, 0, hints.lines(st, SEARCH_HINTS if query is not None else HINTS))
         key = keys.read_key()

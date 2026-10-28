@@ -15,12 +15,17 @@ right opens it; esc (or left, on a row with no value to step) goes back up one l
 then out to the tabs, then out of the screen, as before. A search looks
 through every setting at every depth.
 
+With the mouse on, a row in a page you came through (a column to the
+left) can be clicked: it goes back up to that page with the row selected.
+A click on a row in the dim column of what's in the page under the cursor
+opens that page with the row selected.
+
 Building one: TreeMenu([Page("typing", [row, row, Page("drills", [...])]),
 ...]). To add a setting, make its row and put it in a page; to regroup,
 move it - nothing else knows where a row lives.
 """
 
-from ..terminal import keys
+from ..terminal import console, keys
 from ..terminal.style import RESET
 from .menu import Item, Menu
 
@@ -160,6 +165,25 @@ class TreeMenu(Menu):
         self._refresh(select=self._openers.get((self.selected.section, id(page))))
         return True
 
+    def _click_up(self, page, row):
+        """A click on a row of a page you came through: back up to that
+        page, the row selected (a page's row, for a page)."""
+        top = self.selected.section
+        trail = self.trail[top]
+        at = next(k for k, p in enumerate(trail) if p is page)
+        self.trail[top] = trail[:at + 1]
+        self._refresh(select=self._opener(top, row) if isinstance(row, Page) else row)
+        self.on_sections = False
+        return None
+
+    def _click_into(self, page, row):
+        """A click on a row in the preview of the page under the cursor:
+        that page opened, the row selected (a page's row, for a page)."""
+        top = self.selected.section
+        self.trail[top].append(page)
+        self._refresh(select=self._opener(top, row) if isinstance(row, Page) else row)
+        return None
+
     def back_out(self):
         """Esc: up a page, then (two columns) out to the tabs, then False
         to leave the screen."""
@@ -229,11 +253,12 @@ class TreeMenu(Menu):
         settings = [c for c in page.children if not isinstance(c, Page)]
         pages = [c for c in page.children if isinstance(c, Page)]
         lw = max((len(c.label) for c in settings), default=0) + 2
-        lines = [f"   {st.dim}{c.label.ljust(lw)}{RESET}{c.value() if c.value else ''}"
-                 for c in settings]
+        into = lambda c: lambda: self._click_into(page, c)
+        lines = [console.hit(f"   {st.dim}{c.label.ljust(lw)}{RESET}{c.value() if c.value else ''}",
+                             into(c)) for c in settings]
         if settings and pages:
             lines.append("")
-        lines += [f"   {st.dim}{c.name} {SUB_MARK}{RESET}" for c in pages]
+        lines += [console.hit(f"   {st.dim}{c.name} {SUB_MARK}{RESET}", into(c)) for c in pages]
         texts = [c.label.ljust(lw) + (c.value() if c.value else "") for c in settings] \
             + [c.name + " " + SUB_MARK for c in pages]
         return lines, max(map(len, texts), default=0) + 4
@@ -254,11 +279,12 @@ class TreeMenu(Menu):
         lines = []
         for c in settings + pages:
             if c is inner:
-                lines.append(f" {st.title}>> {c.name} {SUB_MARK}{RESET}")
+                line = f" {st.title}>> {c.name} {SUB_MARK}{RESET}"
             elif isinstance(c, Page):
-                lines.append(f"   {st.dim}{c.name} {SUB_MARK}{RESET}")
+                line = f"   {st.dim}{c.name} {SUB_MARK}{RESET}"
             else:
-                lines.append(f"   {st.dim}{c.label}{RESET}")
+                line = f"   {st.dim}{c.label}{RESET}"
+            lines.append(console.hit(line, lambda c=c: self._click_up(page, c)))
         names = [c.name + " " + SUB_MARK if isinstance(c, Page) else c.label for c in page.children]
         return lines, max(map(len, names)) + 4
 

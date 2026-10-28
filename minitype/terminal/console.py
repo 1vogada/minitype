@@ -14,6 +14,12 @@ RESET = "\x1b[0m"
 # go over the corner art (a menu's help box) and so doesn't push the art
 # smaller. It takes no room, and present() takes it out before drawing
 FLOAT = "\x1b]minitype-float\x07"
+# put round a piece of a line by hit(): a click there (the mouse setting)
+# runs its action, pointing at it its hover action. Like FLOAT the marks take no room; present() notes
+# where on the screen they landed and takes them out before drawing
+HIT = "\x1b]minitype-hit;"
+UNHIT = HIT + "\x07"           # where a clickable piece ends
+_HIT = re.compile(r"\x1b\]minitype-hit;(\d*)\x07")
 MIN_W, MIN_H = 20, 5
 
 _last_size = None
@@ -41,6 +47,9 @@ _corner = {"where": None, "lines": []}
 _corner_last = []   # a help box for a corner of the next frame
 CORNER_SIDE_GAP = 1     # blank columns between a corner box and the side
 _overlay = []           # lines of a box drawn over the middle of every frame (a dialog)
+# clickable pieces (hit): their (click, hover) actions by number, and where the last frame
+# drew them - (row, first column, column past the end, number), on the screen
+_clicks = {"on": False, "actions": {}, "next": 0, "zones": []}
 
 
 def enable_vt():
@@ -134,9 +143,90 @@ def clip(s, w):
 
 
 def pad(s, w):
-    """Clip or space-pad s to exactly w visible characters."""
+    """Clip or space-pad s to exactly w visible characters. A clickable
+    piece in it ends there (see hit)."""
     s = clip(s, w)
+    if HIT in s:
+        s += UNHIT
     return s + RESET + " " * (w - visible_len(s))
+
+
+def set_clickable(on):
+    """Whether hit() marks things clickable: the mouse is on and the
+    terminal reports it (keys.mouse)."""
+    _clicks["on"] = bool(on)
+    if not on:
+        _clicks.update(actions={}, zones=[])
+
+
+def clickable():
+    return _clicks["on"]
+
+
+def hit(text, action, hover=None):
+    """The text, clickable while the mouse is on: a click on it calls
+    action(), which returns the key the click stands for (a menu row's
+    enter), or None when it did all there is to do itself (the screen is
+    drawn again). Pointing at it calls hover(), if there is one, which
+    returns whether that changed anything (a menu row selected), so the
+    screen is drawn again. With the mouse off the text comes back as it is."""
+    if not _clicks["on"]:
+        return text
+    _clicks["next"] += 1
+    n = _clicks["next"]
+    _clicks["actions"][n] = (action, hover)
+    return f"{HIT}{n}\x07{text}{UNHIT}"
+
+
+def _at(x, y):
+    """The actions of the clickable piece at column x, row y of the last
+    frame drawn, or None."""
+    for row, start, end, n in _clicks["zones"]:
+        if row == y and start <= x < end and n in _clicks["actions"]:
+            return _clicks["actions"][n]
+    return None
+
+
+def click(x, y):
+    """A click at column x, row y of the terminal: (whether it hit
+    something clickable in the last frame drawn, the key its action
+    returned)."""
+    actions = _at(x, y)
+    return (True, actions[0]()) if actions else (False, None)
+
+
+def hover(x, y):
+    """The mouse pointing at column x, row y: whether that changed
+    anything (see hit)."""
+    actions = _at(x, y)
+    return bool(actions and actions[1] and actions[1]())
+
+
+def _zones(rows):
+    """The clickable pieces in the rows: (row, first column, column past
+    the end, number), in the rows' own cells; a piece not closed in its row
+    runs to the row's end."""
+    found = []
+    for r, row in enumerate(rows):
+        if HIT not in row:
+            continue
+        col, pos, open_ = 0, 0, None
+        for m in ANSI.finditer(row):
+            col += m.start() - pos
+            pos = m.end()
+            mark = _HIT.fullmatch(m.group())
+            if not mark:
+                continue
+            if open_ is not None:
+                found.append((r, open_[0], col, open_[1]))
+            open_ = (col, int(mark.group(1))) if mark.group(1) else None
+        if open_ is not None:
+            found.append((r, open_[0], col + len(row) - pos, open_[1]))
+    return [z for z in found if z[2] > z[1]]
+
+
+def _unmarked(rows):
+    return [_HIT.sub("", r) if HIT in r else r for r in rows]
 
 
 def present(lines, focus=None, pinned=(), scene="menu"):
@@ -183,6 +273,8 @@ def present(lines, focus=None, pinned=(), scene="menu"):
         view += [""] * (body_h - len(view))     # full height: pinned / art / frame / corner box
     view += pinned
     rows = [clip(line, w - 1) for line in view]
+    zones = _zones(rows)
+    rows = _unmarked(rows)
     # what a corner help box must keep clear of: per row, the first column
     # free of text (a gap of two after it), and the row it must end above
     taken = {r: end + 2 for r, row in enumerate(rows) if (end := _text_ends(row)[0])}
@@ -192,10 +284,16 @@ def present(lines, focus=None, pinned=(), scene="menu"):
         # its own on top of it, the key hints in another along the bottom
         body, hints = rows[:body_h], [r for r in rows[body_h:] if visible_len(r)]
         boxed, dim = _panel([""] * len(rows), body, w - 1, 0)
+        side = len((d["border"] or BORDERS["rounded"])[5])
+        shown = [r for r in range(len(rows)) if visible_len(rows[r]) and r >= body_h]
+        moved = {r: (r + 1, side) for r in range(body_h)}    # into the text panel
         if hints:
             bottom = len(rows) - len(hints) - 2         # the hints panel's top edge
             boxed, more = _panel(boxed, hints, w - 1, bottom)
             dim.update(more)
+            moved.update({r: (bottom + 1 + k, side) for k, r in enumerate(shown)})
+        zones = [(moved[r][0], a + moved[r][1], b + moved[r][1], n)
+                 for r, a, b, n in zones if r in moved and moved[r][0] in dim]
         taken = {r: right + 1 for r, (_, right) in dim.items()}    # the panels' edges
         rows = overlay_art(boxed, art, w - 1, 0, True, dim)
     elif art:
@@ -204,8 +302,19 @@ def present(lines, focus=None, pinned=(), scene="menu"):
         rows = _in_corner(rows, taken, corner, w - 1, bottom)
     if d["border"]:
         rows = frame(rows, d["border"], d["border_style"], w - 1)
+        side = len(d["border"][5])
+        zones = [(r + 1, a + side, b + side, n) for r, a, b, n in zones]
     if _overlay:
-        rows = _over(rows, _overlay)
+        box = list(_overlay)
+        top, left = _over_at(rows, box)
+        bw, bh = max(visible_len(b) for b in box), len(box)
+        zones = [z for z in zones if not (top <= z[0] < top + bh and z[1] < left + bw
+                                          and z[2] > left)]       # covered by the box
+        zones += [(r + top, a + left, b + left, n) for r, a, b, n in _zones(box)]
+        rows = _over(rows, _unmarked(box))
+    _clicks["zones"] = zones
+    kept = {z[3] for z in zones}
+    _clicks["actions"] = {n: a for n, a in _clicks["actions"].items() if n in kept}
     bg = _background
     # with a theme background, every reset puts the background straight
     # back, and the line ends (and the rest of the screen) are cleared
@@ -675,11 +784,16 @@ def _over(rows, box):
     """The rows with the box laid over their middle. Where it covers the
     art, the art shows through the box darkened (the see-through setting),
     instead of a black hole; the box's own highlights stay as they are."""
+    return _stamp(rows, box, *_over_at(rows, box))
+
+
+def _over_at(rows, box):
+    """Where _over puts the box: its (top, left)."""
     bw = max(visible_len(b) for b in box)
     top = max(0, (len(rows) - len(box)) // 2)
     width = max((visible_len(r) for r in rows), default=0)
     left = max(0, (max(width, bw) - bw) // 2)
-    return _stamp(rows, box, top, left)
+    return top, left
 
 
 def _stamp(rows, box, top, left):

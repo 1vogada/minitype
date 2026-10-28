@@ -214,6 +214,29 @@ agent's memory don't travel, so this section is the memory.
   room for (up to `art.TALLER` = half the height) after the picture is
   placed by its own height, then fades it. `pic.extra` = filler rows.
 
+- 2026-10-28: **mouse** (setting `mouse`, on by default; settings → menus →
+  mouse). Clicks are hit-tested against invisible marks: `console.hit(text,
+  action)` wraps a piece of a line in OSC marks (like FLOAT, zero width),
+  `present()` notes where they land on screen (`_zones`, after clipping,
+  moved for the text panel, the border and a dialog box, which also covers
+  what's under it) and strips them before anything else sees the rows, so
+  art caching is unchanged. `keys.read_key` turns the wheel into up / down,
+  a click into whatever the action returns (`Menu._click`: enter on the
+  row; `_click_section`; `TreeMenu._click_up` / `_click_into`), and the
+  mouse moving over something (hover, the owner's ask: "a tooltip on
+  hover") into a redraw when its hover action changed anything
+  (`Menu._point`: the row selected, its help shows; once per cell). A
+  click on nothing is passed over. While a test runs (`stamping`) mouse
+  events are passed over, so they never reach a test or its timing; a box
+  over the test (`keys.over_test`: the pause box, ctrl-o's settings) takes
+  them; any left when the test ends are dropped. Windows: console mouse records via
+  ReadConsoleInput (`_windows._pump` takes them off the front of the input
+  so msvcrt still reads every key; quick edit off while on; the mode put
+  back on exit); VT input mode stays off, so key decoding is unchanged.
+  Linux / macOS / Termux: xterm mouse tracking (1003: moves too), SGR 1006 (and the old
+  X10 form). The terminal is only touched between `keys.setup()` and
+  `restore()`, never by the tests. `tests/mouse_check.py`.
+
 ## First thing in a new session
 Ask the user whether to add an **"outline only" option for the text
 panel** (just the border, the art showing through inside). Ask every time

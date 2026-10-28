@@ -23,3 +23,23 @@ CSI = {
     "A": UP, "B": DOWN, "C": RIGHT, "D": LEFT,
     "H": HOME, "F": END, "Z": SHIFT_TAB,
 }
+
+
+# The mouse (the mouse setting): read like keys, each event a Mouse - its
+# name with the cell it happened on. HOVER is the mouse moving with no
+# button down; MOUSE is anything else it does (a release, a drag, another
+# button), which read_key passes over.
+CLICK = "click"
+HOVER = "hover"
+WHEEL_UP, WHEEL_DOWN = "wheel-up", "wheel-down"
+MOUSE = "mouse"
+
+
+class Mouse(str):
+    """A mouse event: CLICK, HOVER, WHEEL_UP, WHEEL_DOWN or MOUSE, at column x and
+    row y of the terminal, both from 0 at the top left."""
+
+    def __new__(cls, name, x=0, y=0):
+        event = super().__new__(cls, name)
+        event.x, event.y = x, y
+        return event

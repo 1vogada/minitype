@@ -1,13 +1,25 @@
-"""Keyboard input on Windows, through msvcrt."""
+"""Keyboard input on Windows, through msvcrt; the mouse through the
+console's own input records.
+
+With the mouse on (mouse()), the console sends mouse events as input
+records next to the keys, and quick edit (selecting text with the mouse)
+is off. msvcrt would read past them and drop them, so they're taken off
+the front of the input first (_pump) and handed out as Mouse events; the
+keys stay msvcrt's, decoded exactly as without the mouse. This works in
+the classic console and in Windows Terminal (which passes the mouse to a
+console app that asks for it); the VT input mode, which would bring the
+mouse as escape sequences instead, stays off.
+"""
 
 import ctypes
 import msvcrt
+import time
 from ctypes import wintypes
 
 from .keynames import (BACKSPACE, CSI, CTRL_BACKSPACE, CTRL_C, CTRL_D, CTRL_O, CTRL_P, CTRL_I, CTRL_LBRACKET, CTRL_RBRACKET, CTRL_Q,
                        CTRL_W, DELETE, DOWN, END, ENTER, ESC, HOME, INSERT,
                        LEFT, PGDN, PGUP, RIGHT, SHIFT_ENTER, SHIFT_TAB, TAB,
-                       UNKNOWN, UP)
+                       UNKNOWN, UP, CLICK, HOVER, WHEEL_DOWN, WHEEL_UP, Mouse)
 
 _CONTROL = {
     "\r": ENTER,
@@ -39,6 +51,18 @@ VK_RETURN = 0x0D
 VK_SHIFT = 0x10
 SHIFT_PRESSED = 0x0010
 KEY_EVENT = 0x0001
+MOUSE_EVENT = 0x0002
+# console input modes
+ENABLE_MOUSE_INPUT = 0x0010
+ENABLE_QUICK_EDIT_MODE = 0x0040
+ENABLE_EXTENDED_FLAGS = 0x0080      # needed for a change to quick edit to count
+# a mouse record's buttons and flags
+LEFT_BUTTON = 0x0001
+MOUSE_MOVED = 0x0001
+MOUSE_WHEELED = 0x0004
+WHEEL_NOTCH = 120                   # one notch of the wheel
+PUMP = 64                           # input records looked at at a time
+MOUSE_POLL = 0.002                  # a read waiting for a key, with the mouse on
 
 
 class _KeyRecord(ctypes.Structure):
@@ -47,8 +71,29 @@ class _KeyRecord(ctypes.Structure):
                 ("char", wintypes.WCHAR), ("state", wintypes.DWORD)]
 
 
+class _MouseRecord(ctypes.Structure):
+    _fields_ = [("x", wintypes.SHORT), ("y", wintypes.SHORT),
+                ("buttons", wintypes.DWORD), ("state", wintypes.DWORD),
+                ("flags", wintypes.DWORD)]
+
+
+class _Event(ctypes.Union):
+    _fields_ = [("key", _KeyRecord), ("mouse", _MouseRecord)]
+
+
 class _InputRecord(ctypes.Structure):
-    _fields_ = [("type", wintypes.WORD), ("key", _KeyRecord)]
+    _anonymous_ = ("event",)
+    _fields_ = [("type", wintypes.WORD), ("event", _Event)]
+
+
+class _BufferInfo(ctypes.Structure):
+    _fields_ = [("size", wintypes._COORD), ("cursor", wintypes._COORD),
+                ("attributes", wintypes.WORD), ("window", wintypes.SMALL_RECT),
+                ("biggest", wintypes._COORD)]
+
+
+_mouse = {"on": False, "saved": None, "held": False, "wheel": 0}
+_events = []            # mouse events taken off the input, not yet read
 
 
 def setup():
@@ -56,11 +101,102 @@ def setup():
 
 
 def restore():
-    pass
+    mouse(False)
+
+
+def mouse(on):
+    """Switch the mouse on or off: the console's mouse input, with quick
+    edit off while it's on (a click would start a selection instead).
+    Off puts back the mode it had. Returns whether it's on - never when
+    the input isn't a console."""
+    on = bool(on)
+    if on == _mouse["on"]:
+        return on
+    try:
+        k32 = ctypes.windll.kernel32
+        h = k32.GetStdHandle(-10)
+        mode = wintypes.DWORD()
+        if not k32.GetConsoleMode(h, ctypes.byref(mode)):
+            return False
+        if on:
+            _mouse["saved"] = mode.value
+            new = (mode.value | ENABLE_MOUSE_INPUT | ENABLE_EXTENDED_FLAGS) \
+                & ~ENABLE_QUICK_EDIT_MODE
+        else:
+            new = _mouse["saved"] | ENABLE_EXTENDED_FLAGS   # quick edit as it was
+        if k32.SetConsoleMode(h, new):
+            _mouse.update(on=on, held=False, wheel=0)
+            _events.clear()
+    except (AttributeError, OSError):
+        pass
+    return _mouse["on"]
+
+
+def _window():
+    """The visible window's top left in the console's buffer: mouse
+    records count from the buffer's, which can have scrollback above."""
+    try:
+        k32 = ctypes.windll.kernel32
+        info = _BufferInfo()
+        if k32.GetConsoleScreenBufferInfo(k32.GetStdHandle(-11), ctypes.byref(info)):
+            return info.window.Left, info.window.Top
+    except (AttributeError, OSError):
+        pass
+    return 0, 0
+
+
+def _decode(rec, origin=(0, 0)):
+    """A mouse record as Mouse events: none for one that does nothing (a
+    drag, a release, another button), a hover for a move, one for a click - the left button
+    going down, the second click of a double click too - and one per notch
+    for the wheel (a fast turn comes as one record of several notches; a
+    touchpad's small turns add up to one)."""
+    x, y = rec.x - origin[0], rec.y - origin[1]
+    left = bool(rec.buttons & LEFT_BUTTON)
+    if rec.flags & MOUSE_WHEELED:
+        _mouse["wheel"] += ctypes.c_short((rec.buttons >> 16) & 0xFFFF).value
+        notches = int(_mouse["wheel"] / WHEEL_NOTCH)          # towards 0
+        _mouse["wheel"] -= notches * WHEEL_NOTCH
+        return [Mouse(WHEEL_UP if notches > 0 else WHEEL_DOWN, x, y)] * abs(notches)
+    if rec.flags & MOUSE_MOVED:
+        _mouse["held"] = left                       # a drag isn't a click
+        return [] if rec.buttons else [Mouse(HOVER, x, y)]
+    pressed = left and not _mouse["held"]
+    _mouse["held"] = left
+    return [Mouse(CLICK, x, y)] if pressed else []
+
+
+def _pump():
+    """Take what isn't a key (mouse records, key releases, focus) off the
+    front of the console input, keeping the mouse events. It stops at the
+    first key, so msvcrt still reads every key itself."""
+    try:
+        k32 = ctypes.windll.kernel32
+        h = k32.GetStdHandle(-10)
+        recs = (_InputRecord * PUMP)()
+        n = wintypes.DWORD()
+        if not k32.PeekConsoleInputW(h, recs, PUMP, ctypes.byref(n)):
+            return
+        take, found = 0, []
+        for r in recs[:n.value]:
+            if r.type == KEY_EVENT and (r.key.down or r.key.char not in ("", "\0")):
+                break                               # a key (or an alt-code's character)
+            take += 1
+            if r.type == MOUSE_EVENT:
+                found.append(_MouseRecord.from_buffer_copy(r.mouse))
+        if take:
+            origin = _window() if found else (0, 0)
+            for m in found:
+                _events.extend(_decode(m, origin))
+            k32.ReadConsoleInputW(h, recs, take, ctypes.byref(n))
+    except (AttributeError, OSError):
+        pass
 
 
 def ready():
-    return msvcrt.kbhit()
+    if _mouse["on"]:
+        _pump()
+    return bool(_events) or msvcrt.kbhit()
 
 
 def _getch():
@@ -131,7 +267,11 @@ def _escape_sequence():
 
 
 def read():
-    """One key press, decoded."""
+    """One key press, decoded, or a mouse event (see mouse())."""
+    while _mouse["on"] and not ready():
+        time.sleep(MOUSE_POLL)          # msvcrt, blocking, would drop the mouse
+    if _events:
+        return _events.pop(0)
     # shift has to be read off the raw event before msvcrt consumes the key
     shift_tab = _with_shift(VK_TAB)
     shift_enter = _with_shift(VK_RETURN)

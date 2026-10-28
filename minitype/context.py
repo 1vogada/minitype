@@ -4,7 +4,7 @@ from .history import History
 from .learn.progress import LearnProgress
 from .settings import FADE_FIELDS, SETUPS, Settings
 from .stats import SessionStats
-from .terminal import console
+from .terminal import console, keys
 from .terminal.art import THEME_ART
 from .terminal.art import paint as paint_art
 from .terminal.art import resolve as resolve_art
@@ -113,6 +113,7 @@ class App:
                   s.fade_start_top, s.fade_angle, s.fade_curve) if s.fade_on else None,
             text_fx=None if no_art else (s.text_contrast, s.text_bold) + extremes,
             see_through=s.see_through / 100, menu_lighten=s.text_lighten / 100)
+        keys.mouse(s.mouse)
         return st
 
     def picture_fade(self, picture):

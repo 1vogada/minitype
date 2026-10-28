@@ -88,6 +88,20 @@ minitype
   settings. In the middle of a test it's paused (the clock stops), and
   coming back a box asks "Resume?": yes carries on where you were, no
   leaves the test
+- **the mouse** (settings → menus → mouse, on by default): point at a row
+  to select it, as the arrows would (its help shows), and click it to use
+  it, like enter. Pointing at a section button or tab picks it; a click on
+  a button steps into it (or opens it: settings, gallery, quit). In
+  settings, a click on a page you came through (the columns to the left)
+  goes back up to it, and a click on a row in the dim preview of a page
+  opens the page on that row. The gallery's rows step on when clicked.
+  In the pause box, point at Yes or No to pick it and click to answer. The
+  wheel moves up and down wherever the arrows do. The mouse never counts
+  while you type a test. With it on, the
+  terminal can't select text with the mouse; switch it off to copy text.
+  It works in Windows Terminal and the classic Windows console, and in
+  terminals that report the mouse the xterm way (most on Linux and macOS,
+  Termux)
 - key hints can be switched off; pressing any key that does nothing brings
   them back
 

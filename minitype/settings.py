@@ -325,6 +325,7 @@ class Settings:
     pace: int = 0                # dim caret moving at a fixed wpm
     sound: bool = False          # bell on a wrong key
     hints: bool = True           # key hints at the bottom of each screen
+    mouse: bool = True           # click menu rows, scroll with the wheel
 
     # ---- header during a test
     show_timer: bool = True

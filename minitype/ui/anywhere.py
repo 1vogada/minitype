@@ -15,7 +15,8 @@ def open_settings(app):
     from .settings_menu import settings_menu       # it imports screens that import this
     running = app.current_test
     paused = time.time()
-    settings_menu(app)
+    with keys.over_test():                    # the mouse works here, over a test too
+        settings_menu(app)
     app.save_settings()
     if not running:
         return
@@ -52,23 +53,29 @@ def warn(app, text, redraw=None, secs=WARN_SECS):
 
 def resume_dialog(app, redraw, title="Resume?"):
     """Yes / No over the screen behind: True to resume. Left / right (or
-    tab) pick, enter confirms, y and n answer at once, esc resumes."""
-    choice = 0
+    tab) pick, enter confirms, y and n answer at once, esc resumes. With
+    the mouse, pointing at an answer picks it and a click gives it."""
+    choice = [0]
+
+    def point(k):
+        changed, choice[0] = choice[0] != k, k
+        return changed
     try:
-        while True:
-            console.set_overlay(_box(app.styles(), choice, title))
-            redraw()
-            key = keys.read_key()
-            if key in (keys.LEFT, keys.RIGHT, keys.TAB, keys.SHIFT_TAB):
-                choice = 1 - choice
-            elif key in ("y", "Y"):
-                return True
-            elif key in ("n", "N"):
-                return False
-            elif key == keys.ENTER:
-                return choice == 0
-            elif key == keys.ESC:
-                return True
+        with keys.over_test():                # the mouse works here, over a test too
+            while True:
+                console.set_overlay(_box(app.styles(), choice[0], title, point))
+                redraw()
+                key = keys.read_key()
+                if key in (keys.LEFT, keys.RIGHT, keys.TAB, keys.SHIFT_TAB):
+                    choice[0] = 1 - choice[0]
+                elif key in ("y", "Y"):
+                    return True
+                elif key in ("n", "N"):
+                    return False
+                elif key == keys.ENTER:
+                    return choice[0] == 0
+                elif key == keys.ESC:
+                    return True
     finally:
         console.set_overlay(None)
 
@@ -85,15 +92,17 @@ def _message(st, text):
             f"{st.title}╚{'═' * inner}╝{RESET}"]
 
 
-def _box(st, choice, title="Resume?"):
+def _box(st, choice, title="Resume?", point=lambda k: False):
     """The dialog: a double-lined box with the question and the two
-    answers, the chosen one marked and highlighted."""
+    answers, the chosen one marked and highlighted. point(k) picks answer
+    k when the mouse is over it."""
     inner = 26
 
     def option(label, on):
         return (f"{st.title}>{INV} {label} {RESET}" if on
                 else f"{st.dim}  {label} {RESET}")
-    answers = option("Yes", choice == 0) + "      " + option("No", choice == 1)
+    answers = (console.hit(option("Yes", choice == 0), lambda: "y", lambda: point(0)) + "      "
+               + console.hit(option("No", choice == 1), lambda: "n", lambda: point(1)))
     pad_l = (inner - console.visible_len(answers)) // 2
     line = st.title + "║" + RESET
     centre = lambda text, n: " " * ((inner - n) // 2) + text + " " * (inner - n - (inner - n) // 2)

@@ -565,6 +565,11 @@ def raw_items(app):
                  tags=("caret", "race", "speed", "wpm")),
         b.flag("sound", "sound", "beep on a wrong key",
                tags=("audio", "beep", "mistakes")),
+        b.flag("mouse", "mouse",
+               "point at a row to select it (its help shows), click it to "
+               "use it, like enter; the wheel moves up and down. Off gives "
+               "the mouse back to the terminal, to select and copy text",
+               tags=("click", "wheel", "scroll", "pointer", "hover")),
         b.flag("key hints", "hints",
                "the key list at the bottom of each screen; press any unused "
                "key to see it while it's off",

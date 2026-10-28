@@ -122,6 +122,7 @@ TREE = [
                 ]),
             ]),
         ]),
+        ("mouse", "clicking menu rows and scrolling with the wheel", [("look", "mouse")]),
     ]),
     ("data", "your goal, what's kept on disk, and starting over", [
         ("goal", "a daily goal to type towards", [("progress", "daily goal")]),
