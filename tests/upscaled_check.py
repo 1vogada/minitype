@@ -45,9 +45,14 @@ for name in built:
         assert all(f is not None or b is not None for frow, brow in zip(fg, bg)
                    for f, b in zip(frow, brow)), (name, "no holes")
         width = len(p.lines[0])
-        assert sum(k < width for k in p.keep) < len(p.lines), (name, "not all focus")
-    # truecolour: far more colours than the theme's 70
-    assert len({c for row in big[2].rgb[1] + big[2].rgb[0] for c in row if c}) > 150, name
+        # at the smallest size a tall subject (the cactus, the reef's
+        # jellyfish) can reach every row, as revamp's cactus already does
+        assert len(p.lines) <= 16 or sum(k < width for k in p.keep) < len(p.lines), \
+            (name, "not all focus")
+    # truecolour: far more colours than the theme's 70 - except the pictures
+    # flat by design (matrix code rain, the paper plane, phosphor terminal)
+    if name not in ("rain", "plane", "terminal"):
+        assert len({c for row in big[2].rgb[1] + big[2].rgb[0] for c in row if c}) > 150, name
     # mostly blocks: a scene's own text is a sprinkle, not the picture
     cells = "".join(big[0].lines)
     assert sum(ch in BLOCKS for ch in cells) > 0.6 * len(cells), name

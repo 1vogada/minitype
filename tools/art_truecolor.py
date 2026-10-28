@@ -90,7 +90,8 @@ def draw(scene, rows, pal, row_range, col_range, texts):
                         y = (r + (j + oy) / SY) * unit
                         rgb, a, foc, _ = scene.field(x, y)
                         foc_cell = foc_cell or (foc and a > 0)
-                        col = mix(ground, rgb, a) if a < 1 else rgb
+                        # nothing there (vaporwave's sky fades out to the left): ground
+                        col = ground if a <= 0 else mix(ground, rgb, a) if a < 1 else rgb
                         acc[0] += col[0]
                         acc[1] += col[1]
                         acc[2] += col[2]

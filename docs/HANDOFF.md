@@ -8,14 +8,16 @@ The last long session ran on the owner's work laptop. Its chat and the
 agent's memory don't travel, so this section is the memory.
 
 **Do next, in order:**
-1. **Finish the upscaled build.** Only 6 of 40 pictures are in truecolour:
-   grid, island, keyboard, moon, pines and sunset. The other 34 still show
-   their revamp picture in that style, which works but doesn't look
-   upscaled. Run `python tools/make_art_upscaled.py -j<cores>` (pure
-   Python, CPU-bound; it skips finished pictures and writes after each
-   one, so it can be stopped and resumed). Then `python tests/run_all.py`,
-   commit `minitype/terminal/art_upscaled.py` and push. It takes about 2
-   hours on 4 cores. The owner meant to run it on their workstation.
+1. **Upscaled build (done 2026-10-28).** All 40 pictures are in
+   truecolour, built on the owner's home PC with `-j12`/`-j15` (about an
+   hour). One crash on the way: palm (the vaporwave scene) fades its sky
+   out to nothing far left, and `tools/art_truecolor.py` couldn't mix a
+   sample with no colour; it now uses the ground there, like
+   `art_combined.draw`. A failing picture stops the whole `-j` build (the
+   others' finished work is kept), so rebuild the rest by name.
+   `tests/upscaled_check.py` lets a 16-row picture be all focus (cactus,
+   reef) and the flat-by-design rain, plane and terminal have fewer than
+   150 colours.
 2. **Settings menu: cascading pages (done 2026-10-16).** The owner wanted
    it like Serious Sam Fusion / BFE's options (menus inside menus), keeping
    the side tabs, and easy to extend. `minitype/ui/tree_menu.py` (Page,
