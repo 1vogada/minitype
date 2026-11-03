@@ -120,7 +120,14 @@ minitype
   when) go to the app as the test ends, in the background, so it can match
   your mistakes to how deep you pressed; the results then show what it
   found, like "keyboard: 8 often missed (pressed too light) · 8→9 mixed up
-  4x" or "keyboard: lowered 8 by 0.1 mm". Off, nothing is kept or sent
+  4x" or "keyboard: lowered 8 by 0.1 mm". Off, nothing is kept or sent.
+  The main menu then has **keyboard** (k): a key grid like the bad keys
+  editor; press any key (or move with the arrows) to see what the app
+  learnt about it - actuation now and learnt (or "learning: n / 20
+  presses"), presses, hits / misses / ghosts / doubles / typos, the keys
+  it's mixed up with ("you typed 9 for 8: 4x") and recent changes ("types
+  earlier by 0.1 mm", "bounce guard on"). It asks the app every few
+  seconds in the background; keys pressed there aren't typing
 
 The screen redraws when the console is resized and fits terminals as small
 as 20×5: long menus scroll to keep the selection visible and lines are

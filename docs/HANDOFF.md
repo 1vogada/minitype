@@ -38,6 +38,16 @@ agent's memory don't travel, so this section is the memory.
    2+) · most mixed-up pair (2+) · "most when typing fast" (share 0.6+),
    then "lowered / raised KEY by N mm" from `adjusted`. Nothing when
    patterns are missing. `tests/keyboard_events_check.py` (HTTP faked).
+   **Keyboard screen** (same day, the owner's ask "like the ghost where we
+   press a key and it shows it"; there's no such ghost screen, so it copies
+   the bad keys editor `ui/key_editor.py`): `ui/keyboard_screen.py`, main
+   menu `k` (practice, only with `keyboard_learn` on). `Poller`: status
+   calls in a daemon thread, at open and every `REFRESH` (3 s); the loop
+   polls `keys.key_ready` so input never waits. `key_id` matches the app's
+   names (upper case, shifted symbol -> its key, "Space"); `detail()` makes
+   a key's lines from `keys[]` and `patterns` (keys / pairs either side /
+   adjusted: changeMm < 0 types earlier, > 0 later, why "guard" = bounce
+   guard on). `tests/keyboard_screen_check.py`.
 1. **Upscaled build (done 2026-10-28).** All 40 pictures are in
    truecolour, built on the owner's home PC with `-j12`/`-j15` (about an
    hour). One crash on the way: palm (the vaporwave scene) fades its sky

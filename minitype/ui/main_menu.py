@@ -12,6 +12,7 @@ from .book_menu import book_menu
 from .lyrics_mode import lyrics_test
 from .gallery import gallery
 from . import keyboard_learn
+from .keyboard_screen import keyboard_screen
 from .learn_menu import learn_menu
 from .menu import Item, Menu, title_lines
 from .profile import goal_line, profile_screen
@@ -154,6 +155,13 @@ def build_items(app):
              lambda: f"{len(app.stats.word_speed)} words timed",
              help="a test made of the words you type slowest",
              section="practice"),
+    ] + ([
+        Item("k", "keyboard", lambda: keyboard_screen(app),
+             lambda: app.keyboard_app.line().split(": ", 1)[1] if app.keyboard_app else "",
+             help="what your magnetic keyboard's app has learnt about each key: "
+                  "press a key to see its actuation, presses and mistakes",
+             section="practice"),
+    ] if s.keyboard_learn else []) + [
 
         # each a tab of its own: its button opens it
         Item("g", "gallery", lambda: gallery(app), lambda: s.theme,
