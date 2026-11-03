@@ -9,16 +9,20 @@ assert keys.backend is win, "on Windows the msvcrt back end is used"
 def decode(chars, shift=False, ready=True):
     """read_key on a scripted input stream (Windows back end)."""
     stream = list(chars)
-    ungot = []
+    ungot = win._pushed                 # what's read ahead and put back
+    ungot.clear()
 
     def getch():
-        return ungot.pop() if ungot else stream.pop(0)
+        return ungot.pop(0) if ungot else stream.pop(0)
+    waiting = lambda: ready if stream or ungot else False
     with mock.patch.object(win, "_getch", getch), \
-            mock.patch.object(win, "ready", lambda: ready if stream or ungot else False), \
-            mock.patch.object(win, "_with_shift", lambda vk: shift), \
-            mock.patch.object(win.msvcrt, "ungetwch", ungot.append):
+            mock.patch.object(win, "ready", waiting), \
+            mock.patch.object(win, "_key_waiting", waiting), \
+            mock.patch.object(win, "_with_shift", lambda vk: shift):
         k = keys.read_key(resize=False)
-        return k, "".join(ungot) + "".join(stream)
+        rest = "".join(ungot) + "".join(stream)
+        ungot.clear()
+        return k, rest
 
 
 # the three ways shift-tab can arrive

@@ -204,11 +204,21 @@ def _pump():
 def ready():
     if _mouse["on"]:
         _pump()
-    return bool(_events) or msvcrt.kbhit()
+    return bool(_events) or _key_waiting()
+
+
+# characters read ahead and put back (after an esc): msvcrt's own put-back
+# holds one, and refuses a second or a "￿" with an OSError
+_pushed = []
+
+
+def _key_waiting():
+    """A key to read (not the mouse): put back, or in the console."""
+    return bool(_pushed) or msvcrt.kbhit()
 
 
 def _getch():
-    return msvcrt.getwch()
+    return _pushed.pop(0) if _pushed else msvcrt.getwch()
 
 
 def _with_shift(vk):
@@ -264,12 +274,13 @@ def _ctrl_lbracket():
 
 def _escape_sequence():
     """After ESC: decode "ESC [ x" if one is arriving, otherwise it was a
-    plain Esc press. Anything else read ahead is put back."""
-    if not ready():
+    plain Esc press. Anything else read ahead is put back. Only a key
+    counts as arriving: the mouse waiting must not make it wait for one."""
+    if not _key_waiting():
         return ESC
     c = _getch()
-    if c != "[":
-        msvcrt.ungetwch(c)
+    if c != "[" or not _key_waiting():
+        _pushed.insert(0, c)                    # an esc, then that key on its own
         return ESC
     return CSI.get(_getch(), UNKNOWN)
 
@@ -281,10 +292,12 @@ def read():
     if _events:
         return _events.pop(0)
     # shift has to be read off the raw event before msvcrt consumes the key
-    shift_tab = _with_shift(VK_TAB)
-    shift_enter = _with_shift(VK_RETURN)
-    ctrl_i = _ctrl_i()
-    ctrl_lb = _ctrl_lbracket()
+    # (a key put back was read already: its event is gone)
+    raw = not _pushed
+    shift_tab = raw and _with_shift(VK_TAB)
+    shift_enter = raw and _with_shift(VK_RETURN)
+    ctrl_i = raw and _ctrl_i()
+    ctrl_lb = raw and _ctrl_lbracket()
     c = _getch()
     if c in ("\x00", "\xe0"):
         return _EXTENDED.get(_getch(), UNKNOWN)
