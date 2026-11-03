@@ -75,6 +75,10 @@ TREE = [
             ("keyboard", "the on-screen keyboard and its layout", [
                 ("look", "keyboard", "on-screen keyboard"),
                 ("look", "layout", "keyboard layout")]),
+            ("magnetic keyboard", "a magnetic keyboard's app (the MAX68HE) tuning each "
+                                  "key's actuation to how you really press, while you type", [
+                ("magnetic", "keyboard learn"), ("magnetic", "ask at start"),
+                ("magnetic", "keyboard server")]),
             ("letter effects", "letters bouncing, shaking, popping and more - only looks, "
                                "never the words", [
                 ("fun", "bounce"), ("fun", "shake"), ("fun", "pop"), ("fun", "fade"),

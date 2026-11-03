@@ -28,7 +28,8 @@ from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICU
                       KARAOKE_OFFSETS, WPM_SYSTEMS)
 from ..terminal.art import ART_NAMES, THEME_ART
 from ..terminal.style import CUSTOM_FILE, custom_error, theme_names
-from .. import spotify, storage
+from .. import keyboard_app, spotify, storage
+from . import keyboard_learn
 from ..terminal import console, keys
 from ..terminal.style import INV, RESET
 from ..util import cycle, step_number
@@ -677,6 +678,30 @@ def raw_items(app):
         b.flag("session", "res_history", "your last few speeds this session",
                tags=("history", "speed", "stats")),
     ]
+    b.section = "magnetic"
+    mag_tags = ("keyboard", "magnetic", "hall", "max68he", "actuation", "learn", "app")
+    learn_row = _then(b.flag(
+        "keyboard learn", "keyboard_learn",
+        "while it's on, the keyboard's app (the MAX68HE's, on this computer) "
+        "watches how deep you press each key - here or anywhere - and keeps "
+        "moving each key's actuation point to your real presses, by itself. "
+        "Changing it tells the app straight away",
+        tags=mag_tags), lambda: keyboard_learn.send(app))
+    learn_row.value = lambda: ("on" if s.keyboard_learn else "off") + (
+        f"  ({keyboard_app.NOT_RUNNING})" if app.keyboard_app is not None
+        and app.keyboard_app.error == keyboard_app.NOT_RUNNING else "")
+    items += [
+        learn_row,
+        b.flag("ask at start", "keyboard_ask",
+               "ask whether to learn each time minitype starts; off: no "
+               "question, the keyboard learn setting is sent to the app as it is",
+               tags=mag_tags + ("start", "question", "ask")),
+        b.item("keyboard server", lambda: _keyboard_server(app),
+               lambda: s.keyboard_server,
+               help=f"where the keyboard's app listens (normally "
+                    f"{keyboard_app.SERVER}). Enter to change it",
+               tags=mag_tags + ("server", "address", "url", "port")),
+    ]
     b.section = "progress"
     items += [
         b.choice("daily goal", "daily_goal", GOALS,
@@ -796,6 +821,16 @@ def _client_id(app):
     v = prompt(SPOTIFY_HELP, app.settings.spotify_client_id)
     if v is not None and v.strip():
         app.settings.spotify_client_id = v.strip()
+
+
+def _keyboard_server(app):
+    """Change the keyboard app's address (an empty answer keeps it; a
+    wrong one too: it has to be an http:// or https:// address)."""
+    from .prompt import prompt
+    v = prompt("keyboard app's address (http://...):", app.settings.keyboard_server)
+    if v and keyboard_app.server_url(v) == v.strip().rstrip("/"):
+        app.settings.keyboard_server = v.strip().rstrip("/")
+        keyboard_learn.send(app)
 
 
 def _toggle_spotify(app):

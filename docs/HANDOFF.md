@@ -8,6 +8,22 @@ The last long session ran on the owner's work laptop. Its chat and the
 agent's memory don't travel, so this section is the memory.
 
 **Do next, in order:**
+0. 2026-11-03: **keyboard learn** (the owner's MAX68HE magnetic keyboard).
+   `minitype/keyboard_app.py` is the client for the keyboard app's local
+   server (`POST http://localhost:6869/api/learn/typing`, body
+   `{"action": "status"|"on"|"off"}`, optional `percent` / `floorMm`;
+   urllib, 1 s timeout, never raises: `Answer(state | error)`, "app not
+   running" when nothing listens). `ui/keyboard_learn.py`: `at_start`
+   (from `app.main`, after the welcome screen: with `keyboard_ask` on, an
+   on / off box - `anywhere.ask_dialog`, the Resume? box made general -
+   then the setting sent), `send` (the settings row calls it on every
+   change), `refresh` (one status call as the results open, only when
+   `keyboard_learn` is on) and `status_line` (results and main menu; the
+   menu reuses the last answer, no call). Settings `keyboard_learn` (off),
+   `keyboard_ask` (on), `keyboard_server`; page in-game › screen ›
+   magnetic keyboard. The server side is built in `../max68he`; minitype
+   never asks to apply anything, the app does that itself.
+   `tests/keyboard_learn_check.py`.
 1. **Upscaled build (done 2026-10-28).** All 40 pictures are in
    truecolour, built on the owner's home PC with `-j12`/`-j15` (about an
    hour). One crash on the way: palm (the vaporwave scene) fades its sky

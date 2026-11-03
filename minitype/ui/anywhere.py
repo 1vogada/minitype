@@ -52,10 +52,17 @@ def warn(app, text, redraw=None, secs=WARN_SECS):
 
 
 def resume_dialog(app, redraw, title="Resume?"):
-    """Yes / No over the screen behind: True to resume. Left / right (or
-    tab) pick, enter confirms, y and n answer at once, esc resumes. With
-    the mouse, pointing at an answer picks it and a click gives it."""
-    choice = [0]
+    """Yes / No over the screen behind: True to resume (esc resumes too)."""
+    return ask_dialog(app, redraw, title)
+
+
+def ask_dialog(app, redraw, title, answers=("Yes", "No"), choice=0, esc=True):
+    """A question with two answers over the screen behind: True for the
+    first, False for the second, `esc` on esc. Left / right (or tab) pick,
+    enter confirms, y and n answer at once. `choice`: the answer marked to
+    start with. With the mouse, pointing at an answer picks it and a click
+    gives it."""
+    choice = [choice]
 
     def point(k):
         changed, choice[0] = choice[0] != k, k
@@ -63,7 +70,7 @@ def resume_dialog(app, redraw, title="Resume?"):
     try:
         with keys.over_test():                # the mouse works here, over a test too
             while True:
-                console.set_overlay(_box(app.styles(), choice[0], title, point))
+                console.set_overlay(_box(app.styles(), choice[0], title, point, answers))
                 redraw()
                 key = keys.read_key()
                 if key in (keys.LEFT, keys.RIGHT, keys.TAB, keys.SHIFT_TAB):
@@ -75,7 +82,7 @@ def resume_dialog(app, redraw, title="Resume?"):
                 elif key == keys.ENTER:
                     return choice[0] == 0
                 elif key == keys.ESC:
-                    return True
+                    return esc
     finally:
         console.set_overlay(None)
 
@@ -92,17 +99,17 @@ def _message(st, text):
             f"{st.title}╚{'═' * inner}╝{RESET}"]
 
 
-def _box(st, choice, title="Resume?", point=lambda k: False):
+def _box(st, choice, title="Resume?", point=lambda k: False, labels=("Yes", "No")):
     """The dialog: a double-lined box with the question and the two
     answers, the chosen one marked and highlighted. point(k) picks answer
     k when the mouse is over it."""
-    inner = 26
+    inner = max(26, len(title) + 6)
 
     def option(label, on):
         return (f"{st.title}>{INV} {label} {RESET}" if on
                 else f"{st.dim}  {label} {RESET}")
-    answers = (console.hit(option("Yes", choice == 0), lambda: "y", lambda: point(0)) + "      "
-               + console.hit(option("No", choice == 1), lambda: "n", lambda: point(1)))
+    answers = (console.hit(option(labels[0], choice == 0), lambda: "y", lambda: point(0)) + "      "
+               + console.hit(option(labels[1], choice == 1), lambda: "n", lambda: point(1)))
     pad_l = (inner - console.visible_len(answers)) // 2
     line = st.title + "║" + RESET
     centre = lambda text, n: " " * ((inner - n) // 2) + text + " " * (inner - n - (inner - n) // 2)

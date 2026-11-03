@@ -230,7 +230,7 @@ app.settings.hints = True
 for it in sm.build_items(app):
     if it.label in ("word list", "edit keys", "save to disk", "reset bad words", "reset settings", "book filter",
                     "spotify", "spotify client id", "download liked songs",
-                    "clear kept lyrics",
+                    "clear kept lyrics", "keyboard learn", "keyboard server",
                     "theme creator"):
         continue
     before = it.value()

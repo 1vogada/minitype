@@ -8,6 +8,7 @@ from ..words import books
 from .menu import Hints, Item, Menu, title_lines
 from .profile import goal_line, sparkline
 from .replay import replay_screen
+from . import keyboard_learn
 
 HINTS = "left/right choose   enter select   tab restart   esc menu"
 FAV_KEY = "f"
@@ -150,6 +151,9 @@ def detail_lines(app, st, r):
     goal = goal_line(app, st)
     if goal:
         lines.append("  " + goal)
+    learn = keyboard_learn.status_line(app, st)
+    if learn:
+        lines.append("  " + learn)
     return lines
 
 
@@ -188,6 +192,7 @@ def choice_items(app, result):
 
 
 def show_results(app, result):
+    keyboard_learn.refresh(app)               # one status call, when learning is meant to be on
     menu = Menu(choice_items(app, result), horizontal=True)
     hints = Hints(app)
     while True:

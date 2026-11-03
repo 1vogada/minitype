@@ -105,6 +105,17 @@ minitype
   Termux)
 - key hints can be switched off; pressing any key that does nothing brings
   them back
+- **keyboard learn** (settings → in-game → screen → magnetic keyboard), for
+  a magnetic keyboard whose app runs a local server (the MAX68HE's, at
+  `http://localhost:6869`; **keyboard server** changes it): while it's on,
+  the app watches how deep you press each key, in minitype or anywhere,
+  and keeps moving each key's actuation point to your real presses, by
+  itself. It isn't tied to a test. At start minitype asks "Learn your
+  keyboard's actuation while you type?" (on / off; esc keeps it as it was)
+  and tells the app; with **ask at start** off it just tells the app the
+  setting. Changing it in settings tells the app at once. With it on, the
+  results and the menu show a line like "keyboard learn: on · 42 keys
+  tuned", or "app not running" when the app isn't there (that's fine)
 
 The screen redraws when the console is resized and fits terminals as small
 as 20×5: long menus scroll to keep the selection visible and lines are

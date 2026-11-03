@@ -6,6 +6,7 @@ from .nav import MENU, QUIT
 from .terminal import console, keys
 from .terminal.style import RESET
 from .ui.anywhere import open_settings
+from .ui.keyboard_learn import at_start as keyboard_learn_at_start
 from .ui.main_menu import main_menu
 from .ui.results import show_results
 from .ui.welcome import welcome
@@ -22,6 +23,7 @@ def main():
         app.load()
         if app.first_run:                 # nothing saved yet: pick a setup
             welcome(app)
+        keyboard_learn_at_start(app)      # ask (or just tell the keyboard app) about learning
         console.clear()
         console.present(["", f"  {app.styles().dim}loading "
                              f"{app.settings.word_source}...{RESET}"])

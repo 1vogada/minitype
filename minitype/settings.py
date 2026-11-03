@@ -327,6 +327,11 @@ class Settings:
     hints: bool = True           # key hints at the bottom of each screen
     mouse: bool = True           # click menu rows, scroll with the wheel
 
+    # ---- a magnetic keyboard's app (keyboard_app.py): learn as you type
+    keyboard_learn: bool = False    # the app tunes each key's actuation to your presses
+    keyboard_ask: bool = True       # ask about it when minitype starts
+    keyboard_server: str = "http://localhost:6869"   # where the keyboard app listens
+
     # ---- header during a test
     show_timer: bool = True
     show_progress: bool = True

@@ -49,6 +49,7 @@ class App:
         self.fade_picture = None  # the picture the fade settings are showing
         self._styled = (None,)    # styles()'s last build, see there
         self.first_run = False    # nothing was saved: the welcome screen picks a setup
+        self.keyboard_app = None  # the keyboard app's last learn answer (keyboard_app.Answer)
 
     def styles(self, custom=None, art=None):
         """The current theme's colours, with every effect and fun-modifier

@@ -11,6 +11,7 @@ from ..words import books
 from .book_menu import book_menu
 from .lyrics_mode import lyrics_test
 from .gallery import gallery
+from . import keyboard_learn
 from .learn_menu import learn_menu
 from .menu import Item, Menu, title_lines
 from .profile import goal_line, profile_screen
@@ -187,6 +188,9 @@ def draw(app, st, menu):
     goal = goal_line(app, st)
     if goal:
         notes.append(goal)
+    learn = keyboard_learn.status_line(app, st)     # the last answer: no call from here
+    if learn:
+        notes.append(learn)
     if notes:
         lines += [""] + ["  " + n for n in notes]
     return lines, focus
