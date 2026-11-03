@@ -53,9 +53,13 @@ assert "less" in rows[-1] and "more" in rows[-1]
 rows = [strip(l) for l in profile.calendar_lines(a, a.styles(), 40, TODAY)]
 assert max(map(len, rows)) <= 40 and len(rows[1].split()) - 1 >= 4, rows
 
-# the profile shows the streak and the calendar; the goal line the streak
-a.history.runs = app_with({0: 700, 1: 200, 2: 400}).history.runs
+# the profile shows the streak and the calendar; the goal line the streak.
+# These go by the real today, so the runs are put on the days before it
+now = time.time()
+a.history.runs = [{"t": now - d * 86400, "mode": "30 seconds", "wpm": 80, "acc": 97,
+                   "secs": s, "failed": False} for d, s in {0: 700, 1: 200, 2: 400}.items()]
 text = "\n".join(strip(l) for l in profile.draw(a, a.styles()))
 assert "days typed" in text and "less" in text, text
-assert profile.streak_text(a) in ("3 days", ""), profile.streak_text(a)   # relative to the real today
+assert profile.streak_text(a) == "3 days", profile.streak_text(a)
+assert "3 day streak" in strip(profile.goal_line(a, a.styles())), profile.goal_line(a, a.styles())
 print("ALL OK")
