@@ -8,7 +8,7 @@ from ..words import books
 from .menu import Hints, Item, Menu, title_lines
 from .profile import goal_line, sparkline
 from .replay import replay_screen
-from . import keyboard_learn
+from . import keyboard_learn, keyboard_suggest
 
 HINTS = "left/right choose   enter select   tab restart   esc menu"
 FAV_KEY = "f"
@@ -196,13 +196,19 @@ def show_results(app, result):
     keyboard_learn.refresh(app)               # the keystrokes' answer, or one status call
     menu = Menu(choice_items(app, result), horizontal=True)
     hints = Hints(app)
+    asked = False
     while True:
         st = app.styles()
         lines, choices = draw(app, st, result, menu)
         can_replay = bool(result.replay and result.replay.frames)
-        console.present(lines, 0, choices + hints.lines(
+        frame = (lines, 0, choices + hints.lines(
             st, HINTS + (FAV_HINT if result.quote else "")
             + (REPLAY_HINT if can_replay else "")))
+        console.present(*frame)
+        if not asked:                         # the keyboard app's suggestions, if any: once
+            asked = True
+            if keyboard_suggest.ask(app, lambda: console.present(*frame)):
+                continue                      # redraw: the lines may say what was answered
         key = keys.read_key()
         if key == keys.RESIZE:
             continue

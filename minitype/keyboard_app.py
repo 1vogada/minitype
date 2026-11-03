@@ -8,6 +8,7 @@ it has got; it never applies anything and never asks to.
 
 One endpoint, POST SERVER + PATH with a JSON body:
     {"action": "status" | "on" | "off"}   (optional "percent" 30..95, "floorMm" 0.1..2)
+    {"action": "accept", "key", "group"?} | {"action": "dismiss", "key"}   (a suggestion)
     {"action": "events", "events": [{"t", "expected", "typed"}, ...]}   (a test's keystrokes,
         at most MAX_EVENTS a call; see keystrokes.py - the app matches them to key depth)
 and a JSON answer:
@@ -181,10 +182,35 @@ def post_events(events, server=SERVER, done=None):
     events = list(events)
     if not events:
         return None
+    return _background(lambda: send_events(events, server), done, "keyboard-events")
 
+
+def suggestion_body(key, accept, group=None):
+    """The answer to one of the app's suggestions: accept (a bounce guard
+    group 1 or 2 for "doubles", none for "slips") or dismiss."""
+    if not isinstance(key, str) or not key:
+        return None
+    if not accept:
+        return {"action": "dismiss", "key": key}
+    out = {"action": "accept", "key": key}
+    if group in (1, 2):
+        out["group"] = group
+    return out
+
+
+def answer_suggestion(key, accept, group=None, server=SERVER, done=None):
+    """suggestion_body sent in a daemon thread (the reply is the status,
+    to `done`); None when the key isn't one."""
+    data = suggestion_body(key, accept, group)
+    if data is None:
+        return None
+    return _background(lambda: _post(data, server, TIMEOUT), done, "keyboard-answer")
+
+
+def _background(work, done, name):
     def run():
         try:
-            answer = send_events(events, server)
+            answer = work()
             if done is not None and answer is not None:
                 done(answer)
         except Exception:
@@ -194,7 +220,7 @@ def post_events(events, server=SERVER, done=None):
                 if t in _sending:
                     _sending.remove(t)
 
-    t = threading.Thread(target=run, daemon=True, name="keyboard-events")
+    t = threading.Thread(target=run, daemon=True, name=name)
     with _lock:
         _sending.append(t)
     t.start()

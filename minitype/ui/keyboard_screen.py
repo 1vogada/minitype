@@ -14,6 +14,7 @@ import threading
 import time
 
 from .. import keyboard_app
+from . import keyboard_learn, keyboard_suggest
 from ..terminal import console, keys
 from ..terminal.style import INV, RESET
 from .menu import Hints, title_lines
@@ -129,8 +130,9 @@ def detail(answer, key):
             continue
         why = a.get("why") if isinstance(a.get("why"), str) and a.get("why") else ""
         mm = a.get("changeMm")
-        if a.get("guard") is True or why == "guard":
-            out.append("changed: bounce guard on")
+        said = keyboard_learn.guard_text(a)
+        if said:
+            out.append(f"changed: {said}")
         elif _num(mm) and round(mm, 2):
             way = "earlier" if mm < 0 else "later"
             out.append(f"changed: types {way} by {abs(round(mm, 2)):g} mm"
@@ -202,6 +204,7 @@ def keyboard_screen(app, every=REFRESH):
         cursor = (1, 0)
     hints = Hints(app)
     seen, dirty, size = -1, True, None
+    asked, frame = False, None
     try:
         while True:
             if poller.seen != seen:
@@ -213,8 +216,13 @@ def keyboard_screen(app, every=REFRESH):
             if dirty:
                 st = app.styles()
                 lines, focus = draw(app, st, poller.answer, cursor)
-                console.present(lines, focus, hints.lines(st, HINTS))
+                frame = (lines, focus, hints.lines(st, HINTS))
+                console.present(*frame)
                 dirty = False
+            if not asked and seen > 0:           # app.keyboard_app is that answer now
+                asked = True                    # the app's suggestions, once, as it opens
+                if keyboard_suggest.ask(app, lambda: console.present(*frame)):
+                    dirty = True
             if not keys.key_ready():
                 time.sleep(POLL)
                 continue

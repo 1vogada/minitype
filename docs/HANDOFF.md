@@ -48,6 +48,20 @@ agent's memory don't travel, so this section is the memory.
    a key's lines from `keys[]` and `patterns` (keys / pairs either side /
    adjusted: changeMm < 0 types earlier, > 0 later, why "guard" = bounce
    guard on). `tests/keyboard_screen_check.py`.
+   **Suggestions** (same day, the owner: a doubling key must not go into
+   the bounce guard by itself): `patterns.suggestions` (`{key, why:
+   "doubles", count}`) are asked by `ui/keyboard_suggest.py` (`ask`, one
+   `anywhere.pick_dialog` box each - `ask_dialog` made N-answer, two-line
+   titles - group 1 / group 2 / no, group 2 marked for `BIG` keys; esc
+   stops, asked again next time) on the results after the first draw and
+   on the keyboard screen once its first answer is in; never in a test.
+   The answer: `keyboard_app.answer_suggestion` (`{"action": "accept",
+   key, group}` / `{"action": "dismiss", key}`) in a daemon thread;
+   `app.keyboard_answered` keeps it from being asked again while still
+   listed. `adjusted` `{why: "doubles", suggested|accepted|dismissed}`
+   show via `keyboard_learn.guard_text`; `guard: true` is gone. Status
+   replies carry `patterns` too now (refresh keeps them).
+   `tests/keyboard_suggest_check.py`.
 1. **Upscaled build (done 2026-10-28).** All 40 pictures are in
    truecolour, built on the owner's home PC with `-j12`/`-j15` (about an
    hour). One crash on the way: palm (the vaporwave scene) fades its sky

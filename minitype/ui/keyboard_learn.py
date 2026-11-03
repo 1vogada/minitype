@@ -48,6 +48,8 @@ def refresh(app, wait=WAIT):
         if not sent[1].is_alive() and app.keyboard_patterns is not None:
             return app.keyboard_app            # answered: no second call
     app.keyboard_app = keyboard_app.status(s.keyboard_server)
+    if app.keyboard_app.ok:                    # status answers carry the patterns too
+        app.keyboard_patterns = app.keyboard_app.state.get("patterns")
     return app.keyboard_app
 
 
@@ -91,9 +93,27 @@ def pattern_text(patterns):
     changed = []
     for a in _dicts(patterns.get("adjusted"))[:3]:
         mm, key = a.get("changeMm"), _key(a.get("key"))
-        if key and isinstance(mm, (int, float)) and not isinstance(mm, bool) and round(mm, 2):
+        said = guard_text(a)
+        if key and said:
+            changed.append(f"{key}: {said}")
+        elif key and isinstance(mm, (int, float)) and not isinstance(mm, bool) and round(mm, 2):
             changed.append(f"{'lowered' if mm < 0 else 'raised'} {key} by {abs(round(mm, 2)):g} mm")
     return [_fit(part) for part in (found, changed) if part]
+
+
+GUARD = (("accepted", "put in the bounce guard (you said yes)"),
+         ("dismissed", "bounce guard dismissed (you said no)"),
+         ("suggested", "suggested for the bounce guard"))
+
+
+def guard_text(a):
+    """What an `adjusted` entry about a suggestion says (accepted, dismissed
+    or suggested), or None for an actuation change."""
+    texts = GUARD
+    for field, text in texts:
+        if a.get(field) is True:
+            return text
+    return None
 
 
 def _fit(parts):

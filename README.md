@@ -127,7 +127,13 @@ minitype
   presses"), presses, hits / misses / ghosts / doubles / typos, the keys
   it's mixed up with ("you typed 9 for 8: 4x") and recent changes ("types
   earlier by 0.1 mm", "bounce guard on"). It asks the app every few
-  seconds in the background; keys pressed there aren't typing
+  seconds in the background; keys pressed there aren't typing.
+  Some things the app won't change by itself: a key that types twice from
+  one press (a bounce) is only suggested for the keyboard's bounce guard.
+  The results after a test (or the keyboard screen as it opens) ask "Space
+  typed twice from one press 3x (a bounce). Put it in the keyboard's bounce
+  guard?" - group 1 / group 2 (deeper, marked for Space, Shift, Enter,
+  Backspace) / no; esc asks again next time
 
 The screen redraws when the console is resized and fits terminals as small
 as 20×5: long menus scroll to keep the selection visible and lines are

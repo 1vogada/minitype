@@ -62,6 +62,16 @@ def ask_dialog(app, redraw, title, answers=("Yes", "No"), choice=0, esc=True):
     enter confirms, y and n answer at once. `choice`: the answer marked to
     start with. With the mouse, pointing at an answer picks it and a click
     gives it."""
+    k = pick_dialog(app, redraw, title, answers, choice, hotkeys=("y", "n"))
+    return esc if k is None else k == 0
+
+
+def pick_dialog(app, redraw, title, answers, choice=0, hotkeys=None):
+    """ask_dialog with any number of answers: the index of the one given,
+    None on esc. `hotkeys`: a key per answer that gives it at once (default
+    1, 2, 3...; letters either case). A "\n" in the title starts a line."""
+    hotkeys = tuple(hotkeys or (str(i + 1) for i in range(len(answers))))
+    n = len(answers)
     choice = [choice]
 
     def point(k):
@@ -70,19 +80,19 @@ def ask_dialog(app, redraw, title, answers=("Yes", "No"), choice=0, esc=True):
     try:
         with keys.over_test():                # the mouse works here, over a test too
             while True:
-                console.set_overlay(_box(app.styles(), choice[0], title, point, answers))
+                console.set_overlay(_box(app.styles(), choice[0], title, point, answers, hotkeys))
                 redraw()
                 key = keys.read_key()
-                if key in (keys.LEFT, keys.RIGHT, keys.TAB, keys.SHIFT_TAB):
-                    choice[0] = 1 - choice[0]
-                elif key in ("y", "Y"):
-                    return True
-                elif key in ("n", "N"):
-                    return False
+                if key in (keys.RIGHT, keys.TAB):
+                    choice[0] = (choice[0] + 1) % n
+                elif key in (keys.LEFT, keys.SHIFT_TAB):
+                    choice[0] = (choice[0] - 1) % n
+                elif keys.is_char(key) and key.lower() in hotkeys:
+                    return hotkeys.index(key.lower())
                 elif key == keys.ENTER:
-                    return choice[0] == 0
+                    return choice[0]
                 elif key == keys.ESC:
-                    return esc
+                    return None
     finally:
         console.set_overlay(None)
 
@@ -99,24 +109,27 @@ def _message(st, text):
             f"{st.title}╚{'═' * inner}╝{RESET}"]
 
 
-def _box(st, choice, title="Resume?", point=lambda k: False, labels=("Yes", "No")):
-    """The dialog: a double-lined box with the question and the two
-    answers, the chosen one marked and highlighted. point(k) picks answer
-    k when the mouse is over it."""
-    inner = max(26, len(title) + 6)
+def _box(st, choice, title="Resume?", point=lambda k: False, labels=("Yes", "No"),
+         hotkeys=("y", "n")):
+    """The dialog: a double-lined box with the question (a line per "\n")
+    and the answers, the chosen one marked and highlighted. point(k) picks
+    answer k when the mouse is over it; a click gives hotkeys[k]."""
+    titles = title.split("\n")
 
     def option(label, on):
         return (f"{st.title}>{INV} {label} {RESET}" if on
                 else f"{st.dim}  {label} {RESET}")
-    answers = (console.hit(option(labels[0], choice == 0), lambda: "y", lambda: point(0)) + "      "
-               + console.hit(option(labels[1], choice == 1), lambda: "n", lambda: point(1)))
+    answers = "      ".join(
+        console.hit(option(lab, choice == k), lambda k=k: hotkeys[k], lambda k=k: point(k))
+        for k, lab in enumerate(labels))
+    inner = max(26, max(len(t) for t in titles) + 6, console.visible_len(answers) + 4)
     pad_l = (inner - console.visible_len(answers)) // 2
     line = st.title + "║" + RESET
     centre = lambda text, n: " " * ((inner - n) // 2) + text + " " * (inner - n - (inner - n) // 2)
-    return [f"{st.title}╔{'═' * inner}╗{RESET}",
-            line + " " * inner + line,
-            line + centre(f"{st.title}{title}{RESET}", len(title)) + line,
-            line + " " * inner + line,
-            line + " " * pad_l + answers + " " * (inner - pad_l - console.visible_len(answers)) + line,
-            line + " " * inner + line,
-            f"{st.title}╚{'═' * inner}╝{RESET}"]
+    return ([f"{st.title}╔{'═' * inner}╗{RESET}",
+             line + " " * inner + line]
+            + [line + centre(f"{st.title}{t}{RESET}", len(t)) + line for t in titles]
+            + [line + " " * inner + line,
+               line + " " * pad_l + answers + " " * (inner - pad_l - console.visible_len(answers)) + line,
+               line + " " * inner + line,
+               f"{st.title}╚{'═' * inner}╝{RESET}"])

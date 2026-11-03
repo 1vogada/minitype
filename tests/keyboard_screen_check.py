@@ -35,7 +35,7 @@ STATE = {"on": True, "percent": 70, "floorMm": 0.3, "minPresses": 20, "tunedKeys
                                 {"expected": "e", "typed": "r", "count": 3}],
                       "fastErrorShare": 0.62,
                       "adjusted": [{"key": "8", "why": "misses", "changeMm": -0.1},
-                                   {"key": "8", "why": "guard"},
+                                   {"key": "8", "why": "doubles", "suggested": True},
                                    {"key": "w", "why": "ghosts", "changeMm": 0.05}]}}
 
 
@@ -71,7 +71,7 @@ assert ks.detail(A, "8") == [
     "you typed 9 for 8: 4x",
     "you typed 8 for 7: 2x",
     "changed: types earlier by 0.1 mm (misses)",
-    "changed: bounce guard on",
+    "changed: suggested for the bounce guard",
 ], ks.detail(A, "8")
 assert ks.detail(A, "W") == ["W", "actuation   1.50 mm now", "learning    12 / 20 presses",
                              "presses     12", "changed: types later by 0.05 mm (ghosts)"]
@@ -125,7 +125,7 @@ with mock.patch.object(ka, "post_events") as posted:
 assert not posted.called, "keys here aren't typing"
 assert f.sent and all(b == {"action": "status"} for b in f.sent), f.sent
 last_8 = [fr for fr in frames if "actuation   1.20 mm now" in fr]
-assert last_8 and "you typed 9 for 8: 4x" in last_8[-1] and "changed: bounce guard on" in last_8[-1]
+assert last_8 and "you typed 9 for 8: 4x" in last_8[-1] and "changed: suggested for the bounce guard" in last_8[-1]
 assert "keyboard learn: on · 1 key tuned · 1 learning" in frames[-1]
 assert "  7\n  you typed 8 for 7: 2x" in frames[-1], "left of 8: 7"
 assert " 8·8 " in frames[-1], "8 mistakes on 8"

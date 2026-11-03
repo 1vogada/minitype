@@ -52,6 +52,7 @@ class App:
         self.keyboard_app = None  # the keyboard app's last learn answer (keyboard_app.Answer)
         self.keyboard_sent = None  # (when, thread): the last test's keystrokes going to it
         self.keyboard_patterns = None  # what it made of that test's mistakes ("patterns")
+        self.keyboard_answered = set()  # suggestions answered, while the app still lists them
 
     def styles(self, custom=None, art=None):
         """The current theme's colours, with every effect and fun-modifier
