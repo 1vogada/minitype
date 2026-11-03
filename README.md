@@ -115,7 +115,12 @@ minitype
   and tells the app; with **ask at start** off it just tells the app the
   setting. Changing it in settings tells the app at once. With it on, the
   results and the menu show a line like "keyboard learn: on · 42 keys
-  tuned", or "app not running" when the app isn't there (that's fine)
+  tuned", or "app not running" when the app isn't there (that's fine).
+  With it on, each test's keystrokes (what the text wanted, what you typed,
+  when) go to the app as the test ends, in the background, so it can match
+  your mistakes to how deep you pressed; the results then show what it
+  found, like "keyboard: 8 often missed (pressed too light) · 8→9 mixed up
+  4x" or "keyboard: lowered 8 by 0.1 mm". Off, nothing is kept or sent
 
 The screen redraws when the console is resized and fits terminals as small
 as 20×5: long menus scroll to keep the selection visible and lines are

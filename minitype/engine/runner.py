@@ -81,6 +81,9 @@ class TypingTest:
         self.popped_hints = False
         self.abandoned = False  # left from the ctrl-o settings: back to the menu
         self.n_before = app.learn.unlocked() if self.learning else 0
+        # every keystroke for the keyboard app (keyboard learn on only, else None):
+        # {"t": epoch ms, "expected": the char the text wanted or None, "typed"}
+        self.keystrokes = [] if s.keyboard_learn else None
 
     # ---------------------------------------------------------------- words
 
@@ -403,6 +406,7 @@ class TypingTest:
             return books.neighbour(self.app, self.spec,
                                    1 if key == keys.PGDN else -1)
         if key == keys.BACKSPACE:
+            self._log(now, "")
             if self._can_backspace():
                 self._backspace()
                 self._active(now)
@@ -425,6 +429,7 @@ class TypingTest:
         if self.spec.kind == "time" and now - self.start >= self.spec.amount:
             self.done = True                  # pressed after the time ran out
             return None
+        self._log(now, key)
         el = now - self.start
         self.last_key = now
         self._active(now)
@@ -435,6 +440,28 @@ class TypingTest:
         else:
             self._char(key, el, dt)
         return None
+
+    def _log(self, now, typed):
+        """Note a keystroke for the keyboard app: cheap, no I/O."""
+        if self.keystrokes is not None:
+            self.keystrokes.append({"t": int(now * 1000), "expected": self.expected(typed),
+                                    "typed": typed})
+
+    def expected(self, typed):
+        """The char the test will compare key `typed` with, before it lands
+        (as _char / _space see it): " " past a word's end, None past the
+        text's end or when every key types the text anyway (hacker)."""
+        if self.wi >= len(self.words) or self.hacker():
+            return None
+        word, j = self.words[self.wi], len(self.typed[self.wi])
+        if self._forgive() and typed != "":
+            if typed == " " and self.typed[self.wi] == word.rstrip(QUOTE_PUNCT):
+                return " "                       # the left-out punctuation is forgiven
+            while j < len(word) and word[j] in QUOTE_PUNCT and j + 1 < len(word)                     and typed != word[j] and self._same(typed, word[j + 1]):
+                j += 1
+        if j < len(word):
+            return word[j]
+        return None if self.wi == len(self.words) - 1 and self.spec.kind != "time" else " "
 
     def hacker(self):
         """The hacker funboxes, like a hacker in a film: every key is the
@@ -710,6 +737,9 @@ class ZenTest(TypingTest):
     def _make_words(self):
         return [""]
 
+    def expected(self, typed):
+        return None                             # no text: nothing is wanted
+
     def finished(self, now):
         return self.done
 
@@ -802,8 +832,27 @@ def run_test(app, spec):
             return _run(app, test, paint)
     finally:
         app.current_test = None
+        _send_keystrokes(app, test)
         if test.follow is not None:
             test.follow.stop()
+
+
+def _send_keystrokes(app, test):
+    """The test's keystrokes to the keyboard app, in the background (finished,
+    left, or quit: whatever was typed). Its answer lands in app.keyboard_app."""
+    if not test.keystrokes or not app.settings.keyboard_learn:
+        return None
+    from .. import keyboard_app
+
+    def done(answer):
+        if answer.ok:
+            app.keyboard_app = answer
+            app.keyboard_patterns = answer.state.get("patterns")
+    events, test.keystrokes = test.keystrokes, []
+    app.keyboard_patterns = None              # this test's, once the app answers
+    app.keyboard_sent = (time.time(), keyboard_app.post_events(
+        events, app.settings.keyboard_server, done))
+    return app.keyboard_sent[1]
 
 
 def _next_song(test):

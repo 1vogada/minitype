@@ -1,3 +1,4 @@
+from . import keyboard_app
 from .context import App
 from .engine.result import TestResult
 from .engine.runner import run_test
@@ -40,6 +41,7 @@ def main():
         pass
     finally:
         app.save()
+        keyboard_app.flush()              # the last test's keystrokes still going to the keyboard app
         console.cursor(True)
         console.clear()
         console.flush()

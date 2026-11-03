@@ -8,15 +8,20 @@ it has got; it never applies anything and never asks to.
 
 One endpoint, POST SERVER + PATH with a JSON body:
     {"action": "status" | "on" | "off"}   (optional "percent" 30..95, "floorMm" 0.1..2)
+    {"action": "events", "events": [{"t", "expected", "typed"}, ...]}   (a test's keystrokes,
+        at most MAX_EVENTS a call; see keystrokes.py - the app matches them to key depth)
 and a JSON answer:
     {"on", "percent", "floorMm", "minPresses", "tunedKeys", "learningKeys",
      "lastApply", "lastError", "keys": [...]}
+(the events answer may add "patterns": what the app made of the mistakes)
 or, when something's wrong, a non-2xx status with {"error": "message"}.
 The app not running at all is normal: most people don't have the keyboard.
 Standard library only, a short timeout, and nothing here ever raises.
 """
 
 import json
+import threading
+import time
 import urllib.error
 import urllib.request
 
@@ -27,6 +32,8 @@ ACTIONS = ("status", "on", "off")
 PERCENT = (30, 95)                    # the range the server takes
 FLOOR_MM = (0.1, 2.0)
 NOT_RUNNING = "app not running"
+MAX_EVENTS = 2000                     # keystrokes per events call
+FLUSH = 2.5                           # seconds quitting waits for the last sends
 
 
 class Answer:
@@ -100,6 +107,10 @@ def call(action, server=SERVER, percent=None, floor_mm=None, timeout=TIMEOUT):
     data = body(action, percent, floor_mm)
     if data is None:
         return Answer(error=f"unknown action {action!r}")
+    return _post(data, server, timeout)
+
+
+def _post(data, server, timeout):
     req = urllib.request.Request(
         server_url(server) + PATH, data=json.dumps(data).encode("utf-8"), method="POST",
         headers={"Content-Type": "application/json", "Accept": "application/json"})
@@ -136,3 +147,64 @@ def status(server=SERVER):
 def switch(on, server=SERVER):
     """Learning on or off."""
     return call("on" if on else "off", server)
+
+
+def events_body(events):
+    return {"action": "events", "events": list(events)}
+
+
+def batches(events, n=None):
+    """The events in calls of at most n (MAX_EVENTS)."""
+    n = n or MAX_EVENTS
+    return [events[i:i + n] for i in range(0, len(events), n)]
+
+
+def send_events(events, server=SERVER, timeout=TIMEOUT):
+    """Every event, MAX_EVENTS a call; the last call's Answer (None when
+    there was nothing to send). Stops at the first call that fails."""
+    answer = None
+    for part in batches(events):
+        answer = _post(events_body(part), server, timeout)
+        if not answer.ok:
+            break
+    return answer
+
+
+_sending = []              # the threads still sending, for flush()
+_lock = threading.Lock()
+
+
+def post_events(events, server=SERVER, done=None):
+    """send_events in a daemon thread, so nothing waits on it; `done(answer)`
+    is called from that thread with the last Answer. Returns the thread
+    (None when there's nothing to send)."""
+    events = list(events)
+    if not events:
+        return None
+
+    def run():
+        try:
+            answer = send_events(events, server)
+            if done is not None and answer is not None:
+                done(answer)
+        except Exception:
+            pass                               # never let it reach the screen
+        finally:
+            with _lock:
+                if t in _sending:
+                    _sending.remove(t)
+
+    t = threading.Thread(target=run, daemon=True, name="keyboard-events")
+    with _lock:
+        _sending.append(t)
+    t.start()
+    return t
+
+
+def flush(timeout=FLUSH):
+    """Wait (up to `timeout` seconds in all) for the sends still going: on quit."""
+    end = time.monotonic() + timeout
+    with _lock:
+        going = list(_sending)
+    for t in going:
+        t.join(max(0.0, end - time.monotonic()))

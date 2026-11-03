@@ -154,6 +154,7 @@ def detail_lines(app, st, r):
     learn = keyboard_learn.status_line(app, st)
     if learn:
         lines.append("  " + learn)
+        lines += ["  " + p for p in keyboard_learn.pattern_lines(app, st)]
     return lines
 
 
@@ -192,7 +193,7 @@ def choice_items(app, result):
 
 
 def show_results(app, result):
-    keyboard_learn.refresh(app)               # one status call, when learning is meant to be on
+    keyboard_learn.refresh(app)               # the keystrokes' answer, or one status call
     menu = Menu(choice_items(app, result), horizontal=True)
     hints = Hints(app)
     while True:

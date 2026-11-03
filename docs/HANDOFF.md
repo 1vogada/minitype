@@ -24,6 +24,20 @@ agent's memory don't travel, so this section is the memory.
    magnetic keyboard. The server side is built in `../max68he`; minitype
    never asks to apply anything, the app does that itself.
    `tests/keyboard_learn_check.py`.
+   **Keystrokes** (same day): with `keyboard_learn` on, `TypingTest.keystrokes`
+   gets `{"t": epoch ms, "expected", "typed"}` per key (`_log` in `handle`,
+   before the key lands; `expected()` is `_char` / `_space`'s position
+   logic: " " past a word, None past the text / zen / hacker; "" for
+   backspace, other control keys skipped). `run_test`'s finally hands them
+   to `runner._send_keystrokes` -> `keyboard_app.post_events` (daemon thread,
+   `{"action": "events"}`, 2000 a call); `app.main` calls
+   `keyboard_app.flush()` on quit (2.5 s at most). The answer's optional
+   `patterns` land in `app.keyboard_patterns`; the results wait 0.3 s at
+   most for it (then skip the status call) and show
+   `keyboard_learn.pattern_text`: worst key (misses / ghosts / doubles,
+   2+) · most mixed-up pair (2+) · "most when typing fast" (share 0.6+),
+   then "lowered / raised KEY by N mm" from `adjusted`. Nothing when
+   patterns are missing. `tests/keyboard_events_check.py` (HTTP faked).
 1. **Upscaled build (done 2026-10-28).** All 40 pictures are in
    truecolour, built on the owner's home PC with `-j12`/`-j15` (about an
    hour). One crash on the way: palm (the vaporwave scene) fades its sky
