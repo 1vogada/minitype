@@ -570,6 +570,14 @@ built-in, Monkeytype's English 200 / 1k / 5k / 10k / 25k / 450k, double
 letters, commonly misspelled, and offline themed lists: programming,
 left hand, right hand, right heavy, home row.
 
+**word length** (beside the word list) keeps to short words (1-4
+letters), short + medium, medium (5-7) or long (8+), on every list. The
+big lists hold mostly long words in their tail (10k: 42% are 8+ letters),
+so drawing every word alike felt long-words-only; **any** (the default)
+now draws a natural mix from them (about 45% short, 45% medium, 10%
+long) and a list that already is one (200, 1k) as it is. **as listed**
+is the old draw.
+
 The one-hand and home-row lists follow your keyboard layout (settings →
 look → layout). On qwerty there are about 770 left-hand and 135 right-hand
 words. Some layouts have almost none: dvorak puts every vowel on the left,

@@ -36,7 +36,8 @@ TREE = [
         ]),
         ("words", "what you type: the word list, punctuation, quotes, books and lyrics", [
             ("word list", "which words, and numbers and capitals in them", [
-                ("words", "word list"), ("test", "numbers"), ("test", "all lowercase")]),
+                ("words", "word list"), ("words", "word length"), ("test", "numbers"),
+                ("test", "all lowercase")]),
             ("punctuation", "punctuation and apostrophes in the words", [
                 ("test", "punctuation"), ("test", "apostrophes visible")]),
             ("quotes", "where quotes come from and which kinds", [

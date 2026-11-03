@@ -76,6 +76,19 @@ agent's memory don't travel, so this section is the memory.
    `keyboard_learn.pairs_drill` (main menu m: one status call, pairs kept
    in `app.keyboard_pairs` / settings.json `keyboard_pairs`, notice when
    there are none). `tests/keyboard_slips_check.py`.
+0b. 2026-11-03: **word length** (the owner: "10k is like long words only").
+   Measured: the generator drew every word alike and Monkeytype's 5k / 10k
+   are frequency-ordered with long words in the tail - 10k drawn as listed
+   is 13% short (1-4) / 45% medium (5-7) / 42% long (8+), mean 7.2 letters
+   (1k: 48 / 46 / 6, mean 4.8; 25k, unordered: 7 / 41 / 52). Rank weights
+   only got 10k to ~6.3 before the top words took over, so
+   `generator.plain` draws a length band first: setting `word_length`
+   (words › word list › word length: any, short, short + medium, medium,
+   long, as listed). any = `NATURAL` 45 / 45 / 10 for a list with more
+   than 10% long words, else as listed: 10k now 44 / 45 / 10, mean 5.4,
+   ~6800 distinct in 20000 draws. The bad-key pool keeps to the lengths
+   too; fewer than 20 words of them falls back to any.
+   `tests/word_length_check.py`.
 1. **Upscaled build (done 2026-10-28).** All 40 pictures are in
    truecolour, built on the owner's home PC with `-j12`/`-j15` (about an
    hour). One crash on the way: palm (the vaporwave scene) fades its sky

@@ -8,7 +8,7 @@ from .config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS,
                      TAPE_MODES, UI_STYLES,
                      WORD_GAPS, FUN_BOUNCE, FUN_SWITCH, FUN_CARET,
                      EFFECT_SPEEDS, FLOW_DIRECTIONS, CORRECTED, TYPOS,
-                     PUNCTUATION_MODES,
+                     PUNCTUATION_MODES, WORD_LENGTHS,
                      BORDER_STYLES, ART_SCOPES, ART_STYLES, ART_COLOURS,
                      THEME_BACKGROUNDS,
                      ART_FADES, FADE_TOPS, FADE_SIDES, FADE_ROUNDS,
@@ -30,6 +30,7 @@ CHOICES = {
     "difficulty": DIFFICULTIES,
     "stop_on_error": STOP_MODES,
     "punctuation": PUNCTUATION_MODES,
+    "word_length": WORD_LENGTHS,
     "backspace": BACKSPACE_MODES,
     "min_wpm": MIN_WPMS,
     "min_acc": MIN_ACCS,
@@ -249,6 +250,7 @@ class Settings:
 
     # ---- text sources
     word_source: str = "online 1k"
+    word_length: str = "any"     # any (a natural mix), short, short + medium, medium, long, as listed
     quote_length: str = "all"
     quote_source: str = "built-in"
     quote_genre: str = "all"

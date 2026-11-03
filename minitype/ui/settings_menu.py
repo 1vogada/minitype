@@ -15,7 +15,7 @@ outside the setting's range shows a warning in the pause box.
 from ..words.shlokavitsa import STYLE_NAMES as SHLOKAVITSA_STYLES
 from ..config import (BACKSPACE_MODES, BOOK_PAGES, BOOK_SCRIPTS, CARETS, DIFFICULTIES, FUNBOXES, GOALS,
                       KEYBOARD_MODES, LAYOUTS, LOWKEY_MODES, MEMORY_SECS,
-                      MIN_ACCS, MIN_WPMS, PACES, PCTS, QUOTE_SOURCES, QUOTE_GENRES,
+                      MIN_ACCS, MIN_WPMS, PACES, PCTS, QUOTE_SOURCES, QUOTE_GENRES, WORD_LENGTHS,
                       SIDEBAR_TABS, STOP_MODES, TAPE_MODES, UI_STYLES, WORD_GAPS,
                       FUN_BOUNCE, FUN_SWITCH, FUN_CARET, EFFECT_SPEEDS,
                       FLOW_DIRECTIONS, CORRECTED, TYPOS, BORDER_STYLES,
@@ -245,6 +245,12 @@ def raw_items(app):
                     "and home row follow your keyboard layout",
                tags=("source", "language", "english", "online", "vocabulary",
                      "text", "hand", "one hand", "left", "right")),
+        b.choice("word length", "word_length", WORD_LENGTHS,
+                 help="how long the words drawn from the word list are: short "
+                      "1-4 letters, medium 5-7, long 8+. any is a natural mix "
+                      "(big lists like 10k are mostly long words in their tail); "
+                      "as listed draws every word alike",
+                 tags=("length", "long words", "short words", "size", "10k")),
         b.choice("quotes from", "quote_source", QUOTE_SOURCES,
                  help="built-in: a small public-domain set. online: "
                       "monkeytype's collection (needs internet)",
