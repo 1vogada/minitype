@@ -85,14 +85,16 @@ def pattern_text(patterns):
                 worst = (n, _key(k.get("key")), why)
     if worst:
         found.append(f"{worst[1]} {worst[2]}")
-    finger = max(((_n(p.get("count")), _key(p.get("meant")), _key(p.get("typed")))
-                  for p in _dicts(patterns.get("fingers"))), default=None)
-    if finger and finger[0] >= SOME and finger[1] and finger[2]:
-        found.append(f"{finger[1]}→{finger[2]} wrong finger {finger[0]}x")
-    pair = max(((_n(p.get("count")), _key(p.get("expected")), _key(p.get("typed")))
-                for p in _dicts(patterns.get("pairs"))), default=None)
-    if pair and pair[0] >= SOME and pair[1] and pair[2]:
-        found.append(f"{pair[1]}→{pair[2]} mixed up {pair[0]}x")
+    # the top pair of each kind, the biggest first
+    tops = []
+    for field, a, b, say in (("fingers", "meant", "typed", "{}→{} wrong finger {}x"),
+                             ("swaps", "first", "second", "{}/{} swapped {}x"),
+                             ("pairs", "expected", "typed", "{}→{} mixed up {}x")):
+        top = max(((_n(p.get("count")), _key(p.get(a)), _key(p.get(b)))
+                   for p in _dicts(patterns.get(field))), default=None)
+        if top and top[0] >= SOME and top[1] and top[2]:
+            tops.append((top[0], say.format(top[1], top[2], top[0])))
+    found += [text for _, text in sorted(tops, key=lambda t: -t[0])]
     fast = patterns.get("fastErrorShare")
     if found and isinstance(fast, (int, float)) and not isinstance(fast, bool) and fast >= 0.6:
         found.append("most when typing fast")

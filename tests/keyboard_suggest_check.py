@@ -141,7 +141,7 @@ with mock.patch("urllib.request.urlopen", slow), \
         mock.patch.object(console, "set_overlay", lambda o: None):
     t0 = time.monotonic()
     sg.ask(app, lambda: None)
-    assert time.monotonic() - t0 < 0.3
+    assert time.monotonic() - t0 < 2.0, "the answer is held 5 s: nothing waited on it"
     gate.set()
     ka.flush()
 

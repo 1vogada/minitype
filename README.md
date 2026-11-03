@@ -137,7 +137,9 @@ minitype
   wrong-finger presses (a finger on the key next to the one you meant):
   "9 wrong-finger presses on L stop at ~1.6 mm, real ones go to 3.3 mm.
   Set L's actuation to 2.2 mm so they don't type?" yes / no. The results
-  and the keyboard screen show them too ("K→L wrong finger 9x")
+  and the keyboard screen show them too ("K→L wrong finger 9x"), and keys
+  typed in the wrong order ("E/Space swapped 4x"; on the keyboard screen
+  "typed Space before E: 4x")
 - **mixed-up keys** (main menu m, practice; with keyboard learn on, or
   once it has seen some): a test from the keys you press for each other,
   the wrong-finger ones first - words with both keys close together

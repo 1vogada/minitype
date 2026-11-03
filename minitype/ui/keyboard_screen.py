@@ -25,7 +25,8 @@ POLL = 0.03         # how often the loop looks for a key or a new answer
 HINTS = "press any key to see it   arrows move   esc back"
 SHIFTED = dict(zip('~!@#$%^&*()_+{}|:"<>?', "`1234567890-=[]\\;',./"))
 WHY = (("misses", "pressed too light"), ("ghosts", "typed by brushing it"),
-       ("doubles", "bounce"), ("typos", "wrong key"), ("slips", "wrong finger"))
+       ("doubles", "bounce"), ("typos", "wrong key"), ("slips", "wrong finger"),
+       ("swaps", "typed the next key first"))
 
 
 def key_id(v):
@@ -130,6 +131,11 @@ def detail(answer, key):
         meant, typed, n = key_id(fg.get("meant")), key_id(fg.get("typed")), fg.get("count")
         if type(n) is int and n > 0 and meant and typed and key in (meant, typed):
             out.append(f"wrong finger: meant {label(meant)}, pressed {label(typed)}: {n}x")
+    for sw in sorted(_dicts(pat.get("swaps")),
+                     key=lambda x: -x["count"] if type(x.get("count")) is int else 0):
+        first, second, n = key_id(sw.get("first")), key_id(sw.get("second")), sw.get("count")
+        if type(n) is int and n > 0 and first and second and key in (first, second):
+            out.append(f"typed {label(second)} before {label(first)}: {n}x")
     for sug in _dicts(pat.get("suggestions")):
         if key_id(sug.get("key")) == key and sug.get("why") in ("doubles", "slips"):
             out.append("waiting for your answer: " + (

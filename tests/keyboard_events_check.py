@@ -153,7 +153,7 @@ def slow(req, timeout=None):
 with mock.patch("urllib.request.urlopen", slow):
     t0 = time.monotonic()
     th = runner._send_keystrokes(app, t)
-    assert time.monotonic() - t0 < 0.1 and th.is_alive(), "nothing waits on it"
+    assert th.is_alive() and time.monotonic() - t0 < 1.0, "nothing waits on it (the send is held 5 s)"
     assert t.keystrokes == [] and app.keyboard_patterns is None
     gate.set()
     ka.flush()

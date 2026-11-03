@@ -76,6 +76,11 @@ agent's memory don't travel, so this section is the memory.
    `keyboard_learn.pairs_drill` (main menu m: one status call, pairs kept
    in `app.keyboard_pairs` / settings.json `keyboard_pairs`, notice when
    there are none). `tests/keyboard_slips_check.py`.
+   **Swaps** (two keys typed in the wrong order): `patterns.swaps`
+   ({first, second, count}) and `keys[].swaps` on the keyboard screen
+   ("typed Space before E: 4x") and the results line (the top pair of each
+   kind - fingers, swaps, pairs - biggest first: "E/Space swapped 4x");
+   the drill takes swaps when there are no wrong-finger pairs.
 0b. 2026-11-03: **word length** (the owner: "10k is like long words only").
    Measured: the generator drew every word alike and Monkeytype's 5k / 10k
    are frequency-ordered with long words in the tail - 10k drawn as listed

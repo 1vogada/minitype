@@ -27,17 +27,19 @@ def _char(v):
 
 def pairs_from(patterns, top=TOP):
     """[(a, b, count)] from the app's patterns: fingers (meant, typed) if it
-    has any, else pairs (expected, typed); most first, the same two keys
-    either way round counted together."""
+    has any, else swaps (first, second: typed in the wrong order), else
+    pairs (expected, typed); most first, the same two keys either way round
+    counted together. Keys that aren't one character (Space) are left out."""
     if not isinstance(patterns, dict):
         return []
-    for field, want in (("fingers", "meant"), ("pairs", "expected")):
+    for field, want, other in (("fingers", "meant", "typed"), ("swaps", "first", "second"),
+                               ("pairs", "expected", "typed")):
         found = {}
         items = patterns.get(field)
         for p in items if isinstance(items, list) else []:
             if not isinstance(p, dict):
                 continue
-            a, b, n = _char(p.get(want)), _char(p.get("typed")), p.get("count")
+            a, b, n = _char(p.get(want)), _char(p.get(other)), p.get("count")
             if a and b and a != b and type(n) is int and n > 0:
                 key = (a, b) if (b, a) not in found else (b, a)
                 found[key] = found.get(key, 0) + n

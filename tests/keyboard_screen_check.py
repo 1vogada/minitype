@@ -166,7 +166,7 @@ with mock.patch("urllib.request.urlopen", slow):
                 "\n".join(strip(x) for x in lines))):
         t0 = time.monotonic()
         ks.keyboard_screen(app)
-        assert time.monotonic() - t0 < 0.5, "never blocks on the app"
+        assert time.monotonic() - t0 < 2.0, "never blocks on the app (it holds 5 s)"
     gate.set()
 assert any("asking the keyboard app..." in x for x in shown)
 

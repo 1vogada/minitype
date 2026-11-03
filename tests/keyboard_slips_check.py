@@ -199,4 +199,22 @@ for i, ch in enumerate(t.words[0][:3]):
     t.handle(ch, 1000 + i)
 assert [(e["expected"], e["typed"]) for e in t.keystrokes] == [(c, c) for c in t.words[0][:3]], \
     "a normal test: keystrokes recorded for the app"
+
+# ---------------------------------------------------------------- swaps (typed in the wrong order)
+SW = {"keys": [{"key": "E", "hits": 300, "swaps": 4}],
+      "swaps": [{"first": "E", "second": "Space", "count": 4}, {"first": "h", "second": "t", "count": 2}],
+      "pairs": [{"expected": "8", "typed": "9", "count": 3}]}
+assert kl.pattern_text(SW) == ["keyboard: E/Space swapped 4x · 8→9 mixed up 3x"], kl.pattern_text(SW)
+assert kl.pattern_text(dict(SW, pairs=[{"expected": "8", "typed": "9", "count": 6}])) ==     ["keyboard: 8→9 mixed up 6x · E/Space swapped 4x"], "the biggest first"
+A = ka.Answer(state=dict(STATE, patterns=SW))
+d = ks.detail(A, "E")
+assert "hits 300 · swaps 4 (typed the next key first)" in d, d
+assert "typed Space before E: 4x" in d
+assert "typed Space before E: 4x" in ks.detail(A, "SPACE")
+assert "typed T before H: 2x" in ks.detail(A, "T") and not any("before" in x for x in ks.detail(A, "Q"))
+# the drill: swaps when there are no wrong-finger pairs (Space can't be drilled)
+assert pd.pairs_from(SW) == [("h", "t", 2)], pd.pairs_from(SW)
+assert pd.pairs_from(dict(SW, fingers=[{"meant": "K", "typed": "L", "count": 9}])) == [("k", "l", 9)]
+assert pd.pairs_from({"swaps": [{"first": "E", "second": "Space", "count": 4}],
+                      "pairs": SW["pairs"]}) == [("8", "9", 3)], "no drillable swaps: the pairs"
 print("ALL OK")
