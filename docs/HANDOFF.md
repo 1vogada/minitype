@@ -62,6 +62,20 @@ agent's memory don't travel, so this section is the memory.
    show via `keyboard_learn.guard_text`; `guard: true` is gone. Status
    replies carry `patterns` too now (refresh keeps them).
    `tests/keyboard_suggest_check.py`.
+   **Wrong fingers** (same day; the owner is a month into touch typing and
+   presses the key next to the one meant, K -> L): the app's second
+   suggestion kind `why: "slips"` (`actuationMm`, `slipMm`, `normalMm`)
+   is asked yes / no the same way (accept has no group); `adjusted`
+   slips entries via `guard_text` (`SLIPS`); `patterns.keys[].slips` and
+   `patterns.fingers` ({meant, typed, count}) on the results line and the
+   keyboard screen (plus "waiting for your answer" for open suggestions).
+   **Mixed-up keys drill**: `words/pair_drill.py` (`pairs_from`: fingers,
+   else pairs, top 3, both ways counted together; `words`: words holding
+   both keys, side by side weighted most, else runs like "898"); source
+   "pairs" in `TypingTest._make_words` (spec.words = the pairs);
+   `keyboard_learn.pairs_drill` (main menu m: one status call, pairs kept
+   in `app.keyboard_pairs` / settings.json `keyboard_pairs`, notice when
+   there are none). `tests/keyboard_slips_check.py`.
 1. **Upscaled build (done 2026-10-28).** All 40 pictures are in
    truecolour, built on the owner's home PC with `-j12`/`-j15` (about an
    hour). One crash on the way: palm (the vaporwave scene) fades its sky

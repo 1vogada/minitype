@@ -25,7 +25,9 @@ SOME = 2            # a pattern counts from this many
 WIDTH = 76          # a pattern line is cut to this
 KEY_WHY = (("misses", "often missed (pressed too light)"),
            ("ghosts", "typed by brushing it"),
-           ("doubles", "typed twice (bounce)"))
+           ("doubles", "typed twice (bounce)"),
+           ("slips", "pressed by the wrong finger"))
+NOTHING = "nothing to drill yet: type a few tests with keyboard learn on"
 
 
 def send(app):
@@ -83,6 +85,10 @@ def pattern_text(patterns):
                 worst = (n, _key(k.get("key")), why)
     if worst:
         found.append(f"{worst[1]} {worst[2]}")
+    finger = max(((_n(p.get("count")), _key(p.get("meant")), _key(p.get("typed")))
+                  for p in _dicts(patterns.get("fingers"))), default=None)
+    if finger and finger[0] >= SOME and finger[1] and finger[2]:
+        found.append(f"{finger[1]}→{finger[2]} wrong finger {finger[0]}x")
     pair = max(((_n(p.get("count")), _key(p.get("expected")), _key(p.get("typed")))
                 for p in _dicts(patterns.get("pairs"))), default=None)
     if pair and pair[0] >= SOME and pair[1] and pair[2]:
@@ -104,12 +110,16 @@ def pattern_text(patterns):
 GUARD = (("accepted", "put in the bounce guard (you said yes)"),
          ("dismissed", "bounce guard dismissed (you said no)"),
          ("suggested", "suggested for the bounce guard"))
+SLIPS = (("accepted", "set deeper against wrong-finger presses (you said yes)"),
+         ("dismissed", "wrong-finger fix dismissed (you said no)"),
+         ("suggested", "suggested deeper against wrong-finger presses"))
 
 
 def guard_text(a):
     """What an `adjusted` entry about a suggestion says (accepted, dismissed
-    or suggested), or None for an actuation change."""
-    texts = GUARD
+    or suggested; a bounce guard, or "slips": a wrong-finger fix), or None
+    for an actuation change."""
+    texts = SLIPS if a.get("why") == "slips" else GUARD
     for field, text in texts:
         if a.get(field) is True:
             return text
@@ -154,3 +164,27 @@ def at_start(app):
             s.keyboard_learn = answer
             app.save_settings()
     return send(app)
+
+
+def pairs_drill(app):
+    """The mixed-up keys drill (main menu m): one status call for the pairs
+    (fingers, else pairs), kept for when the app isn't there; a notice and
+    no test when there's nothing to drill yet."""
+    from ..engine.spec import TestSpec
+    from ..words import pair_drill
+    s = app.settings
+    if s.keyboard_learn:
+        answer = keyboard_app.status(s.keyboard_server)
+        if answer.ok:
+            app.keyboard_app = answer
+            app.keyboard_patterns = answer.state.get("patterns")
+            pairs = pair_drill.pairs_from(app.keyboard_patterns)
+            if pairs and pairs != app.keyboard_pairs:
+                app.keyboard_pairs = pairs
+                app.save_settings()
+    if not app.keyboard_pairs:
+        app.notice = NOTHING
+        return None
+    pairs = tuple(tuple(p) for p in app.keyboard_pairs)
+    return TestSpec(f"mixed-up keys {pair_drill.label(pairs)}", "words", s.word_amount,
+                    "pairs", pairs)

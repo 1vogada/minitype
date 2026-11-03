@@ -10,6 +10,9 @@ while the app still lists it (the reply may not have landed yet).
 
     doubles: typed twice from one press (a bounce) -> the bounce guard,
              group 1, or group 2 (deeper, for the big keys)
+    slips:   a wrong finger brushing the key next to the one meant stops
+             shallower than a real press -> set the key's actuation between
+             the two (yes / no)
 """
 
 from .. import keyboard_app
@@ -55,6 +58,20 @@ def question(sug):
                 f"Put it in the keyboard's bounce guard?",
                 ("group 1", "group 2", "no"), 1 if _id(key) in BIG else 0,
                 ("1", "2", "n"), (1, 2, False))
+    if sug["why"] == "slips":
+        def mm(field):
+            v = sug.get(field)
+            return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
+        act, slip, normal = mm("actuationMm"), mm("slipMm"), mm("normalMm")
+        many = f"{n} wrong-finger" if type(n) is int and n > 0 else "Wrong-finger"
+        first = f"{many} presses on {key}"
+        if slip is not None and normal is not None:
+            first += f" stop at ~{slip:g} mm, real ones go to {normal:g} mm."
+        else:
+            first += " stop short of real ones."
+        to = f" to {act:g} mm" if act is not None else " deeper"
+        return (f"{first}\nSet {key}'s actuation{to} so they don't type?",
+                ("yes", "no"), 0, ("y", "n"), (None, False))
     return None
 
 

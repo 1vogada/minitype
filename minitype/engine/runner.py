@@ -9,7 +9,7 @@ from ..learn.progress import ORDER
 from ..learn.wordgen import lesson_words
 from ..nav import MENU, QUIT
 from ..terminal import console, keys
-from ..words import books, code, funbox
+from ..words import books, code, funbox, pair_drill
 from . import keyboard
 from . import karaoke, speed
 from .replay import Recorder, Replay
@@ -112,6 +112,8 @@ class TypingTest:
             self.note, words = code.pick(app.settings.code_lang)
         elif src == "slow":
             words = slow_words(app, spec.amount)
+        elif src == "pairs":                     # mixed-up keys: spec.words is the pairs
+            words = pair_drill.words(app.bank.words, list(spec.words), spec.amount)
         else:
             words = app.generator.make(
                 spec.amount if spec.kind == "words" else 200, src)

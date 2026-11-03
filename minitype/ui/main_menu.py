@@ -7,12 +7,13 @@ from ..nav import QUIT
 from ..terminal import console, keys
 from ..terminal.style import RESET
 from ..util import cycle
-from ..words import books
+from ..words import books, pair_drill
 from .book_menu import book_menu
 from .lyrics_mode import lyrics_test
 from .gallery import gallery
 from . import keyboard_learn
 from .keyboard_screen import keyboard_screen
+from .keyboard_learn import pairs_drill
 from .learn_menu import learn_menu
 from .menu import Item, Menu, title_lines
 from .profile import goal_line, profile_screen
@@ -161,7 +162,14 @@ def build_items(app):
              help="what your magnetic keyboard's app has learnt about each key: "
                   "press a key to see its actuation, presses and mistakes",
              section="practice"),
-    ] if s.keyboard_learn else []) + [
+    ] if s.keyboard_learn else []) + ([
+        Item("m", "mixed-up keys", lambda: pairs_drill(app),
+             lambda: pair_drill.label(app.keyboard_pairs),
+             help="a test from the keys you press for each other (the keyboard app "
+                  "sees which: a finger on the key next to the one you meant): words "
+                  "with both keys close together, runs like 898 for digits",
+             section="practice"),
+    ] if s.keyboard_learn or app.keyboard_pairs else []) + [
 
         # each a tab of its own: its button opens it
         Item("g", "gallery", lambda: gallery(app), lambda: s.theme,

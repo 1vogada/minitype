@@ -25,7 +25,7 @@ POLL = 0.03         # how often the loop looks for a key or a new answer
 HINTS = "press any key to see it   arrows move   esc back"
 SHIFTED = dict(zip('~!@#$%^&*()_+{}|:"<>?', "`1234567890-=[]\\;',./"))
 WHY = (("misses", "pressed too light"), ("ghosts", "typed by brushing it"),
-       ("doubles", "bounce"), ("typos", "wrong key"))
+       ("doubles", "bounce"), ("typos", "wrong key"), ("slips", "wrong finger"))
 
 
 def key_id(v):
@@ -125,6 +125,17 @@ def detail(answer, key):
         want, typed, n = key_id(pr.get("expected")), key_id(pr.get("typed")), pr.get("count")
         if type(n) is int and n > 0 and want and typed and key in (want, typed):
             out.append(f"you typed {label(typed)} for {label(want)}: {n}x")
+    for fg in sorted(_dicts(pat.get("fingers")),
+                     key=lambda x: -x["count"] if type(x.get("count")) is int else 0):
+        meant, typed, n = key_id(fg.get("meant")), key_id(fg.get("typed")), fg.get("count")
+        if type(n) is int and n > 0 and meant and typed and key in (meant, typed):
+            out.append(f"wrong finger: meant {label(meant)}, pressed {label(typed)}: {n}x")
+    for sug in _dicts(pat.get("suggestions")):
+        if key_id(sug.get("key")) == key and sug.get("why") in ("doubles", "slips"):
+            out.append("waiting for your answer: " + (
+                "bounce guard?" if sug["why"] == "doubles" else
+                f"actuation to {_mm(sug['actuationMm'])} against wrong-finger presses?"
+                if _num(sug.get("actuationMm")) else "deeper against wrong-finger presses?"))
     for a in _dicts(pat.get("adjusted")):
         if key_id(a.get("key")) != key:
             continue

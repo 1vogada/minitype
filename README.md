@@ -133,7 +133,17 @@ minitype
   The results after a test (or the keyboard screen as it opens) ask "Space
   typed twice from one press 3x (a bounce). Put it in the keyboard's bounce
   guard?" - group 1 / group 2 (deeper, marked for Space, Shift, Enter,
-  Backspace) / no; esc asks again next time
+  Backspace) / no; esc asks again next time. The same goes for
+  wrong-finger presses (a finger on the key next to the one you meant):
+  "9 wrong-finger presses on L stop at ~1.6 mm, real ones go to 3.3 mm.
+  Set L's actuation to 2.2 mm so they don't type?" yes / no. The results
+  and the keyboard screen show them too ("K→L wrong finger 9x")
+- **mixed-up keys** (main menu m, practice; with keyboard learn on, or
+  once it has seen some): a test from the keys you press for each other,
+  the wrong-finger ones first - words with both keys close together
+  (k and l: milk, black, lake), runs like 898 for digits. It asks the
+  keyboard app as it starts and keeps what it saw, so it works without
+  the app too; a normal test otherwise (sent to the app, results lines)
 
 The screen redraws when the console is resized and fits terminals as small
 as 20×5: long menus scroll to keep the selection visible and lines are

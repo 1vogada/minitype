@@ -12,7 +12,8 @@ class TestSpec:
             "custom" (uses `words`), "learn", "quote", "code", "slow"
             (your slowest words), "zen" (nothing; you type freely) or
             "book" (one page of a book, in `words`) or "lyrics" (a song's
-            lyrics, in `lines`).
+            lyrics, in `lines`) or "pairs" (mixed-up keys: `words` is the
+            pairs to drill, (a, b, count) each - words/pair_drill.py).
     """
     label: str
     kind: str

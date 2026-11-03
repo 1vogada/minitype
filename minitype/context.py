@@ -53,6 +53,7 @@ class App:
         self.keyboard_sent = None  # (when, thread): the last test's keystrokes going to it
         self.keyboard_patterns = None  # what it made of that test's mistakes ("patterns")
         self.keyboard_answered = set()  # suggestions answered, while the app still lists them
+        self.keyboard_pairs = []  # the mixed-up keys last seen, [(a, b, count)], kept in settings.json
 
     def styles(self, custom=None, art=None):
         """The current theme's colours, with every effect and fun-modifier
@@ -163,7 +164,8 @@ class App:
     def settings_dict(self):
         """What goes in settings.json (always saved): every setting, plus
         which keys you pinned or muted in the bad-key editor."""
-        return dict(self.settings.to_dict(), key_state=self.stats.key_state)
+        return dict(self.settings.to_dict(), key_state=self.stats.key_state,
+                    keyboard_pairs=[list(p) for p in self.keyboard_pairs])
 
     def saving(self):
         return storage.enabled()
@@ -204,6 +206,12 @@ class App:
         if isinstance(ks, dict):
             self.stats.key_state.update(
                 {c: v for c, v in ks.items() if v in ("on", "off")})
+        kp = s.get("keyboard_pairs")
+        if isinstance(kp, list):
+            self.keyboard_pairs = [(a, b, n) for a, b, n in
+                                   (p for p in kp if isinstance(p, list) and len(p) == 3)
+                                   if isinstance(a, str) and isinstance(b, str)
+                                   and len(a) == len(b) == 1 and type(n) is int and n > 0]
         self.learn.apply(d)
         self.history.apply(d.get("history"), d.get("pbs"))
         ws = d.get("word_speed")
