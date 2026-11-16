@@ -94,8 +94,8 @@ def build_items(app):
 
     def best_drill():
         # too little history: say so, and the normal word test instead
-        if not best_words.pool(app.stats):
-            have, need = best_words.progress(app.stats)
+        if not best_words.pool(app.stats, app.learn.stats):
+            have, need = best_words.progress(app.stats, app.learn.stats)
             app.notice = (f"best words needs more history ({have}/{need} words so far): "
                           "a normal word test instead")
             return TestSpec(f"{s.word_amount} words", "words", s.word_amount)
@@ -166,9 +166,9 @@ def build_items(app):
              help="a test made of the words you type slowest",
              section="practice"),
         Item("w", "best words", best_drill,
-             lambda: "{}/{} words".format(*best_words.progress(app.stats)),
-             help="a test made only of the words you type fastest and cleanest "
-                  "(each typed 5+ times, 90%+ with no wrong key). Kept apart: its "
+             lambda: "{}/{} words".format(*best_words.progress(app.stats, app.learn.stats)),
+             help="your fastest, cleanest words from your history (faster ones "
+                  "come up more), to push your top speed. Kept apart: its "
                   "own bests and profile rows, not in your normal speed, accuracy, "
                   "key or word stats, nor in keyboard learn",
              section="practice"),

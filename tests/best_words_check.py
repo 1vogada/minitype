@@ -62,25 +62,42 @@ spec = items["w"].action()
 assert spec.source == "words" and spec.label == f"{app.settings.word_amount} words", spec
 assert "needs more history (0/20" in app.notice and "normal word test" in app.notice
 
-# 60 words with history; the fast half clean, a few not clean or too new
+# 60 words with history; measured clean where typed 5+ times
 rng = random.Random(1)
 for i, w in enumerate(WORDS):
     st.word_speed[w] = [100.0 + i * 5, 6]     # waa fastest
     st.word_clean[w] = [6, 6]
 st.word_clean[WORDS[0]] = [4, 6]              # fastest, but 67% clean: out
-st.word_clean[WORDS[1]] = [4, 4]              # typed only 4 times: out
 st.word_speed[WORDS[2]] = [100.0, 2]          # timed only twice: out
 pool = bw.pool(st)
-assert len(pool) == (len(WORDS) - 3) // 2 == 28, len(pool)
-assert pool[0] == WORDS[3] and WORDS[0] not in pool and WORDS[1] not in pool and WORDS[2] not in pool
+assert len(pool) == len(WORDS) - 2 and pool[0] == WORDS[1], (len(pool), pool[:3])
+assert WORDS[0] not in pool and WORDS[2] not in pool
 assert all(st.word_speed[a][0] <= st.word_speed[b][0] for a, b in zip(pool, pool[1:])), "fastest first"
-assert WORDS[-1] not in pool, "the slow half isn't"
-drawn = bw.words(st, 40, rng)
-assert len(drawn) == 40 and set(drawn) <= set(pool)
+drawn = bw.words(st, 400, rng)
+assert len(drawn) == 400 and set(drawn) <= set(pool)
 assert all(a != b for a, b in zip(drawn, drawn[1:])), "no word twice in a row"
+fast, slow = pool[:10], pool[-10:]
+assert sum(w in fast for w in drawn) > sum(w in slow for w in drawn), "faster words come up more"
+# at most MAX_POOL, the fastest
+big = App().stats
+for i in range(300):
+    w = "w" + "".join(chr(97 + (i // 26 ** k) % 26) for k in range(2))
+    big.word_speed[w], big.word_clean[w] = [50.0 + i, 5], [5, 5]
+assert len(bw.pool(big)) == bw.MAX_POOL and max(big.word_speed[w][0] for w in bw.pool(big)) < 50.0 + 151
+# no word_clean yet (an old save): estimated from the keys' error rates, the least clean 40% out
+old = App().stats
+keys = {"a": [100, 1000, 10], "b": [100, 1000, 10], "z": [100, 1000, 400]}   # z misses 40%
+for i in range(30):
+    old.word_speed["ab" + "a" * (i % 5) + chr(98 + i % 2) * (i // 5)] = [80.0 + i, 4]
+for i in range(20):
+    old.word_speed["zz" + "a" * i] = [10.0 + i, 4]                            # fastest, but z words
+assert bw.pool(old) and any(w.startswith("zz") for w in bw.pool(old)), "no key stats: speed only"
+p = bw.pool(old, keys)
+assert p and not any(w.startswith("zz") for w in p), p[:5]
+assert bw.progress(old, keys)[0] == len(p)
 # just under the line: falls back
 st2 = App().stats
-for i, w in enumerate(WORDS[:39]):
+for i, w in enumerate(WORDS[:19]):
     st2.word_speed[w], st2.word_clean[w] = [100.0 + i, 5], [5, 5]
 assert bw.pool(st2) == [] and bw.progress(st2) == (19, 20)
 st2.word_speed["zz"], st2.word_clean["zz"] = [500.0, 5], [5, 5]

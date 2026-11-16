@@ -115,7 +115,7 @@ class TypingTest:
         elif src == "slow":
             words = slow_words(app, spec.amount)
         elif src == best_words.SOURCE:
-            words = best_words.words(app.stats, spec.amount if spec.kind == "words" else 200) \
+            words = best_words.words(app.stats, spec.amount if spec.kind == "words" else 200, keys=app.learn.stats) \
                 or app.generator.make(spec.amount if spec.kind == "words" else 200)
         elif src == "pairs":                     # mixed-up keys: spec.words is the pairs
             words = pair_drill.words(app.bank.words, list(spec.words), spec.amount)
