@@ -26,7 +26,7 @@ TREE = [
         ("test", "how a test plays: its rules, mistakes and challenges", [
             ("rules", "what a wrong key does, backspace, and pausing", [
                 ("test", "difficulty"), ("test", "stop on error"), ("test", "backspace"),
-                ("test", "pause on esc")]),
+                ("test", "pause on esc"), ("test", "tab replays")]),
             ("mistakes", "how mistakes show, a beep on them, and typing blind", [
                 ("test", "corrected letters"), ("test", "indicate typos"),
                 ("look", "sound"), ("test", "blind", "blind mode")]),

@@ -30,3 +30,4 @@ class TestSpec:
     song_at: Tuple = ()
     whole: Tuple = ()
     song: Tuple = ()    # lyrics: (title, artist, seconds long), for its tempo
+    replay: Tuple = ()  # tab with "same words": the words of the test it restarts, as they were

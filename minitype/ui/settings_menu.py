@@ -148,6 +148,10 @@ def raw_items(app):
                  help="letter: a wrong key doesn't move the cursor. "
                       "word: you can't leave a wrong word",
                  tags=("mistakes", "errors", "cursor", "letter", "word")),
+        b.flag("tab replays", "tab_same",
+               "tab once you've typed something restarts with the same words; "
+               "tab with nothing typed yet gives new ones",
+               tags=("tab", "restart", "repeat", "again", "new", "words")),
         b.flag("pause on esc", "esc_pause",
                "esc in the middle of a test pauses it (its clock stops) and "
                "asks whether to resume; off: esc leaves the test at once",

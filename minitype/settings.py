@@ -225,6 +225,7 @@ class Settings:
     # ---- the test
     difficulty: str = "normal"   # expert: a wrong word ends it. master: a wrong key ends it.
     stop_on_error: str = "off"   # letter: wrong keys don't move the cursor. word: can't leave a wrong word
+    tab_same: bool = True        # tab after typing something: the same words again (nothing typed: new ones)
     backspace: str = "normal"    # off: no corrections at all. freedom: back into correct words too
     corrected: str = "marked"    # fixed letters: marked (warn colour), normal, or red
     typos: str = "off"           # show the wrong key: off, below, replace, both

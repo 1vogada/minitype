@@ -2,6 +2,7 @@ import os
 import random
 import string
 import time
+from dataclasses import replace
 
 from .. import media
 from ..config import MAX_EXTRA, NUMBER_RANGES, RULE_GRACE
@@ -57,7 +58,7 @@ class TypingTest:
         self.bpm = None        # lyrics: the song's tempo, once looked up (in the background)
         self.follow = None     # lyrics from spotify: keeps up with it (spotify.Follow)
         self.breaks = set()    # lyrics: the words that start a line of the song
-        self.words = self._make_words()
+        self.words = list(spec.replay) if spec.replay else self._make_words()
         self.typed = [""] * len(self.words)
         self.wi = self.keys = self.bad_keys = 0
         self.combo = self.best_combo = 0
@@ -399,7 +400,11 @@ class TypingTest:
             if self.follow is not None:       # a song spotify is playing: from where it is now
                 from ..ui.lyrics_mode import synced     # the ui imports the engine
                 return synced(self.spec, self.follow.now)
-            return self.spec
+            if self.spec.source in ("lyrics", "book"):
+                return self.spec                                       # fixed text: it's the same anyway
+            if self.app.settings.tab_same and (self.wi or (self.wi < len(self.typed) and self.typed[self.wi])):
+                return replace(self.spec, replay=tuple(self.words))   # typed something: the same words again
+            return replace(self.spec, replay=()) if self.spec.replay else self.spec   # nothing typed: new words
         if key in (keys.CTRL_LBRACKET, keys.CTRL_RBRACKET) and self.follow is not None:
             self.nudge(-NUDGE if key == keys.CTRL_LBRACKET else NUDGE)
             return None
@@ -733,7 +738,9 @@ class TypingTest:
             self.app.stats.history.append(wpm)
             if self.spec.source == "book":
                 books.finished_page(self.app, self.spec)
-        result = TestResult(self.spec, wpm, raw, acc, elapsed, self.bad_keys,
+        # tab on the results: the same words again with "tab: same words" on (you typed them), else new ones
+        again = replace(self.spec, replay=tuple(self.words) if self.app.settings.tab_same else ())
+        result = TestResult(again, wpm, raw, acc, elapsed, self.bad_keys,
                             self.best_combo, self.misses, self.failed, self.diff,
                             self.fail_reason, self.note, self.events, self.presses)
         result.quote = self.quote
