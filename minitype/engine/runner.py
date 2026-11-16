@@ -9,7 +9,7 @@ from ..learn.progress import ORDER
 from ..learn.wordgen import lesson_words
 from ..nav import MENU, QUIT
 from ..terminal import console, keys
-from ..words import books, code, funbox, pair_drill
+from ..words import best_words, books, code, funbox, pair_drill
 from . import keyboard
 from . import karaoke, speed
 from .replay import Recorder, Replay
@@ -47,6 +47,8 @@ class TypingTest:
         self.diff = s.difficulty
         self.stop = s.stop_on_error
         self.learning = spec.source == "learn"
+        # best words: its own mode, kept out of the stats it's built from (words/best_words.py)
+        self.best = spec.source == best_words.SOURCE
         self.note = ""
         self.quote = ""        # the quote as picked, for favouriting
         self.timing = []       # lyrics: (seconds, char offset) where each line starts
@@ -83,7 +85,7 @@ class TypingTest:
         self.n_before = app.learn.unlocked() if self.learning else 0
         # every keystroke for the keyboard app (keyboard learn on only, else None):
         # {"t": epoch ms, "expected": the char the text wanted or None, "typed"}
-        self.keystrokes = [] if s.keyboard_learn else None
+        self.keystrokes = [] if s.keyboard_learn and not self.best else None
 
     # ---------------------------------------------------------------- words
 
@@ -112,6 +114,9 @@ class TypingTest:
             self.note, words = code.pick(app.settings.code_lang)
         elif src == "slow":
             words = slow_words(app, spec.amount)
+        elif src == best_words.SOURCE:
+            words = best_words.words(app.stats, spec.amount if spec.kind == "words" else 200) \
+                or app.generator.make(spec.amount if spec.kind == "words" else 200)
         elif src == "pairs":                     # mixed-up keys: spec.words is the pairs
             words = pair_drill.words(app.bank.words, list(spec.words), spec.amount)
         else:
@@ -543,7 +548,8 @@ class TypingTest:
         self.missed_words.add(self.wi)
         self.last_error = time.time()
         self.misses[want] = self.misses.get(want, 0) + 1
-        self.app.stats.miss_key(want)
+        if not self.best:
+            self.app.stats.miss_key(want)
         if self.app.settings.sound:
             console.bell()
 
@@ -620,19 +626,30 @@ class TypingTest:
             if self.wi not in self.missed_words:
                 self.bad_keys += 1      # a wrong word with no wrong key in it
             self.combo = 0
-            if not self.learning:
+            if self._tracked():
                 self.app.stats.miss_word(word)
+            self._word_done(word, False)
             if self.diff in ("expert", "master"):
                 self._fail("wrong word")
                 return
         else:
             self._hit()
             self._time_word(word, el)
+            self._word_done(word, self.wi not in self.missed_words)
         self.wi += 1
         self.word_start = None
 
+    def _tracked(self):
+        """Whether this test's words feed the word stats (not learn lessons,
+        not best words, which is built from them)."""
+        return not self.learning and not self.best
+
+    def _word_done(self, word, clean):
+        if self._tracked():
+            self.app.stats.word_done(word, clean)
+
     def _time_word(self, word, el):
-        if self.word_start is not None and not self.learning:
+        if self.word_start is not None and self._tracked():
             ms = (el - self.word_start) * 1000 / len(word)
             self.app.stats.word_time(word, ms)
 
@@ -689,10 +706,12 @@ class TypingTest:
                     return                      # fix it before you can finish
                 if self.wi not in self.missed_words:
                     self.bad_keys += 1
-                if not self.learning:
+                if self._tracked():
                     self.app.stats.miss_word(word)
+                self._word_done(word, False)
             else:
                 self._time_word(word, el)
+                self._word_done(word, self.wi not in self.missed_words)
             self.wi += 1
             self.done = True
 
@@ -709,7 +728,7 @@ class TypingTest:
         if self.learning:
             self.app.learn.finish(self.n_before)
         counted = not self.hacker()             # a hacker run is just for fun
-        if not self.failed and counted:
+        if not self.failed and counted and not self.best:
             self.app.stats.ghost[:] = self.samples
             self.app.stats.history.append(wpm)
             if self.spec.source == "book":

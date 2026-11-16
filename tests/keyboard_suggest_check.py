@@ -155,6 +155,33 @@ for key, want in (("y", True), ("N", False), (keys.ESC, "later")):
             mock.patch.object(console, "set_overlay", lambda o: None):
         assert anywhere.ask_dialog(App(), lambda: None, "Q?", esc="later") == want
 
+# ---------------------------------------------------------------- rapid-trigger suggestions
+# a bounce the app measured (a rebound past its rapid-trigger release): the release is a third answer
+RT = [{"key": "S", "slot": 10, "why": "doubles", "count": 3, "rtReleaseMm": 0.15, "riseMm": 0.13, "rtNowMm": 0.1},
+      {"key": "L", "slot": 57, "why": "repeats", "count": 3, "rtReleaseMm": 0.05, "liftMm": 0.07, "rtNowMm": 0.1},
+      {"key": "O", "why": "repeats"}]
+q = sg.question(RT[0])
+assert q[0] == ("S typed twice from one press 3x (a bounce: it came back up 0.13 mm at the bottom).\n"
+                "Bounce guard, or its rapid-trigger release to 0.15 mm?"), q[0]
+assert q[1] == ("group 1", "group 2", "release 0.15 mm", "no") and q[3] == ("1", "2", "r", "n")
+q = sg.question(RT[1])
+assert q[0] == "LL came out as one L 3x: your finger came up 0.07 mm.\nSet L's rapid-trigger release to 0.05 mm (now 0.1 mm)?", q[0]
+assert q[1] == ("yes", "no")
+assert sg.question(RT[2]) is None, "a repeats suggestion with no value isn't asked"
+assert ka.suggestion_body("S", True, 1, "rt") == {"action": "accept", "key": "S", "fix": "rt"}
+assert ka.suggestion_body("S", False, None, "rt") == {"action": "dismiss", "key": "S"}
+rts = dict(STATE, patterns={"suggestions": RT})
+app = new(rts)
+sent, boxes, got = ask(app, ["r", "y"], rts)
+assert sent == [{"action": "accept", "key": "S", "fix": "rt"}, {"action": "accept", "key": "L"}], sent
+assert got == [("S", True, "rt"), ("L", True, None)]
+assert kl.pattern_text({"adjusted": [{"key": "L", "why": "repeats", "suggested": True}]}) == [
+    "keyboard: L: suggested a finer rapid-trigger release"]
+assert kl.pattern_text({"adjusted": [{"key": "A", "why": "undo", "undone": True}]}) == [
+    "keyboard: A: put back (undone)"]
+assert kl.pattern_text({"keys": [{"key": "L", "repeats": 4}]}) == [
+    "keyboard: L lost when typed twice (finger came up too little)"]
+
 # ---------------------------------------------------------------- the adjusted lines
 adj = {"adjusted": [{"key": "Space", "why": "doubles", "suggested": True},
                     {"key": "J", "why": "doubles", "accepted": True},

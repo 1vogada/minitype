@@ -159,6 +159,7 @@ class App:
             "history": self.history.runs,
             "pbs": self.history.pbs,
             "word_speed": self.stats.word_speed,
+            "word_clean": self.stats.word_clean,
         }
 
     def settings_dict(self):
@@ -219,3 +220,9 @@ class App:
             self.stats.word_speed.update(
                 {w: [float(v[0]), int(v[1])] for w, v in ws.items()
                  if isinstance(v, list) and len(v) == 2})
+        wc = d.get("word_clean")
+        if isinstance(wc, dict):
+            self.stats.word_clean.update(
+                {w: [int(v[0]), int(v[1])] for w, v in wc.items()
+                 if isinstance(w, str) and isinstance(v, list) and len(v) == 2
+                 and all(type(x) is int and x >= 0 for x in v) and v[0] <= v[1]})

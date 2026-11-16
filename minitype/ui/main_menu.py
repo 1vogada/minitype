@@ -7,7 +7,7 @@ from ..nav import QUIT
 from ..terminal import console, keys
 from ..terminal.style import RESET
 from ..util import cycle
-from ..words import books, pair_drill
+from ..words import best_words, books, pair_drill
 from .book_menu import book_menu
 from .lyrics_mode import lyrics_test
 from .gallery import gallery
@@ -92,6 +92,15 @@ def build_items(app):
             return None
         return TestSpec("slow words", "words", s.word_amount, "slow")
 
+    def best_drill():
+        # too little history: say so, and the normal word test instead
+        if not best_words.pool(app.stats):
+            have, need = best_words.progress(app.stats)
+            app.notice = (f"best words needs more history ({have}/{need} words so far): "
+                          "a normal word test instead")
+            return TestSpec(f"{s.word_amount} words", "words", s.word_amount)
+        return TestSpec(best_words.LABEL, "words", s.word_amount, best_words.SOURCE)
+
     opening = {"tab": None}     # the settings tab a click on its peek picked
 
     def settings():
@@ -155,6 +164,13 @@ def build_items(app):
         Item("0", "slow words", slow_drill,
              lambda: f"{len(app.stats.word_speed)} words timed",
              help="a test made of the words you type slowest",
+             section="practice"),
+        Item("w", "best words", best_drill,
+             lambda: "{}/{} words".format(*best_words.progress(app.stats)),
+             help="a test made only of the words you type fastest and cleanest "
+                  "(each typed 5+ times, 90%+ with no wrong key). Kept apart: its "
+                  "own bests and profile rows, not in your normal speed, accuracy, "
+                  "key or word stats, nor in keyboard learn",
              section="practice"),
     ] + ([
         Item("k", "keyboard", lambda: keyboard_screen(app),

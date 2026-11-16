@@ -10,9 +10,15 @@ while the app still lists it (the reply may not have landed yet).
 
     doubles: typed twice from one press (a bounce) -> the bounce guard,
              group 1, or group 2 (deeper, for the big keys)
+             or, when the app measured the key bouncing back up at the
+             bottom by more than its rapid-trigger release, that release a
+             little coarser instead
     slips:   a wrong finger brushing the key next to the one meant stops
              shallower than a real press -> set the key's actuation between
              the two (yes / no)
+    repeats: a letter typed twice came out once: the finger came up less
+             than the key's rapid-trigger release -> that release finer
+             (yes / no)
 """
 
 from .. import keyboard_app
@@ -50,18 +56,37 @@ def pending(app):
 def question(sug):
     """(title, answers, preselected, hotkeys, groups) for a box, or None for
     a kind minitype doesn't know. groups[k] is answer k's bounce guard group
-    (None: accept with no group), False for no."""
+    (None: accept with no group), "rt" to accept with its rapid-trigger
+    release instead, False for no."""
     key, n = sug["key"], sug.get("count")
     times = f" {n}x" if type(n) is int and n > 0 else ""
+
+    def mm(field):
+        v = sug.get(field)
+        return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
     if sug["why"] == "doubles":
+        rt, rise = mm("rtReleaseMm"), mm("riseMm")
+        big = 1 if _id(key) in BIG else 0
+        if rt is not None:
+            back = f": it came back up {rise:g} mm at the bottom" if rise is not None else ""
+            return (f"{key} typed twice from one press{times} (a bounce{back}).\n"
+                    f"Bounce guard, or its rapid-trigger release to {rt:g} mm?",
+                    ("group 1", "group 2", f"release {rt:g} mm", "no"), big,
+                    ("1", "2", "r", "n"), (1, 2, "rt", False))
         return (f"{key} typed twice from one press{times} (a bounce).\n"
                 f"Put it in the keyboard's bounce guard?",
-                ("group 1", "group 2", "no"), 1 if _id(key) in BIG else 0,
+                ("group 1", "group 2", "no"), big,
                 ("1", "2", "n"), (1, 2, False))
+    if sug["why"] == "repeats":
+        rt, lift, now = mm("rtReleaseMm"), mm("liftMm"), mm("rtNowMm")
+        if rt is None:
+            return None
+        why = f": your finger came up {lift:g} mm" if lift is not None else ""
+        was = f" (now {now:g} mm)" if now is not None else ""
+        return (f"{key}{key} came out as one {key}{times}{why}.\n"
+                f"Set {key}'s rapid-trigger release to {rt:g} mm{was}?",
+                ("yes", "no"), 0, ("y", "n"), (None, False))
     if sug["why"] == "slips":
-        def mm(field):
-            v = sug.get(field)
-            return v if isinstance(v, (int, float)) and not isinstance(v, bool) else None
         act, slip, normal = mm("actuationMm"), mm("slipMm"), mm("normalMm")
         many = f"{n} wrong-finger" if type(n) is int and n > 0 else "Wrong-finger"
         first = f"{many} presses on {key}"
@@ -88,10 +113,12 @@ def ask(app, redraw):
             break                                  # esc: ask again later
         group = groups[k]
         accept = group is not False
+        fix = "rt" if group == "rt" else None
+        group = group if accept and not fix else None
         app.keyboard_answered.add(_id(sug["key"]))
-        keyboard_app.answer_suggestion(sug["key"], accept, group if accept else None,
-                                       app.settings.keyboard_server, lambda a: _landed(app, a))
-        sent.append((sug["key"], accept, group if accept else None))
+        keyboard_app.answer_suggestion(sug["key"], accept, group,
+                                       app.settings.keyboard_server, lambda a: _landed(app, a), fix)
+        sent.append((sug["key"], accept, fix or group))
     return sent
 
 

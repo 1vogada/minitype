@@ -15,6 +15,7 @@ class SessionStats:
         self.history = []     # wpm of completed runs
         self.ghost = []       # (elapsed, chars) samples from the last completed run
         self.word_speed = {}  # word -> [smoothed ms per char, times typed]
+        self.word_clean = {}  # word -> [times finished with no wrong key, times finished]
 
     def miss_key(self, c):
         self.errors[c] = self.errors.get(c, 0) + 1
@@ -22,11 +23,31 @@ class SessionStats:
     def miss_word(self, w):
         self.missed[w] = self.missed.get(w, 0) + 1
 
-    def word_time(self, word, ms_per_char):
-        """Record how fast a word was typed correctly. Words are stored
-        bare and lowercase so punctuation and capitals don't split them."""
+    @staticmethod
+    def _bare(word):
+        """A word as it's stored: bare and lowercase, so punctuation and
+        capitals don't split it; None for one too short or not letters."""
         w = word.strip(PUNCT_STRIP).lower()
-        if len(w) < 2 or not w.isalpha():
+        return w if len(w) >= 2 and w.isalpha() else None
+
+    def word_done(self, word, clean):
+        """A word finished: clean when it was right with no wrong key on the
+        way (best words reads these)."""
+        w = self._bare(word)
+        if w is None:
+            return
+        c = self.word_clean.setdefault(w, [0, 0])
+        c[0] += 1 if clean else 0
+        c[1] += 1
+        if len(self.word_clean) > MAX_WORDS:
+            for k, _ in sorted(self.word_clean.items(), key=lambda kv: kv[1][1])[
+                    :len(self.word_clean) - MAX_WORDS]:
+                del self.word_clean[k]
+
+    def word_time(self, word, ms_per_char):
+        """Record how fast a word was typed correctly."""
+        w = self._bare(word)
+        if w is None:
             return
         s = self.word_speed.get(w)
         if s is None:

@@ -26,7 +26,9 @@ WIDTH = 76          # a pattern line is cut to this
 KEY_WHY = (("misses", "often missed (pressed too light)"),
            ("ghosts", "typed by brushing it"),
            ("doubles", "typed twice (bounce)"),
-           ("slips", "pressed by the wrong finger"))
+           ("slips", "pressed by the wrong finger"),
+           ("repeats", "lost when typed twice (finger came up too little)"),
+           ("lateSwaps", "actuated late (typed after the next key)"))
 NOTHING = "nothing to drill yet: type a few tests with keyboard learn on"
 
 
@@ -112,6 +114,9 @@ def pattern_text(patterns):
 GUARD = (("accepted", "put in the bounce guard (you said yes)"),
          ("dismissed", "bounce guard dismissed (you said no)"),
          ("suggested", "suggested for the bounce guard"))
+REPEATS = (("accepted", "finer rapid-trigger release (you said yes)"),
+           ("dismissed", "rapid-trigger change dismissed (you said no)"),
+           ("suggested", "suggested a finer rapid-trigger release"))
 SLIPS = (("accepted", "set deeper against wrong-finger presses (you said yes)"),
          ("dismissed", "wrong-finger fix dismissed (you said no)"),
          ("suggested", "suggested deeper against wrong-finger presses"))
@@ -121,7 +126,9 @@ def guard_text(a):
     """What an `adjusted` entry about a suggestion says (accepted, dismissed
     or suggested; a bounce guard, or "slips": a wrong-finger fix), or None
     for an actuation change."""
-    texts = SLIPS if a.get("why") == "slips" else GUARD
+    if a.get("why") == "undo" or a.get("undone") is True:
+        return "put back (undone)"
+    texts = {"slips": SLIPS, "repeats": REPEATS}.get(a.get("why"), GUARD)
     for field, text in texts:
         if a.get(field) is True:
             return text

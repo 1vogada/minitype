@@ -5,6 +5,7 @@ from datetime import date, timedelta
 
 from ..terminal import console, keys
 from ..terminal.style import RESET
+from ..words import best_words
 from .menu import Hints, title_lines
 
 SPARKS = "▁▂▃▄▅▆▇█"
@@ -92,7 +93,8 @@ def calendar_lines(app, st, width, today=None):
 def draw(app, st):
     dim, ok = st.dim, st.title
     h = app.history
-    runs = h.completed()
+    normal = h.normal()                   # best-words runs have rows of their own
+    runs = [r for r in normal if not r["failed"]]
     width = console.size()[0]
     lines = title_lines(app, st, "profile")
     if not h.runs:
@@ -103,14 +105,19 @@ def draw(app, st):
         avg = sum(h.speed(r) for r in last) / len(last)
         acc = sum(r["acc"] for r in last) / len(last)
         rows = [
-            ("tests", f"{len(h.runs)}"),
+            ("tests", f"{len(normal)}"),
             ("time typed", fmt_time(h.total_seconds())),
             ("top speed", f"{max(wpms):.0f} wpm"),
             ("average", f"{avg:.0f} wpm (last 10)"),
             ("accuracy", f"{acc:.1f}% (last 10)"),
-            ("failed", f"{len(h.runs) - len(runs)}"),
+            ("failed", f"{len(normal) - len(runs)}"),
             ("streak", streak_text(app)),
         ]
+        best = best_words.summary(h)
+        if best:
+            n, bavg, bacc, btop = best
+            rows += [("best words", f"{n} test{'' if n == 1 else 's'}, top {btop:.0f} wpm"),
+                     ("  average", f"{bavg:.0f} wpm, {bacc:.1f}%")]
         two_cols = width >= 64
         step = 2 if two_cols else 1
         for k in range(0, len(rows), step):

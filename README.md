@@ -139,7 +139,13 @@ minitype
   Set L's actuation to 2.2 mm so they don't type?" yes / no. The results
   and the keyboard screen show them too ("K→L wrong finger 9x"), and keys
   typed in the wrong order ("E/Space swapped 4x"; on the keyboard screen
-  "typed Space before E: 4x")
+  "typed Space before E: 4x").
+  The app reads each mistake from the key's travel around it, not from how
+  deep it went (bottoming out every key says nothing), so it can also ask
+  about rapid trigger: a bounce it measured at the bottom ("group 1 /
+  group 2 / release 0.15 mm / no"), and a letter typed twice that came out
+  once because the finger lifted too little ("LL came out as one L 3x: your
+  finger came up 0.07 mm. Set L's rapid-trigger release to 0.05 mm?")
 - **mixed-up keys** (main menu m, practice; with keyboard learn on, or
   once it has seen some): a test from the keys you press for each other,
   the wrong-finger ones first - words with both keys close together
@@ -168,6 +174,13 @@ clipped to the width.
 - **learn**: keybr-style lessons that unlock letters as each one reaches a
   target speed, with optional capitals and punctuation
 - **slow words**: a drill built from the words you type slowest
+- **best words** (main menu w): a test made only of the words you type
+  fastest and cleanest - each typed 5+ times, 90%+ of them with no wrong
+  key; the fastest half of those, once there are 20. Before that it says
+  how far it's got and starts a normal word test. Its runs are kept apart:
+  their own personal best and profile rows, and they're left out of the
+  normal speed / accuracy figures, the key and word stats (so the list
+  doesn't feed on itself) and keyboard learn
 
 ## Lyrics mode
 

@@ -185,23 +185,26 @@ def post_events(events, server=SERVER, done=None):
     return _background(lambda: send_events(events, server), done, "keyboard-events")
 
 
-def suggestion_body(key, accept, group=None):
+def suggestion_body(key, accept, group=None, fix=None):
     """The answer to one of the app's suggestions: accept (a bounce guard
-    group 1 or 2 for "doubles", none for "slips") or dismiss."""
+    group 1 or 2 for "doubles", or fix "rt": its rapid-trigger release
+    instead; none for "slips" and "repeats") or dismiss."""
     if not isinstance(key, str) or not key:
         return None
     if not accept:
         return {"action": "dismiss", "key": key}
     out = {"action": "accept", "key": key}
-    if group in (1, 2):
+    if fix == "rt":
+        out["fix"] = "rt"
+    elif group in (1, 2):
         out["group"] = group
     return out
 
 
-def answer_suggestion(key, accept, group=None, server=SERVER, done=None):
+def answer_suggestion(key, accept, group=None, server=SERVER, done=None, fix=None):
     """suggestion_body sent in a daemon thread (the reply is the status,
     to `done`); None when the key isn't one."""
-    data = suggestion_body(key, accept, group)
+    data = suggestion_body(key, accept, group, fix)
     if data is None:
         return None
     return _background(lambda: _post(data, server, TIMEOUT), done, "keyboard-answer")

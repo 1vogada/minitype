@@ -8,6 +8,14 @@ The last long session ran on the owner's work laptop. Its chat and the
 agent's memory don't travel, so this section is the memory.
 
 **Do next, in order:**
+00. 2026-11-16 (home PC), branch `learn-mistakes`, not merged or pushed:
+   **best words** mode (`minitype/words/best_words.py`, main menu w; runs tagged
+   "best" in the history, kept out of normal stats, word / key stats and
+   keyboard learn; `stats.word_clean` is new in save.json) and the keyboard
+   app's new suggestion kinds (doubles with an rtRelease, "repeats"; accept
+   with `fix: "rt"`). The app side is max68he branch `learn-mistakes`,
+   design note there: `docs/learn-mistakes.md`. Tests: best_words_check,
+   keyboard_suggest_check. Not tried in a real terminal or on the keyboard.
 0. 2026-11-03: **keyboard learn** (the owner's MAX68HE magnetic keyboard).
    `minitype/keyboard_app.py` is the client for the keyboard app's local
    server (`POST http://localhost:6869/api/learn/typing`, body

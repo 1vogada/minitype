@@ -61,6 +61,9 @@ def headline(app, st, r):
 def pb_lines(app, st, r):
     if not r.counted:
         return [f"  {st.dim}{app.settings.funbox} mode - just for fun, not kept{RESET}"]
+    if r.spec.source == "best":
+        note = [f"  {st.dim}best words - kept apart from your normal stats{RESET}"]
+        return note + pb_lines(app, st, _plain(r))
     if not app.settings.res_pb or r.failed or r.spec.source == "zen":
         return []
     if r.wpm > r.pb_before:
@@ -125,6 +128,12 @@ def heatmap_lines(app, st, r):
     legend = (f"  {st.dim}keys:{RESET} {clean}clean{RESET}{st.dim},{RESET} "
               f"{some}some misses{RESET}{st.dim},{RESET} {many}many misses{RESET}")
     return ["", legend] + lines[:-1]
+
+
+def _plain(r):
+    """r as any other run, for the personal-best lines."""
+    from dataclasses import replace
+    return replace(r, spec=replace(r.spec, source="words"))
 
 
 def detail_lines(app, st, r):

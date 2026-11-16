@@ -14,7 +14,9 @@ def _day_start(now=None):
 
 class History:
     def __init__(self):
-        self.runs = []   # {"t", "mode", "wpm", "acc", "secs", "failed"[, "awpm"]}
+        # {"t", "mode", "wpm", "acc", "secs", "failed"[, "awpm"][, "tag"]}; tag "best":
+        # a best-words run, its own mode and kept out of the normal speed stats
+        self.runs = []
         self.pbs = {}    # mode -> {"wpm", "acc", "t"[, "awpm"]}
         # which wpm system to show and compare: "classic" ("wpm", over the
         # whole clock) or "active" ("awpm", over the time typed); runs from
@@ -51,6 +53,8 @@ class History:
             "secs": round(result.elapsed, 1),
             "failed": result.failed,
         })
+        if result.spec.source == "best":
+            self.runs[-1]["tag"] = "best"
         del self.runs[:-MAX_RUNS]
         if result.failed:
             return False
@@ -70,6 +74,11 @@ class History:
 
     def completed(self):
         return [r for r in self.runs if not r["failed"]]
+
+    def normal(self):
+        """The runs the normal speed and accuracy figures are made of: all
+        but the best-words ones."""
+        return [r for r in self.runs if r.get("tag") != "best"]
 
     def total_seconds(self):
         return sum(r["secs"] for r in self.runs)
@@ -102,7 +111,7 @@ class History:
 
     def best_by_mode(self):
         best = {}
-        for r in self.completed():
+        for r in self.completed():                  # best words is a mode of its own here
             best[r["mode"]] = max(best.get(r["mode"], 0), self.speed(r))
         return best
 
