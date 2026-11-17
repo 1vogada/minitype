@@ -12,7 +12,7 @@ import { h, toast, NAV } from "./dom.js";
 import { RowList } from "./rows.js";
 import { TREE, flatten, outline } from "./settingsTree.js";
 
-const RESTYLE = /^(theme|accent_text|untyped_lighten|fun_|effect_speed|flow_direction|smooth_caret|caret$|lowkey)/;
+const RESTYLE = /^(theme|accent_text|untyped_lighten|fun_|effect_speed|flow_direction|smooth_caret|caret$|lowkey|fx_bg|fx_glass|fx_tiles)/;
 const SEP = " › ";
 const SPY_TOP = 120;      // px from the top of the window where "you are here" is read
 

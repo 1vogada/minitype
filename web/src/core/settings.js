@@ -98,6 +98,11 @@ export const DEFAULTS = {
   fx_camera: false,      // a small camera shake on a wrong key
   fx_reveal: false,      // the results come in one by one
   fx_quality: "auto",    // auto drops to cheap effects when frames run slow
+  // ---- the browser's look: on by default
+  fx_bg: "auto",         // a drawn scene behind everything: auto (one that suits the theme), off, or a scene
+  fx_bg_tilt: true,      // the scene tilts in 3D after the mouse
+  fx_glass: true,        // a frosted glass card behind the text and the menus
+  fx_tiles: true,        // the cards tilt after the mouse on hover, with some thickness
   smooth_caret: true,
 };
 
@@ -141,6 +146,7 @@ export const CHOICES = {
   bad_words_pct: C.PCTS,
   untyped_lighten: [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100],
   fx_quality: C.FX_QUALITY,
+  fx_bg: C.BG_SCENES,
   fx_fire: C.FIRE_MODES,
   fx_tilt_angle: [6, 10, 14, 20, 26],
   fx_fire_wpm: [60, 80, 100, 120, 150],

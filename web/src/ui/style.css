@@ -30,6 +30,30 @@ html, body {
   transition: background-color 0.25s ease;
 }
 
+/* ---------------------------------------------------------------- the background scene (backdrop.js) */
+
+/* behind everything, fixed; its layers at their own depths, so it tilts in 3D */
+#backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  perspective: 900px;
+  pointer-events: none;
+  display: none;
+}
+.has-bg #backdrop { display: block; }
+/* the body's own background would paint over it (the root's is the canvas, under it) */
+.has-bg body { background: transparent; }
+.bd-tilt {
+  position: absolute;
+  inset: -7%;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.bd-layer { position: absolute; inset: 0; }
+.bd-layer svg { display: block; width: 100%; height: 100%; }
+
 /* clip, not hidden: hidden would make the body its own scroller, and the page (window) must scroll */
 body { overflow-x: clip; height: auto; min-height: 100%; }
 

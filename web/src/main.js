@@ -11,7 +11,8 @@ import { App } from "./core/app.js";
 import { canReachLocal } from "./core/keyboardApp.js";
 import { MENU, QUIT } from "./core/test.js";
 import { keyOf, NAV, h, hints } from "./ui/dom.js";
-import { applyTheme, styles } from "./ui/theme.js";
+import { THEMES, applyTheme, styles } from "./ui/theme.js";
+import { Backdrop } from "./ui/backdrop.js";
 import { MenuScreen } from "./ui/menu.js";
 import { TestScreen } from "./ui/testScreen.js";
 import { ResultsScreen } from "./ui/results.js";
@@ -46,6 +47,7 @@ class UI {
     this.screen = null;
     this.stack = [];          // screens waiting under the one shown (settings over a test)
     this.fx = new FxMonitor(app);
+    this.backdrop = new Backdrop();
     this.restyle();
   }
 
@@ -54,6 +56,10 @@ class UI {
     applyTheme(this.st);
     document.documentElement.style.setProperty("--fx-speed", Math.abs(this.st.fx.speed) || 1);
     document.documentElement.classList.toggle("no-smooth", !app.settings.smooth_caret);
+    const s = app.settings;
+    this.backdrop.apply(s, this.st, THEMES[s.theme] ?? THEMES.default, s.theme);
+    document.documentElement.classList.toggle("glass", s.fx_glass !== false);
+    document.documentElement.classList.toggle("tiles", s.fx_tiles !== false);
     return this.st;
   }
 

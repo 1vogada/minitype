@@ -34,6 +34,7 @@ export const WPM_SYSTEMS = ["active", "classic"];
 export const THEME_BACKGROUNDS = ["theme", "always", "off"];
 export const FX_QUALITY = ["auto", "full", "cheap"];
 export const FIRE_MODES = ["off", "streak", "always"];
+export const BG_SCENES = ["auto", "off", "synthwave", "mountains", "aurora", "ocean", "city", "blobs"];
 
 export const NUMBER_RANGES = {
   min_wpm: [0, 300], min_acc: [0, 100], memory: [0, 60],

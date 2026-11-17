@@ -14,17 +14,9 @@ const DEFAULT_FIX = { error: "#ff5f5f", extra: "#d75f5f", good: "#5fd75f", warn:
 const MONO = { dim: "#6f6f6f", text: "#e4e4e4", error: "#e4e4e4", extra: "#8a8a8a", accent: "#ffffff", good: "#cfcfcf", warn: "#bdbdbd" };
 const FALLBACK_BG = "#141517";
 
-export function hexToRgb(h) {
-  const n = parseInt(h.slice(1), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-export const rgbToHex = (c) => "#" + c.map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
-export const mix = (a, b, t) => rgbToHex(hexToRgb(a).map((v, i) => v + (hexToRgb(b)[i] - v) * t));
-export function luminance(h) {
-  const lin = (v) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
-  const [r, g, b] = hexToRgb(h);
-  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-}
+import { hexToRgb, rgbToHex, mix, luminance } from "./colour.js";
+
+export { hexToRgb, rgbToHex, mix, luminance };
 
 /** `steps` colours running evenly through the stops and back to the first. */
 export function blend(stops, steps = GRADIENT_STEPS) {
