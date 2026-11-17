@@ -14,6 +14,7 @@ venv/
 /spotify.json
 /liked.json
 /tempo.json
+/keyboard_queue.json
 /lyrics/
 /*.json.tmp
 /books/

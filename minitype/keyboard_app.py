@@ -21,6 +21,7 @@ Standard library only, a short timeout, and nothing here ever raises.
 """
 
 import json
+import os
 import re
 import threading
 import time
@@ -178,6 +179,63 @@ def send_events(events, server=SERVER, timeout=TIMEOUT):
     return answer
 
 
+# Keystrokes the app couldn't take (not running): kept in QUEUE_FILE next to the save and sent first the next time
+# it answers, so typing while it's down isn't lost. Without the app there was no depth stream either, so the app
+# counts those mistakes but can't tie them to how a key moved. At most MAX_QUEUED events (the oldest go).
+QUEUE_FILE = "keyboard_queue.json"
+MAX_QUEUED = 20000
+_qlock = threading.Lock()
+
+
+def _queue_path():
+    from . import storage                     # storage imports nothing from here
+    return storage.path(QUEUE_FILE)
+
+
+def queued():
+    """The events waiting for the app (a list, [] when none or unreadable)."""
+    try:
+        with open(_queue_path(), encoding="utf-8") as f:
+            data = json.load(f)
+        return [e for e in data if isinstance(e, dict)] if isinstance(data, list) else []
+    except (OSError, ValueError):
+        return []
+
+
+def _write_queue(events):
+    p = _queue_path()
+    try:
+        if not events:
+            if os.path.exists(p):
+                os.remove(p)
+            return
+        tmp = p + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(events[-MAX_QUEUED:], f)
+        os.replace(tmp, p)
+    except OSError:
+        pass                                   # a read-only folder: nothing kept, nothing breaks
+
+
+def send_queued(events, server=SERVER, timeout=TIMEOUT):
+    """The waiting events first, then these; whatever the app can't take because it
+    isn't running is kept for next time. The last Answer (None: nothing sent)."""
+    with _qlock:
+        waiting = queued()
+        allev = waiting + list(events)
+        answer, sent = None, 0
+        for part in batches(allev):
+            answer = _post(events_body(part), server, timeout)
+            if not answer.ok:
+                break
+            sent += len(part)
+        if answer is not None and not answer.ok and answer.error == NOT_RUNNING:
+            _write_queue(allev[sent:])        # down: keep the rest
+        elif sent or waiting:
+            _write_queue([])                  # taken (or refused for a reason: not kept forever)
+        return answer
+
+
 _sending = []              # the threads still sending, for flush()
 _lock = threading.Lock()
 
@@ -189,7 +247,7 @@ def post_events(events, server=SERVER, done=None):
     events = list(events)
     if not events:
         return None
-    return _background(lambda: send_events(events, server), done, "keyboard-events")
+    return _background(lambda: send_queued(events, server), done, "keyboard-events")
 
 
 def suggestion_body(key, accept, group=None, fix=None):

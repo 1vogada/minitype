@@ -868,10 +868,25 @@ def run_test(app, spec):
             test.follow.stop()
 
 
+LEARN_MIN_ACC = 60          # % of keystrokes right: a test (finished or not) under it isn't sent to keyboard learn
+
+
+def keystroke_accuracy(events):
+    """% of the keystrokes that typed what the text wanted (backspaces and keys with
+    nothing expected left out); 100 with none to judge."""
+    judged = [e for e in events if e.get("expected") is not None and e.get("typed")]
+    if not judged:
+        return 100.0
+    return 100.0 * sum(e["typed"] == e["expected"] for e in judged) / len(judged)
+
+
 def _send_keystrokes(app, test):
     """The test's keystrokes to the keyboard app, in the background (finished,
     left, or quit: whatever was typed). Its answer lands in app.keyboard_app."""
     if not test.keystrokes or not app.settings.keyboard_learn:
+        return None
+    if keystroke_accuracy(test.keystrokes) < LEARN_MIN_ACC:
+        test.keystrokes = []                   # an obviously bad run (mashing, wrong layout): not learnt from
         return None
     from .. import keyboard_app
 

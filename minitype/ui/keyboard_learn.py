@@ -67,7 +67,9 @@ def status_line(app, st):
     """The dim status line, or None while keyboard learn is off."""
     if not app.settings.keyboard_learn or app.keyboard_app is None:
         return None
-    return f"{st.dim}{app.keyboard_app.line()}{RESET}"
+    waiting = len(keyboard_app.queued())
+    more = f" · {waiting} keystrokes saved for when the app is back" if waiting else ""
+    return f"{st.dim}{app.keyboard_app.line()}{more}{RESET}"
 
 
 def pattern_lines(app, st):
