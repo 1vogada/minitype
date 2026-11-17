@@ -18,7 +18,7 @@ from .render import draw
 from .result import TestResult
 from .scoring import correct_chars, score
 
-REPLAY_BELOW = 95          # % accuracy: a finished test under it replays on tab, at or over it gives new words
+REPLAY_BELOW = 90          # % accuracy: a finished test under it replays on tab, at or over it gives new words
 FOOTER = "esc menu   tab restart   ctrl-bksp word   ctrl-o settings   ctrl-q hide"
 ZEN_FOOTER = "enter finish   esc menu   ctrl-o settings   ctrl-q hide"
 LYRICS_FOOTER = ("esc menu   tab sync to the song   ctrl-i song start   ctrl-p pause music   "
