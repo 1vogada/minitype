@@ -1,32 +1,9 @@
-// One canvas over the page for every particle effect (fire on the line, the
-// combo counter's flames, a shattering number). Drawn once a frame; nothing
-// here runs on a key press, so typing never waits on it.
+// One canvas over the page for the one effect that does fly apart: a combo
+// that breaks shatters its number into outlined chunks (cartoon style, a dark
+// line round each) that spin, fall and fade. Made only when something
+// shatters; drawn once a frame while chunks are in the air.
 
-export const MAX_PARTICLES = 900;
-
-// flame colours by heat, coolest first: red, orange, yellow, white, blue, purple
-export const FLAME_TIERS = [
-  ["#ff3b1f", "#b3100a"],
-  ["#ff8a1f", "#e0420c"],
-  ["#ffd84a", "#ff8a1f"],
-  ["#fff6e0", "#ffd27a"],
-  ["#7fc8ff", "#2f6bff"],
-  ["#d58bff", "#7a2cff"],
-];
-
-function hexRgb(h) {
-  const n = parseInt(h.slice(1), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-}
-const TIER_RGB = FLAME_TIERS.map(([a, b]) => [hexRgb(a), hexRgb(b)]);
-
-/** The flame colour pair at a heat (0..5, fractions blend between tiers). */
-export function flameColour(heat, k = 0) {
-  const i = Math.max(0, Math.min(TIER_RGB.length - 1, Math.floor(heat)));
-  const j = Math.min(TIER_RGB.length - 1, i + 1);
-  const t = Math.max(0, Math.min(1, heat - i));
-  return TIER_RGB[i][k].map((v, c) => Math.round(v + (TIER_RGB[j][k][c] - v) * t));
-}
+export const MAX_SHARDS = 60;
 
 export class ParticleLayer {
   constructor() {
@@ -38,90 +15,57 @@ export class ParticleLayer {
     this.ps = [];
     this.cheap = false;
     this.resize = () => {
-      const dpr = Math.min(2, window.devicePixelRatio || 1);
-      this.dpr = dpr;
-      this.canvas.width = Math.round(innerWidth * dpr);
-      this.canvas.height = Math.round(innerHeight * dpr);
+      this.dpr = Math.min(2, window.devicePixelRatio || 1);
+      this.canvas.width = Math.round(innerWidth * this.dpr);
+      this.canvas.height = Math.round(innerHeight * this.dpr);
     };
     this.resize();
     window.addEventListener("resize", this.resize);
   }
 
-  /** A flame particle at x, y (css px): rises, flickers, shrinks. */
-  flame(x, y, heat, size = 1) {
-    if (this.ps.length >= MAX_PARTICLES * (this.cheap ? 0.4 : 1)) return;
-    const h = heat + Math.random() * 0.5 - 0.25;
+  /** A chunk of a shattered number: flies out, spins, falls, fades. */
+  shard(x, y, text, colour, font, outline = "#1b0f14") {
+    if (this.ps.length >= MAX_SHARDS) return;
+    const a = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.4, v = 220 + Math.random() * 300;
     this.ps.push({
-      kind: "flame", x, y, vx: (Math.random() - 0.5) * 24 * size, vy: -(70 + Math.random() * 90) * size,
-      life: 0, max: 0.35 + Math.random() * 0.4, r: (1.6 + Math.random() * 3) * size,
-      hot: flameColour(h, 0), cool: flameColour(h, 1),
+      x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, rot: 0, vr: (Math.random() - 0.5) * 12,
+      life: 0, max: 0.9 + Math.random() * 0.4, text, colour, font, outline, s: 0.6 + Math.random() * 0.6,
     });
-  }
-
-  /** A shard of a shattered number: flies out, spins, falls, fades. */
-  shard(x, y, text, colour, font) {
-    const a = Math.random() * Math.PI * 2, v = 160 + Math.random() * 320;
-    this.ps.push({
-      kind: "shard", x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120, rot: 0, vr: (Math.random() - 0.5) * 14,
-      life: 0, max: 0.9 + Math.random() * 0.5, text, colour, font,
-    });
-  }
-
-  /** A spark: a fast short dot. */
-  spark(x, y, colour) {
-    if (this.ps.length >= MAX_PARTICLES) return;
-    const a = Math.random() * Math.PI * 2, v = 60 + Math.random() * 220;
-    this.ps.push({ kind: "spark", x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: 0, max: 0.3 + Math.random() * 0.4, colour });
   }
 
   get busy() { return this.ps.length > 0; }
 
   frame(dt) {
-    const ctx = this.ctx, dpr = this.dpr;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const ctx = this.ctx;
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     ctx.clearRect(0, 0, innerWidth, innerHeight);
     if (!this.ps.length) return;
-    const glow = !this.cheap;
     const alive = [];
     for (const p of this.ps) {
       p.life += dt;
       if (p.life >= p.max) continue;
       alive.push(p);
       const k = p.life / p.max;
+      p.vy += 1100 * dt;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
-      if (p.kind === "flame") {
-        p.vx += (Math.random() - 0.5) * 260 * dt;
-        p.vy *= 1 - dt * 0.6;
-        // a tongue of flame: a hot core turning to its cooler colour, stretched by its speed
-        const r = p.r * (1 - k * 0.75);
-        const c = p.hot.map((v, i) => Math.round(v + (p.cool[i] - v) * Math.min(1, k * 1.6)));
-        ctx.globalCompositeOperation = glow ? "lighter" : "source-over";
-        ctx.fillStyle = `rgba(${c[0]},${c[1]},${c[2]},${(1 - k) * (glow ? 0.6 : 0.85)})`;
-        ctx.beginPath();
-        ctx.ellipse(p.x, p.y, r, r * (1.8 + Math.min(2, -p.vy / 80)), 0, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (p.kind === "spark") {
-        ctx.globalCompositeOperation = "source-over";
-        ctx.fillStyle = p.colour;
-        ctx.globalAlpha = 1 - k;
-        ctx.fillRect(p.x, p.y, 2, 2);
-        ctx.globalAlpha = 1;
-      } else {
-        p.vy += 900 * dt;
-        p.rot += p.vr * dt;
-        ctx.globalCompositeOperation = "source-over";
-        ctx.save();
-        ctx.globalAlpha = 1 - k;
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rot);
-        ctx.fillStyle = p.colour;
-        ctx.font = p.font;
-        ctx.fillText(p.text, 0, 0);
-        ctx.restore();
+      p.rot += p.vr * dt;
+      ctx.save();
+      ctx.globalAlpha = k < 0.7 ? 1 : 1 - (k - 0.7) / 0.3;     // solid, then a quick fade: no mush
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.scale(p.s, p.s);
+      ctx.font = p.font;
+      ctx.lineJoin = "round";
+      if (!this.cheap) {
+        ctx.lineWidth = 6;
+        ctx.strokeStyle = p.outline;
+        ctx.strokeText(p.text, 0, 0);
       }
+      ctx.fillStyle = p.colour;
+      ctx.fillText(p.text, 0, 0);
+      ctx.restore();
     }
-    ctx.globalCompositeOperation = "source-over";
     this.ps = alive;
   }
 

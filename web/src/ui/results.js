@@ -108,6 +108,7 @@ export class ResultsScreen {
       const k = Math.min(1, (t - start) / ms);
       text.textContent = (to * (1 - (1 - k) ** 3)).toFixed(1);
       if (k < 1 && !this.left) requestAnimationFrame(step);
+      else if (k >= 1) el.classList.add("boing");          // it lands with a squash and stretch
     };
     requestAnimationFrame(step);
   }

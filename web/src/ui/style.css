@@ -291,13 +291,18 @@ body { overflow-x: clip; height: auto; min-height: 100%; }
 .res-block div { line-height: 1.7; }
 .choices { display: flex; gap: 10px; margin-top: 28px; flex-wrap: wrap; }
 .legend span { margin-right: 14px; }
-.reveal > * { animation: rise 0.5s cubic-bezier(.2,.8,.2,1) both; }
+.reveal > * { animation: slam 0.46s cubic-bezier(.2,1.5,.35,1) both; }
 .reveal > *:nth-child(2) { animation-delay: 0.08s; }
 .reveal > *:nth-child(3) { animation-delay: 0.16s; }
 .reveal > *:nth-child(4) { animation-delay: 0.24s; }
 .reveal > *:nth-child(5) { animation-delay: 0.32s; }
 .reveal > *:nth-child(6) { animation-delay: 0.4s; }
 @keyframes rise { from { opacity: 0; transform: translateY(14px); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+/* the results slam in one after another, a little overshoot, like cut-in titles */
+@keyframes slam { 0% { opacity: 0; transform: translateY(26px) scale(0.9) rotate(-1.5deg); } 60% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+.reveal .res-wpm { text-shadow: 4px 4px 0 var(--panel-2), 0 0 0 transparent; }
+.res-wpm.boing { animation: boing 0.42s cubic-bezier(.2,1.6,.4,1); }
+@keyframes boing { 0% { scale: 1 1; } 30% { scale: 1.16 0.86; } 60% { scale: 0.94 1.08; } 100% { scale: 1 1; } }
 
 /* ---------------------------------------------------------------- profile */
 
@@ -404,8 +409,9 @@ input.inline { font: inherit; background: var(--panel-2); color: var(--accent); 
 }
 
 /* letters pop in on a right key */
-.fx-popin .l.popin { animation: popin 0.18s cubic-bezier(.2,1.6,.4,1); }
-@keyframes popin { 0% { scale: 1.45; translate: 0 -0.12em; filter: brightness(1.8); } 100% { scale: 1; translate: 0 0; filter: none; } }
+/* squash and stretch: a letter lands like a cartoon ball */
+.fx-popin .l.popin { animation: popin 0.26s cubic-bezier(.3,1.4,.5,1); transform-origin: 50% 85%; }
+@keyframes popin { 0% { scale: 1.45 0.6; translate: 0 -0.18em; } 40% { scale: 0.82 1.28; translate: 0 -0.06em; } 70% { scale: 1.08 0.94; translate: 0 0; } 100% { scale: 1 1; } }
 
 /* the shine: a clone of the words that shows only a moving band of light through the letters */
 .shine-layer {
@@ -424,10 +430,10 @@ input.inline { font: inherit; background: var(--panel-2); color: var(--accent); 
 .light .shine-layer { background-image: linear-gradient(110deg, transparent 40%, rgba(255, 255, 255, 0.95) 50%, transparent 60%); }
 .shine-star {
   position: absolute;
-  font-size: 0.5em;
+  font-size: 0.6em;
   line-height: 1;
   color: #fff;
-  text-shadow: 0 0 6px rgba(255, 255, 255, 0.9), 0 0 14px rgba(255, 255, 255, 0.5);
+  text-shadow: 1.5px 0px 0 #1b0f14, -1.5px 0px 0 #1b0f14, 0px 1.5px 0 #1b0f14, 0px -1.5px 0 #1b0f14, 1.5px 1.5px 0 #1b0f14, -1.5px -1.5px 0 #1b0f14, 1.5px -1.5px 0 #1b0f14, -1.5px 1.5px 0 #1b0f14, 3px 3px 0 rgba(0, 0, 0, 0.45);
   pointer-events: none;
   z-index: 4;
 }
@@ -450,3 +456,92 @@ input.inline { font: inherit; background: var(--panel-2); color: var(--accent); 
   z-index: 7;
 }
 .combo-fx.gone { transition: none; }
+
+/* ---------------------------------------------------------------- the drawn flame (flame.js) */
+
+.flame-row {
+  position: absolute;
+  height: 0;
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  pointer-events: none;
+  z-index: 0;
+  transform-origin: 50% 0;
+  scale: calc(1 + var(--f-squash, 0) * 0.25) calc(var(--f-grow, 1) * (1 - var(--f-squash, 0) * 0.25));
+  transition: opacity 0.25s;
+  filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.35));
+}
+.fx-cheap .flame-row, .fx-cheap.flame-row { filter: none; }
+.tongue-wrap { position: relative; flex: 1 1 0; height: 0; }
+.tongue {
+  position: absolute;
+  bottom: 0;
+  left: -40%;
+  width: 180%;
+  height: calc(var(--em, 28px) * 1.75 * var(--h, 1));
+  transform-origin: 50% 100%;
+  animation: lick var(--lick, 0.7s) ease-in-out infinite alternate;
+  animation-delay: var(--lick-delay, 0s);
+  overflow: visible;
+}
+@keyframes lick {
+  0% { transform: scale(0.9, 0.84) skewX(-6deg); }
+  50% { transform: scale(1.04, 1.04) skewX(2deg); }
+  100% { transform: scale(0.96, 1.14) skewX(7deg); }
+}
+.tongue .rim, .flick .rim { fill: var(--f-rim); stroke: var(--f-line); stroke-width: 7; stroke-linejoin: round; paint-order: stroke; }
+.flick .rim { stroke-width: 3.5; }
+.tongue .mid { fill: var(--f-mid); }
+.tongue .core, .flick .core { fill: var(--f-core); }
+/* the boil: three hand-drawn frames, one at a time, like drawn animation on twos */
+.boil { animation: boil 0.3s steps(1, end) infinite; }
+.boil.b1 { animation-delay: -0.1s; }
+.boil.b2 { animation-delay: -0.2s; }
+@keyframes boil { 0% { opacity: 1; } 33.33% { opacity: 0; } 100% { opacity: 0; } }
+.fx-cheap .boil { animation: none; opacity: 0; }
+.fx-cheap .boil.b0 { opacity: 1; }
+.flick {
+  position: absolute;
+  left: 34%;
+  bottom: calc(var(--em, 28px) * 0.95);
+  width: calc(var(--em, 28px) * 0.3);
+  overflow: visible;
+  animation: flick var(--flick, 1s) cubic-bezier(.2,.7,.4,1) infinite;
+  animation-delay: var(--flick-delay, 0s);
+  opacity: 0;
+}
+@keyframes flick {
+  0% { transform: translate(0, 0) scale(0.2); opacity: 0; }
+  12% { transform: translate(0, -0.15em) scale(1.1); opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translate(var(--flick-x, 0), calc(var(--em, 28px) * -1.1)) scale(0) rotate(50deg); opacity: 0; }
+}
+.fx-cheap .flick { display: none; }
+/* letters on fire keep a dark edge and a hard shadow, so they read over the flame */
+.fx-fire .w { z-index: 1; }
+.fx-fire:not(.fx-cheap) .l.ok {
+  text-shadow: -1px -1px 0 #1b0f14, 1px -1px 0 #1b0f14, -1px 1px 0 #1b0f14, 1px 1px 0 #1b0f14, 3px 3px 0 rgba(0, 0, 0, 0.55);
+}
+
+/* the combo's number: outlined, a hard coloured shadow, its flame behind */
+.combo-num {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  /* a dark ring drawn with shadows (a text stroke would cover the letters' own colour) */
+  text-shadow: 2px 0px 0 #1b0f14, -2px 0px 0 #1b0f14, 0px 2px 0 #1b0f14, 0px -2px 0 #1b0f14, 2px 2px 0 #1b0f14, -2px -2px 0 #1b0f14, 2px -2px 0 #1b0f14, -2px 2px 0 #1b0f14, 5px 5px 0 var(--num-shadow, #000);
+}
+.fx-cheap .combo-num { text-shadow: 3px 3px 0 #000; }
+.combo-flame { z-index: 0; }
+.burst {
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  width: 3.2em;
+  height: 3.2em;
+  margin: -1.6em 0 0 -1.6em;
+  z-index: 0;
+  pointer-events: none;
+  overflow: visible;
+}

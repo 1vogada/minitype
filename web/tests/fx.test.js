@@ -1,9 +1,9 @@
-// The effects' pure parts: the combo's heat steps and the flame colours.
+// The effects' pure parts: the combo's heat steps, the flame's colours and shape.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { MILESTONES, comboHeat } from "../src/fx/combo.js";
-import { FLAME_TIERS, flameColour } from "../src/fx/particles.js";
+import { FLAME_BANDS, flameBands, tonguePath } from "../src/fx/flame.js";
 import { FxMonitor } from "../src/fx/monitor.js";
 
 test("combo heat: a step per milestone, smooth ramps between", () => {
@@ -15,11 +15,21 @@ test("combo heat: a step per milestone, smooth ramps between", () => {
   for (let c = 1; c < 260; c++) assert.ok(comboHeat(c) >= comboHeat(c - 1));
 });
 
-test("flames go red, orange, yellow, white, blue, purple", () => {
-  const hex = (c) => "#" + c.map((v) => v.toString(16).padStart(2, "0")).join("");
-  FLAME_TIERS.forEach(([hot], i) => assert.equal(hex(flameColour(i, 0)), hot));
-  const mid = flameColour(0.5, 0);
-  assert.ok(mid[1] > flameColour(0, 0)[1] && mid[1] < flameColour(1, 0)[1], "blends between tiers");
+test("the flame's bands go red, orange, yellow, white, blue, purple", () => {
+  assert.equal(FLAME_BANDS.length, 6);
+  FLAME_BANDS.forEach((bands, i) => assert.deepEqual(flameBands(i), bands));
+  const g = (h) => parseInt(h.slice(3, 5), 16);
+  assert.deepEqual(flameBands(0.5), FLAME_BANDS[0], "a step keeps its colours");
+  const mid = flameBands(0.93)[1];
+  assert.ok(g(mid) > g(FLAME_BANDS[0][1]) && g(mid) < g(FLAME_BANDS[1][1]), "turns to the next at the end");
+  assert.deepEqual(flameBands(9), FLAME_BANDS[5]);
+});
+
+test("a tongue is one closed path, standing on its base", () => {
+  const d = tonguePath(10, 4, 2, -3);
+  assert.ok(d.startsWith("M50 160"));
+  assert.ok(d.endsWith("Z"));
+  assert.ok(!/NaN|undefined/.test(d));
 });
 
 test("fx quality auto drops to cheap after slow frames, and comes back", () => {

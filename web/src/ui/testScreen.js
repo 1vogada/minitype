@@ -85,8 +85,8 @@ export class TestScreen {
     this.kb = showKb ? new KeyboardView(s.layout) : null;
     this.el.replaceChildren(this.hud, this.view.root, ...(this.kb ? [this.kb.el] : []));
     this.effects?.destroy();
-    this.effects = new Effects(this.ui, this.view, this);
     this.view.set(this.state());
+    this.effects = new Effects(this.ui, this.view, this);     // after the words: it adds its flame to them
     this.colourKeyboard();
     this.lastHud = 0;
     this.drawHud(nowSecs());
