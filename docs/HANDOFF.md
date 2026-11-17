@@ -8,6 +8,17 @@ The last long session ran on the owner's work laptop. Its chat and the
 agent's memory don't travel, so this section is the memory.
 
 **Do next, in order:**
+000. 2026-11-17 (home PC), branch `web-port`, pushed, not merged: **minitype in
+   the browser** (`web/`, plain JS + Vite; `web/README.md`). `src/core/` is the
+   engine ported rule for rule (runner, scoring / active wpm, replay, stats,
+   history, best words, learn, generator, settings, the keyboard learn client
+   with its queue in localStorage) with node tests (`cd web; npm test`);
+   `src/ui/` the screens; `src/fx/` the owner's phase 2 effects (tilt, fire,
+   shine + star, escalating combo counter, pop-in, camera shake, reveal), all
+   off by default. Data comes from `python tools/export_web_data.py`. Imports
+   and exports save.json / settings.json. Not ported yet: lyrics / spotify,
+   books, the art, the theme creator, the keyboard screen and suggestions,
+   mixed-up keys drill. Never sends keyboard learn on / off.
 00. 2026-11-16 (home PC), branch `learn-mistakes`, not merged or pushed:
    **best words** mode (`minitype/words/best_words.py`, main menu w; runs tagged
    "best" in the history, kept out of normal stats, word / key stats and
