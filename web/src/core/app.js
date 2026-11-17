@@ -21,7 +21,7 @@ export function memoryStore(init = {}) {
 }
 
 export class App {
-  constructor({ data, store = memoryStore(), fetchJson = null, fetchImpl, now, rng, proxy } = {}) {
+  constructor({ data, store = memoryStore(), fetchJson = null, fetchImpl, now, rng, proxy, local = true } = {}) {
     this.data = data;     // {words, quotes, code, themed, themes}
     this.store = store;
     this.settings = new Settings();
@@ -36,7 +36,7 @@ export class App {
     this.code = data.code;
     this.generator = new WordGenerator(this.settings, this.stats, this.bank, () => this.rng());
     this.learn = new LearnProgress();
-    this.keyboard = new KeyboardApp({ fetchImpl, store, server: this.settings.keyboard_server, proxy });
+    this.keyboard = new KeyboardApp({ fetchImpl, store, server: this.settings.keyboard_server, proxy, local });
     this.keyboardPairs = [];
     this.notice = "";
     this.firstRun = false;

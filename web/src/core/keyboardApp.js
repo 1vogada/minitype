@@ -10,6 +10,7 @@ export const PATH = "/api/learn/typing";
 export const PROXY = "/kb";            // the dev server passes /kb/... to the app (vite.config.js)
 export const TIMEOUT = 1000;           // ms
 export const NOT_RUNNING = "app not running";
+export const NEEDS_LOCAL = "needs the local app (npm run dev)";
 export const MAX_EVENTS = 2000;        // keystrokes per events call
 export const MAX_QUEUED = 20000;
 export const QUEUE_KEY = "minitype.keyboard_queue";
@@ -57,12 +58,16 @@ export function batches(events, n = MAX_EVENTS) {
 
 /** The client: `fetchImpl` and `store` ({get(key), set(key, value)}) are handed in. */
 export class KeyboardApp {
-  constructor({ fetchImpl = globalThis.fetch?.bind(globalThis), store = null, server = SERVER, proxy = PROXY } = {}) {
+  constructor({ fetchImpl = globalThis.fetch?.bind(globalThis), store = null, server = SERVER, proxy = PROXY, local = true } = {}) {
     this.fetch = fetchImpl;
     this.store = store;
     this.server = server;
     this.proxy = proxy;            // null: always straight to the server
     this.route = null;             // what worked last: "direct" or "proxy"
+    // false on a page served over https from elsewhere (GitHub Pages): it can't
+    // reach http://127.0.0.1 (mixed content) and has no proxy, so nothing is
+    // tried and the keystrokes wait in the queue for the local version
+    this.local = local;
     this.last = null;              // the last Answer
     this.patterns = null;          // what the app made of the last test's mistakes
     this.sending = Promise.resolve();
@@ -80,6 +85,7 @@ export class KeyboardApp {
   }
 
   async post(body) {
+    if (!this.local) return new Answer(null, NEEDS_LOCAL);
     let lastError = NOT_RUNNING;
     for (const [route, url] of this.urls()) {
       const ctl = typeof AbortController !== "undefined" ? new AbortController() : null;
@@ -148,7 +154,7 @@ export class KeyboardApp {
       if (!answer.ok) break;
       sent += part.length;
     }
-    if (answer && !answer.ok && answer.error === NOT_RUNNING) this.writeQueue(all.slice(sent));
+    if (answer && !answer.ok && (answer.error === NOT_RUNNING || answer.error === NEEDS_LOCAL)) this.writeQueue(all.slice(sent));
     else if (sent || waiting.length) this.writeQueue([]);
     return answer;
   }
@@ -179,7 +185,7 @@ export function statusLine(app) {
   if (!app.settings.keyboard_learn) return "";
   const kb = app.keyboard;
   const waiting = kb.queuedCount();
-  const base = kb.last ? kb.last.line() : "keyboard learn: on";
+  const base = kb.last ? kb.last.line() : `keyboard learn: ${kb.local ? "on" : NEEDS_LOCAL}`;
   return waiting ? `${base} · ${waiting} keystrokes waiting` : base;
 }
 
@@ -199,4 +205,13 @@ export function patternText(patterns) {
   if (top) parts.push(`${top.expected ?? top.a}/${top.typed ?? top.b} mixed up ${top.count}x`);
   if (typeof patterns.fastShare === "number" && patterns.fastShare >= 0.6) parts.push("most when typing fast");
   return parts.join(" · ");
+}
+
+/** Whether a page at `location` can reach the local keyboard app: served
+ * from this machine (the dev server or preview, with their /kb proxy), or
+ * over plain http. An https page from elsewhere (GitHub Pages) can't. */
+export function canReachLocal(loc) {
+  if (!loc) return true;
+  const host = loc.hostname;
+  return loc.protocol === "http:" || host === "localhost" || host === "127.0.0.1" || host === "[::1]" || host.endsWith(".localhost");
 }

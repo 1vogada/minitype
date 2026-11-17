@@ -2,7 +2,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { KeyboardApp, MAX_EVENTS, NOT_RUNNING, QUEUE_KEY, batches, serverUrl } from "../src/core/keyboardApp.js";
+import { KeyboardApp, MAX_EVENTS, NEEDS_LOCAL, NOT_RUNNING, QUEUE_KEY, batches, canReachLocal, serverUrl } from "../src/core/keyboardApp.js";
 import { memoryStore } from "../src/core/app.js";
 
 test("server url: localhost becomes 127.0.0.1", () => {
@@ -72,4 +72,17 @@ test("never throws, even when fetch itself is missing", async () => {
   const a = await kb.call("status");
   assert.equal(a.ok, false);
   assert.equal(await kb.postEvents([]), null);
+});
+
+test("an https page from elsewhere (GitHub Pages) doesn't try, and keeps the keystrokes", async () => {
+  assert.equal(canReachLocal({ protocol: "https:", hostname: "1vogada.github.io" }), false);
+  assert.equal(canReachLocal({ protocol: "http:", hostname: "localhost" }), true);
+  assert.equal(canReachLocal({ protocol: "https:", hostname: "localhost" }), true);
+  let called = 0;
+  const kb = new KeyboardApp({ fetchImpl: async () => { called++; throw new Error("no"); }, store: memoryStore(), local: false });
+  const a = await kb.postEvents([{ t: 1, expected: "a", typed: "a" }]);
+  assert.equal(called, 0);
+  assert.equal(a.error, NEEDS_LOCAL);
+  assert.equal(a.line(), "keyboard learn: needs the local app (npm run dev)");
+  assert.equal(kb.queuedCount(), 1);
 });

@@ -8,6 +8,7 @@ import code from "./data/code.json";
 import themed from "./data/themed.json";
 import themes from "./data/themes.json";
 import { App } from "./core/app.js";
+import { canReachLocal } from "./core/keyboardApp.js";
 import { MENU, QUIT } from "./core/test.js";
 import { keyOf, NAV, h, hints } from "./ui/dom.js";
 import { applyTheme, styles } from "./ui/theme.js";
@@ -33,7 +34,7 @@ async function fetchJson(url) {
   return r.json();
 }
 
-const app = new App({ data: { words, quotes, code, themed, themes }, store: localStore, fetchJson });
+const app = new App({ data: { words, quotes, code, themed, themes }, store: localStore, fetchJson, local: canReachLocal(location) });
 app.load();
 
 const screenEl = document.getElementById("screen");
