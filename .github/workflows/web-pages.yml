@@ -33,12 +33,16 @@ jobs:
       - run: npm test
       - run: npm run build
       - name: Publish dist to gh-pages
+        # a new commit on top of gh-pages with the build as its whole contents (no force push)
         run: |
-          cd dist
-          touch .nojekyll
-          git init -q -b gh-pages
+          git clone -q --depth 1 --branch gh-pages "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" ../pages
+          find ../pages -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -r dist/. ../pages/
+          touch ../pages/.nojekyll
+          cd ../pages
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
+          if git diff --cached --quiet; then echo "nothing changed"; exit 0; fi
           git commit -qm "Pages: web/ from ${GITHUB_SHA::7}"
-          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+          git push -q origin gh-pages
