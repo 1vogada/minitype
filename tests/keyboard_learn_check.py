@@ -77,7 +77,7 @@ assert a.line() == "keyboard learn: on · 42 keys tuned · 3 learning", a.line()
 f, p = fake(dict(STATE, on=False))
 with p:
     a = ka.switch(False)
-assert f.sent[0][0] == ka.SERVER + ka.PATH and f.sent[0][2] == {"action": "off"}
+assert f.sent[0][0] == "http://127.0.0.1:6869" + ka.PATH and f.sent[0][2] == {"action": "off"}
 assert a.ok and not a.on and a.line() == "keyboard learn: off"
 f, p = fake(dict(STATE, tunedKeys=1, learningKeys=0, lastError="keyboard not found"))
 with p:

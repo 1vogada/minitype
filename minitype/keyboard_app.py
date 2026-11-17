@@ -21,6 +21,7 @@ Standard library only, a short timeout, and nothing here ever raises.
 """
 
 import json
+import re
 import threading
 import time
 import urllib.error
@@ -111,9 +112,15 @@ def call(action, server=SERVER, percent=None, floor_mm=None, timeout=TIMEOUT):
     return _post(data, server, timeout)
 
 
+def _url(server):
+    """server_url, with localhost as 127.0.0.1: on Windows "localhost" tries IPv6
+    (::1) first, and the app only listens on IPv4, so every call lost ~2 s."""
+    return re.sub(r"^(https?://)localhost(?=[:/]|$)", r"\g<1>127.0.0.1", server_url(server))
+
+
 def _post(data, server, timeout):
     req = urllib.request.Request(
-        server_url(server) + PATH, data=json.dumps(data).encode("utf-8"), method="POST",
+        _url(server) + PATH, data=json.dumps(data).encode("utf-8"), method="POST",
         headers={"Content-Type": "application/json", "Accept": "application/json"})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as r:
