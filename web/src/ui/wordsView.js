@@ -97,9 +97,11 @@ export class WordsView {
     const { words, typed, wi, errors, typos, wrong, combo } = this.state;
     const w = words[i] ?? "", t = typed[i] ?? "";
     const blind = this.s.blind;
-    const kids = [];
     const now = performance.now() / 1000;
-    for (let j = 0; j < Math.max(w.length, t.length); j++) {
+    const n = Math.max(w.length, t.length);
+    // letters are reused, not rebuilt: an effect running on one (pop-in) carries on
+    while (el.children.length > n) el.lastChild.remove();
+    for (let j = 0; j < n; j++) {
       const wc = j < w.length ? w[j] : undefined;
       const tc = j < t.length ? t[j] : undefined;
       let c = wc ?? tc;
@@ -123,17 +125,31 @@ export class WordsView {
         else if (this.typos === "both") { below = wc; belowDim = true; }
         if (this.typos === "replace" || this.typos === "both") c = tc;
       }
-      const l = document.createElement("span");
-      l.className = cls ? `l ${cls}` : "l";
-      l.textContent = c;
-      if (below !== null) l.dataset.below = below === " " ? "_" : below;
-      if (belowDim) l.classList.add("below-dim");
+      let l = el.children[j];
+      if (!l) {
+        l = document.createElement("span");
+        l._base = null;
+        el.append(l);
+      }
+      const base = cls + (belowDim ? " below-dim" : "");
+      if (l._base !== base) {
+        l.className = base ? `l ${base}` : "l";
+        l._base = base;
+        l.style.color = "";
+      }
+      if (l.dataset.real === undefined ? l.textContent !== c : l.dataset.real !== c) {
+        l.textContent = c;
+        delete l.dataset.real;
+      }
+      const b = below === null ? undefined : below === " " ? "_" : below;
+      if (l.dataset.below !== b) {
+        if (b === undefined) delete l.dataset.below;
+        else l.dataset.below = b;
+      }
       if (cls === "ok" && this.st.fx.gradient.length && !this.st.fx.heat.length) {
         l.style.color = typedColour(this.st, i * 6 + j, i, combo, now);
       }
-      kids.push(l);
     }
-    el.replaceChildren(...kids);
   }
 
   /** What a key changed: the words from..to (inclusive) and the caret. */
@@ -269,7 +285,8 @@ export class WordsView {
     if (fx.glitch && now - this.lastGlitch > 0.125) {
       this.lastGlitch = now;
       for (const l of this.glitched) {
-        l.textContent = l.dataset.real;
+        if (l.dataset.real !== undefined) l.textContent = l.dataset.real;
+        delete l.dataset.real;
         l.classList.remove("glitch");
       }
       this.glitched = [];

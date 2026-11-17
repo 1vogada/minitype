@@ -60,7 +60,7 @@ export class ResultsScreen {
     this.off = this.app.keyboard.onChange(() => this.drawLearn());
   }
 
-  destroy() { this.off?.(); }
+  destroy() { this.left = true; this.off?.(); }
 
   draw() {
     const r = this.r, app = this.app, s = app.settings;
@@ -96,6 +96,20 @@ export class ResultsScreen {
     parts.push(h("div.choices", this.choiceEls));
     this.el.replaceChildren(...parts);
     this.drawLearn();
+    if (s.fx_reveal && !r.failed && !this.ui.fx.cheap) this.countUp(top.querySelector(".res-wpm"), r.wpm);
+  }
+
+  /** The speed counts up to its value (the results reveal). */
+  countUp(el, to) {
+    const text = el?.firstChild;
+    if (!text) return;
+    const start = performance.now(), ms = 700;
+    const step = (t) => {
+      const k = Math.min(1, (t - start) / ms);
+      text.textContent = (to * (1 - (1 - k) ** 3)).toFixed(1);
+      if (k < 1 && !this.left) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
   }
 
   pbLines() {

@@ -367,3 +367,69 @@ input.inline { font: inherit; background: var(--panel-2); color: var(--accent); 
 .welcome p { color: var(--dim); line-height: 1.7; }
 
 .toast { position: fixed; right: 20px; bottom: 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; color: var(--text); z-index: 60; animation: rise 0.3s both; }
+
+/* ---------------------------------------------------------------- effects (phase 2) */
+
+/* 3d tilt: the words turn to the side, with a little depth to the letters */
+.fx-tilt .stage { perspective: 700px; }
+.fx-tilt .viewport {
+  transform: rotateY(calc(var(--tilt, 14deg) * -1)) rotateX(6deg) scale(0.9);
+  animation: sway 9s ease-in-out infinite;
+  transform-origin: 50% 50%;
+}
+@keyframes sway {
+  0%, 100% { transform: rotateY(calc(var(--tilt, 14deg) * -1)) rotateX(6deg) scale(0.9); }
+  50% { transform: rotateY(calc(var(--tilt, 14deg) * -0.7)) rotateX(3deg) scale(0.9); }
+}
+.fx-tilt:not(.fx-cheap) .l {
+  text-shadow: 1px 1px 0 color-mix(in srgb, currentColor 45%, var(--bg)), 2px 2px 0 color-mix(in srgb, currentColor 30%, var(--bg)),
+    3px 3px 0 color-mix(in srgb, currentColor 18%, var(--bg));
+}
+
+/* letters pop in on a right key */
+.fx-popin .l.popin { animation: popin 0.18s cubic-bezier(.2,1.6,.4,1); }
+@keyframes popin { 0% { scale: 1.45; translate: 0 -0.12em; filter: brightness(1.8); } 100% { scale: 1; translate: 0 0; filter: none; } }
+
+/* the shine: a clone of the words that shows only a moving band of light through the letters */
+.shine-layer {
+  position: absolute !important;
+  top: 0; left: 0; right: 0;
+  pointer-events: none;
+  color: transparent;
+  background-image: linear-gradient(110deg, transparent 40%, rgba(255, 255, 255, 0.7) 50%, transparent 60%);
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  z-index: 3;
+}
+.shine-layer .l, .shine-layer .l.ok, .shine-layer .l.bad { color: transparent !important; text-shadow: none !important; animation: none !important; }
+.shine-layer .l::after, .shine-layer .l::before, .shine-layer .g::after { display: none; }
+.light .shine-layer { background-image: linear-gradient(110deg, transparent 40%, rgba(255, 255, 255, 0.95) 50%, transparent 60%); }
+.shine-star {
+  position: absolute;
+  font-size: 0.5em;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.9), 0 0 14px rgba(255, 255, 255, 0.5);
+  pointer-events: none;
+  z-index: 4;
+}
+
+/* the combo counter: in the header, right side, above the words */
+.hud { position: relative; }
+.combo-fx {
+  position: absolute;
+  right: 40px;
+  bottom: 0.7em;
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--accent);
+  transform-origin: 100% 80%;
+  transition: opacity 0.25s;
+  opacity: 0;
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+  will-change: transform;
+  z-index: 7;
+}
+.combo-fx.gone { transition: none; }
