@@ -62,11 +62,14 @@ test("the text's fire climbs in tiers: hue, size, speed, glow, layers, shake", (
   const looks = [0, ...MILESTONES].map((c) => fireLook(c));
   for (let i = 1; i < looks.length; i++) {
     const a = looks[i - 1], b = looks[i];
-    assert.ok(b.size > a.size && b.lick < a.lick && b.glow > a.glow && b.shake > a.shake, `tier ${i} is fiercer`);
+    assert.ok(b.size > a.size && b.lick < a.lick && b.glow > a.glow && b.shake > a.shake && b.halo > a.halo, `tier ${i} is fiercer`);
+    assert.ok(b.flicks >= a.flicks);
     assert.ok(b.layers >= a.layers);
     assert.ok(b.heat > a.heat, "a new hue");
   }
   assert.equal(looks[0].layers, 1, "one layer to start");
+  assert.ok(!looks[0].between && looks[5].between, "more tongues when hotter");
+  assert.ok(looks[5].flicks > looks[0].flicks, "more embers when hotter");
   assert.ok(looks[5].layers >= 3, "several stacked at the top");
   assert.ok(fireLook(40).size > fireLook(25).size, "growing between tiers too");
   assert.ok(fireLook(30, 20).size > fireLook(30, 0).size, "and as the run gets longer");

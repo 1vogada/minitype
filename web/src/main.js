@@ -13,6 +13,7 @@ import { MENU, QUIT } from "./core/test.js";
 import { keyOf, NAV, h, hints } from "./ui/dom.js";
 import { THEMES, applyTheme, styles } from "./ui/theme.js";
 import { Backdrop } from "./ui/backdrop.js";
+import { Tiles } from "./ui/tiles.js";
 import { MenuScreen } from "./ui/menu.js";
 import { TestScreen } from "./ui/testScreen.js";
 import { ResultsScreen } from "./ui/results.js";
@@ -48,6 +49,7 @@ class UI {
     this.stack = [];          // screens waiting under the one shown (settings over a test)
     this.fx = new FxMonitor(app);
     this.backdrop = new Backdrop();
+    this.tiles = new Tiles(() => app.settings.fx_glass !== false && app.settings.fx_tiles !== false);
     this.restyle();
   }
 
@@ -188,8 +190,10 @@ window.addEventListener("keydown", (e) => {
 }, { capture: false });
 
 let last = performance.now();
+let lowFx = false;
 function frame(t) {
   ui.fx.tick(t - last);
+  if (ui.fx.cheap !== lowFx) document.documentElement.classList.toggle("low-fx", (lowFx = ui.fx.cheap));
   last = t;
   ui.screen?.frame?.(t);
   requestAnimationFrame(frame);

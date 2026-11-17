@@ -96,7 +96,7 @@ export const TREE = [
       ["fx_bg", "background", "a drawn scene behind everything, in the theme's colours: auto picks one that suits the theme (none for the high contrast ones)"],
       ["fx_bg_tilt", "background tilt", "the scene tilts in 3D after the mouse, the near layers moving more than the far ones"],
       ["fx_glass", "glass cards", "a frosted glass card behind the text and the menus, so they read over the scene"],
-      ["fx_tiles", "tilting cards", "the cards tilt after the mouse when it's over them, and have some thickness"],
+      ["fx_tiles", "tilting cards", "the glass cards lean after the mouse when it's over them, a slab with its thick edge showing"],
     ]],
     ["3d and fire", [
       ["fx_tilt", "3d tilt", "the words turn a little to the side and go 3D"],

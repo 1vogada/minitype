@@ -1,7 +1,8 @@
-// The text's fire (the fx fire setting): the typed words of a burning run give
-// off their own drawn flames, a tongue rising from the top of each letter
-// (flame.js), on the caret's line. Nothing burns behind the text: the flames
-// grow up out of the letters, which stay on top, heat-tinted and outlined.
+// The text's fire (the fx fire setting): the typed words of a burning run
+// burn themselves, on the caret's line. Each letter is wrapped in a flame of
+// its own shape (rings of the flame's bands following the glyph, flickering)
+// and gives off a drawn tongue rising from its top (flame.js). Nothing burns
+// behind the text: the letters stay on top, heat-tinted and outlined.
 //
 // The fire climbs in tiers with the combo, at the combo counter's milestones:
 // each tier a new hue (red, orange, yellow, white-hot, blue, purple), bigger
@@ -34,7 +35,23 @@ export function fireLook(combo, run = 0) {
     glow: 2.5 * tier,             // px of glow around the flames and the letters
     bright: 1 + 0.05 * tier,
     shake: 1.5 + 1.3 * tier,      // px: the screen shake when this tier lands
+    halo: 0.065 + 0.02 * tier,    // em: the letter-shaped ring round each letter
+    between: tier >= 3,           // tongues between the letters too
+    flicks: 1 + Math.floor(tier / 2),
   };
+}
+
+const ascents = new Map();
+/** Where a font's baseline sits in a line `lineH` px tall, from the line's top. */
+function baselineIn(font, lineH) {
+  if (!ascents.has(font)) {
+    const ctx = document.createElement("canvas").getContext("2d");
+    ctx.font = font;
+    const m = ctx.measureText("Hg");
+    ascents.set(font, [m.fontBoundingBoxAscent, m.fontBoundingBoxDescent]);
+  }
+  const [up, down] = ascents.get(font);
+  return (lineH - up - down) / 2 + up;
 }
 
 export class TextFire {
@@ -70,12 +87,12 @@ export class TextFire {
     }
     const layers = cheap ? 1 : look.layers;
     if (burn) {
-      // what moves the flames: a key, the line, the layout (a font arriving, a resize)
+      // what moves the flames: a key, the line, the layout (a font arriving, a resize), a new tier
       const cw = v.wordEls[wi];
-      const sig = `${wi}|${(st.typed[wi] ?? "").length}|${this.runStart}|${cw?.offsetLeft},${cw?.offsetTop}|${v.lineH}|${v.viewport.clientWidth}|${layers}`;
+      const sig = `${wi}|${(st.typed[wi] ?? "").length}|${this.runStart}|${cw?.offsetLeft},${cw?.offsetTop}|${v.lineH}|${v.viewport.clientWidth}|${layers}|${look.tier}`;
       if (sig !== this.sig) {
         this.sig = sig;
-        this.place(wi, layers);
+        this.place(wi, layers, look);
       }
     }
     const vars = `${cheap ? 0 : look.glow}px|${look.bright.toFixed(2)}|${flameBands(look.heat)[1]}`;
@@ -97,7 +114,7 @@ export class TextFire {
   }
 
   /** The burning words: from where the run lit (at most MAX_WORDS back) to the caret, on the caret's line. */
-  place(wi, layers) {
+  place(wi, layers, look) {
     const v = this.view, st = v.state;
     const caretWord = v.wordEls[wi];
     if (!caretWord) return;
@@ -105,6 +122,7 @@ export class TextFire {
     this.em = parseFloat(getComputedStyle(v.viewport).fontSize) || 28;
     const em = this.em;
     const y = top + v.lineH / 2 - 0.12 * em;               // about the top of the small letters
+    let font = null, baseline = 0;
     const mirror = v.s.funbox === "mirror";
     const want = new Set();
     const lit = new Set();
@@ -118,18 +136,28 @@ export class TextFire {
         const l = w.children[c];
         if (!l.classList.contains("ok")) continue;
         const left = mirror ? w.offsetWidth - l.offsetLeft - l.offsetWidth : l.offsetLeft;
-        spans.push([left, left + l.offsetWidth]);
+        spans.push([left, left + l.offsetWidth, l.textContent]);
+        if (!font) {
+          const cs = getComputedStyle(l);
+          font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+          baseline = top + baselineIn(font, v.lineH) - y;
+        }
       }
       if (!spans.length) continue;
       const a = Math.min(...spans.map((p) => p[0])), b = Math.max(...spans.map((p) => p[1]));
       let row = this.rows.get(i);
       if (!row) {
-        row = new FlameRow(this.box, { flicks: 1, ramp: false, height: WORD_HEIGHT, className: "word-flame", seed: 4241 + i * 977 });
+        row = new FlameRow(this.box, { flicks: 3, ramp: false, height: WORD_HEIGHT, className: "word-flame", seed: 4241 + i * 977 });
         this.rows.set(i, row);
       }
       row.recency = 1 - Math.min(0.3, j * 0.06);           // taller towards the caret
       row.setLayers(layers);
-      row.span(w.offsetLeft + a, w.offsetLeft + b, y, em, spans.map((p) => (p[0] + p[1]) / 2 - a));
+      const centres = spans.map((p) => (p[0] + p[1]) / 2 - a);
+      // hotter: more tongues, between the letters too
+      const tongueAt = look.between ? centres.flatMap((c, k) => (k ? [(centres[k - 1] + c) / 2, c] : [c])) : centres;
+      row.span(w.offsetLeft + a, w.offsetLeft + b, y, em, tongueAt);
+      row.glyphs(spans.map((p, k) => ({ ch: p[2], x: centres[k] })), baseline, font, look.halo * em);
+      row.setFlicks(look.flicks);
       want.add(i);
       lit.add(w);
     }

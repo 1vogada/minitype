@@ -54,6 +54,40 @@ html, body {
 .bd-layer { position: absolute; inset: 0; }
 .bd-layer svg { display: block; width: 100%; height: 100%; }
 
+/* ---------------------------------------------------------------- glass cards, tilting tiles (tiles.js) */
+
+/* a frosted glass card behind each screen (the text, the menus) and the dialogs */
+.glass #screen > *, .glass .dialog {
+  --edge: color-mix(in srgb, var(--bg) 55%, #000);
+  background:
+    radial-gradient(circle at var(--shine-x, 30%) var(--shine-y, 0%), color-mix(in srgb, #fff 9%, transparent), transparent 55%),
+    color-mix(in srgb, var(--bg) 58%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
+  border-radius: 18px;
+  padding: 22px 26px 24px;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 16%, transparent), 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+.glass .test { padding-top: 22px; margin-top: 3vh; }
+.glass .settings-top { background: transparent; }
+.low-fx.glass #screen > *, .low-fx.glass .dialog {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
+}
+/* tiles: the card leans after the mouse (--rx / --ry from tiles.js), a slab
+   with its thick edge showing on the side turned away (--ex / --ey) */
+@media (min-width: 901px) {
+  .glass.tiles #screen > *, .glass.tiles .dialog {
+    --rx: 0deg; --ry: 0deg; --ex: 0; --ey: 0;
+    transform: perspective(1400px) rotateX(var(--rx)) rotateY(var(--ry));
+    transition: transform 0.55s cubic-bezier(.2,.8,.2,1), box-shadow 0.55s cubic-bezier(.2,.8,.2,1);
+    box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 16%, transparent), calc(var(--ex) * 1.6px) calc((0.75 + var(--ey) * 0.6) * 1.6px) 0 var(--edge), calc(var(--ex) * 3.2px) calc((0.75 + var(--ey) * 0.6) * 3.2px) 0 var(--edge), calc(var(--ex) * 4.8px) calc((0.75 + var(--ey) * 0.6) * 4.8px) 0 var(--edge), calc(var(--ex) * 6.4px) calc((0.75 + var(--ey) * 0.6) * 6.4px) 0 var(--edge), calc(var(--ex) * 8.0px) calc((0.75 + var(--ey) * 0.6) * 8.0px) 0 var(--edge), calc(var(--ex) * 9.6px) calc((0.75 + var(--ey) * 0.6) * 9.6px) 0 var(--edge), 0 22px 50px rgba(0, 0, 0, 0.35);
+  }
+  .glass.tiles .tilting { transition: transform 0.15s ease-out, box-shadow 0.15s ease-out; }
+}
+
 /* clip, not hidden: hidden would make the body its own scroller, and the page (window) must scroll */
 body { overflow-x: clip; height: auto; min-height: 100%; }
 
@@ -484,13 +518,38 @@ input.inline { font: inherit; background: var(--panel-2); color: var(--accent); 
   height: 0;
   pointer-events: none;
   z-index: 0;
-  transform-origin: 0 0;
-  scale: calc(1 + var(--f-squash, 0) * 0.12) calc(var(--f-grow, 1) * (1 - var(--f-squash, 0) * 0.25));
   transition: opacity 0.25s;
   filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.35));
 }
 .fx-cheap .flame-row, .fx-cheap.flame-row { filter: none; }
-.flame-svg { position: absolute; left: 0; bottom: 0; overflow: visible; }
+.flame-svg {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  overflow: visible;
+  /* grows up from the base (the svg's bottom), squashes on a punch */
+  transform-origin: 50% 100%;
+  scale: calc(1 + var(--f-squash, 0) * 0.12) calc(var(--f-grow, 1) * (1 - var(--f-squash, 0) * 0.25));
+}
+/* the letters' own shape on fire: rings of the bands round each glyph, under the real letter */
+.halo-svg { position: absolute; left: 0; top: 0; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
+.halo-svg text { stroke-linejoin: round; stroke-linecap: round; }
+.halo-svg .ring-line { fill: var(--f-line); stroke: var(--f-line); }
+.halo-svg .rim { fill: var(--f-rim); stroke: var(--f-rim); }
+.halo-svg .mid { fill: var(--f-mid); stroke: var(--f-mid); }
+.halo-layer {
+  transform-box: fill-box;
+  transform-origin: 50% 85%;
+  animation: halo var(--lick, 0.6s) steps(1, end) infinite;
+}
+.halo-layer:nth-child(2n) { animation-delay: calc(var(--lick, 0.6s) / -3); }
+@keyframes halo {
+  0% { transform: scale(1, 1); }
+  33% { transform: scale(1.03, 1.1); }
+  66% { transform: scale(0.98, 1.05) translateY(-0.5px); }
+}
+.fx-cheap .halo-layer { animation: none; }
+.flick.off { display: none; }
 .flame-svg .rim, .flick .rim { fill: var(--f-rim); stroke: var(--f-line); stroke-width: 3.5; stroke-linejoin: round; paint-order: stroke; }
 .flame-svg .mid { fill: var(--f-mid); }
 .flame-svg .core, .flick .core { fill: var(--f-core); }

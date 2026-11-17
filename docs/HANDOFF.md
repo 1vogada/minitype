@@ -18,7 +18,10 @@ agent's memory don't travel, so this section is the memory.
    off by default. The fire (`src/fx/textFire.js`) rises out of the typed
    words, a drawn tongue per letter, and climbs in tiers at the combo
    milestones 10 / 25 / 50 / 100 / 200 (hue, size, lick speed, glow, 1 to 4
-   layers, a screen shake per tier). Data comes from `python tools/export_web_data.py`. Imports
+   layers, a screen shake per tier); each burning letter wears a flame ring in
+   its own shape. Background scenes (`src/ui/backdrop.js`) tilt after the
+   mouse; glass cards behind each screen lean after it too (`src/ui/tiles.js`).
+   Data comes from `python tools/export_web_data.py`. Imports
    and exports save.json / settings.json. Not ported yet: lyrics / spotify,
    books, the art, the theme creator, the keyboard screen and suggestions,
    mixed-up keys drill. Never sends keyboard learn on / off.

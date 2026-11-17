@@ -206,6 +206,8 @@ export class FlameRow {
     const { ramp, height } = this.opts;
     const top = height * em * 1.25 * (1 + LAYER_TALL * (this.shown - 1));   // room for the tallest tongue at full grow
     const pad = em * LAYER_WIDE * this.shown;                                // ...and for the wider layers' sides
+    this.svgPad = pad;
+    if (this.halo) this.halo.style.left = `${-pad}px`;
     this.svg.setAttribute("viewBox", `${(-pad).toFixed(1)} 0 ${Math.max(1, width + 2 * pad).toFixed(1)} ${top.toFixed(1)}`);
     this.svg.style.left = `${-pad}px`;
     this.svg.style.width = `${width + 2 * pad}px`;
@@ -236,6 +238,48 @@ export class FlameRow {
     });
   }
 
+  /** The letters themselves on fire: each letter's own shape drawn round it
+   * in the flame's bands, a ring per layer (wider and further down the tiers
+   * behind), under the real letters. `glyphs` [{ch, x}] (x from the span's
+   * left), `baseline` px below the flame's base, `font` a CSS font, `radius`
+   * px of the front ring. */
+  glyphs(glyphs, baseline, font, radius) {
+    const key = `${glyphs.map((g) => g.ch + Math.round(g.x)).join()}|${baseline.toFixed(1)}|${font}|${radius.toFixed(1)}|${this.shown}`;
+    if (key === this.glyphKey) return;
+    this.glyphKey = key;
+    if (!this.halo) {
+      this.halo = el("svg", { class: "halo-svg" });
+      this.el.append(this.halo);
+    }
+    const pad = this.svgPad ?? 0;
+    this.halo.style.font = font;
+    const xs = glyphs.map((g) => (g.x + pad).toFixed(1)).join(" ");
+    const text = glyphs.map((g) => g.ch).join("");
+    const rings = [];
+    for (let k = this.shown - 1; k >= 0; k--) {
+      const L = this.layers[k];
+      if (!L.ring) {
+        L.ring = el("g", { class: "halo-layer" });
+        if (L.ringVars) for (const [n, v] of L.ringVars) L.ring.style.setProperty(n, v);
+      }
+      L.ring.style.setProperty("--lick", L.g.style.getPropertyValue("--lick") || `${LOOP}s`);
+      const r = radius * (1 + 0.38 * k);
+      const band = (cls, width) => {
+        const t = el("text", { class: cls, x: xs, y: baseline.toFixed(1), "text-anchor": "middle", "stroke-width": width.toFixed(1) });
+        t.textContent = text;
+        return t;
+      };
+      L.ring.replaceChildren(band("ring-line", 2 * r + 5), band("rim", 2 * r), band("mid", r));
+      rings.push(L.ring);
+    }
+    this.halo.replaceChildren(...rings);
+  }
+
+  /** How many of the flicks (embers off the tips) show. */
+  setFlicks(n) {
+    this.flicks.forEach((f, i) => f.classList.toggle("off", i >= n));
+  }
+
   /** The colours for a heat (0..5), of the front layer (k 0) or layer k
    * behind it; only touched when they change enough to see. */
   colours(heat, k = 0) {
@@ -244,18 +288,23 @@ export class FlameRow {
     if (k) L.heat = heat;
     else this.heat = heat;
     const [rim, mid, core] = flameBands(heat);
-    const s = k ? L.g.style : this.el.style;
-    s.setProperty("--f-rim", rim);
-    s.setProperty("--f-mid", mid);
-    s.setProperty("--f-core", core);
-    if (!k) s.setProperty("--f-line", OUTLINE);
+    const vars = [["--f-rim", rim], ["--f-mid", mid], ["--f-core", core]];
+    if (!k) vars.push(["--f-line", OUTLINE]);
+    else L.ringVars = vars;                         // the letters' ring for this layer wears them too
+    for (const target of k ? [L.g, L.ring] : [this.el]) {
+      if (target) for (const [n, v] of vars) target.style.setProperty(n, v);
+    }
   }
 
   /** How long a lick loop takes (s): quicker is fiercer. The layers behind run a little slower. */
   speed(sec, force = false) {
     if (!force && Math.abs(sec - this.lick) < 0.01) return;
     this.lick = sec;
-    this.layers.forEach((L, k) => L.g.style.setProperty("--lick", `${(sec * (1 + 0.15 * k)).toFixed(3)}s`));
+    this.layers.forEach((L, k) => {
+      const v = `${(sec * (1 + 0.15 * k)).toFixed(3)}s`;
+      L.g.style.setProperty("--lick", v);
+      L.ring?.style.setProperty("--lick", v);
+    });
   }
 
   /** How big it burns (1 = a normal flame), and a squash for punches. */
