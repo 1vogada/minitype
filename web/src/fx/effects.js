@@ -110,7 +110,7 @@ export class Effects {
     if (key === this.spanKey) return;
     this.spanKey = key;
     const em = parseFloat(getComputedStyle(v.viewport).fontSize) || 28;
-    this.fireRow.span(x0, x1, top + v.lineH * 0.76, em);   // the letters' baseline: the flame rises behind them
+    this.fireRow.span(x0, x1, top + v.lineH * 0.84, em);   // the letters' baseline: the flame rises behind them
   }
 
   frame(now) {

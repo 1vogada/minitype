@@ -59,7 +59,7 @@ export class ComboCounter {
     this.el.className = "combo-fx";
     this.num = document.createElement("span");
     this.num.className = "combo-num";
-    this.flame = new FlameRow(this.el, { flicks: true, className: "combo-flame" });
+    this.flame = new FlameRow(this.el, { flicks: 2, className: "combo-flame" });
     this.el.append(this.num);
     host.append(this.el);
     this.combo = 0;

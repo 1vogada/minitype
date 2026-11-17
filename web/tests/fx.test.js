@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { MILESTONES, comboHeat } from "../src/fx/combo.js";
-import { FLAME_BANDS, flameBands, tonguePath } from "../src/fx/flame.js";
+import { FLAME_BANDS, FRAMES, flameBands, flamePath, seeded, tongues } from "../src/fx/flame.js";
 import { FxMonitor } from "../src/fx/monitor.js";
 
 test("combo heat: a step per milestone, smooth ramps between", () => {
@@ -25,11 +25,31 @@ test("the flame's bands go red, orange, yellow, white, blue, purple", () => {
   assert.deepEqual(flameBands(9), FLAME_BANDS[5]);
 });
 
-test("a tongue is one closed path, standing on its base", () => {
-  const d = tonguePath(10, 4, 2, -3);
-  assert.ok(d.startsWith("M50 160"));
-  assert.ok(d.endsWith("Z"));
-  assert.ok(!/NaN|undefined/.test(d));
+test("the flame is one connected shape, taller towards the caret, licking", () => {
+  const em = 30, width = 600, bottom = 80;
+  const ts = tongues(width / em, seeded(5));
+  assert.ok(ts.length >= 12, "tongues of their own along the line");
+  const widths = new Set(ts.map((t) => t.w.toFixed(2)));
+  assert.ok(widths.size > ts.length / 2, "of varied width");
+  const d = flamePath(ts, width, em, bottom, 0);
+  assert.equal((d.match(/M/g) || []).length, 1, "a single outline, not a row of separate shapes");
+  assert.ok(d.endsWith("Z") && !/NaN|undefined/.test(d));
+  // every point of the outline, as [x, height above the base]
+  const points = (p) => {
+    const out = [];
+    for (const cmd of p.match(/[A-Z][^A-Z]*/g)) {
+      const n = cmd.slice(1).trim().split(/\s+/).filter(Boolean).map(Number);
+      for (let i = 0; i + 1 < n.length; i += 2) out.push([n[i], bottom - n[i + 1]]);
+    }
+    return out;
+  };
+  const pts = points(d);
+  const top = (a, b) => Math.max(...pts.filter(([x]) => x >= a && x < b).map(([, y]) => y));
+  const l = top(0, width / 3), r = top((2 * width) / 3, width);
+  assert.ok(r > l, `taller at the caret end (${l.toFixed(0)} < ${r.toFixed(0)})`);
+  assert.ok(pts.every(([, y]) => y >= 0), "nothing below its base");
+  assert.notEqual(flamePath(ts, width, em, bottom, 1), d, "the frames of the lick differ");
+  assert.equal(FRAMES, 6);
 });
 
 test("fx quality auto drops to cheap after slow frames, and comes back", () => {

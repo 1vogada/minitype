@@ -162,7 +162,6 @@ body { overflow-x: clip; height: auto; min-height: 100%; }
   font-size: var(--type-size);
   line-height: 1.6;
   height: calc(3 * 1.6em);
-  transform-style: preserve-3d;
   transition: transform 0.6s cubic-bezier(.2,.8,.2,1);
 }
 .typos-below .viewport { line-height: 2.2; height: calc(3 * 2.2em); }
@@ -392,21 +391,17 @@ input.inline { font: inherit; background: var(--panel-2); color: var(--accent); 
 
 /* ---------------------------------------------------------------- effects (phase 2) */
 
-/* 3d tilt: the words turn to the side, with a little depth to the letters */
-.fx-tilt .stage { perspective: 700px; }
+/* 3d tilt: the words turn to the side. Flat inside (no preserve-3d): the
+   flame stays behind the letters by plain stacking order. A still tilt and a
+   single crisp depth edge on typed letters only, so the text stays sharp */
+.fx-tilt .stage { perspective: 800px; }
 .fx-tilt .viewport {
-  transform: rotateY(var(--tilt, 14deg)) rotateX(6deg) scale(0.9);
-  animation: sway 9s ease-in-out infinite;
+  transform: rotateY(var(--tilt, 14deg)) rotateX(5deg) scale(0.92);
   transform-origin: 50% 50%;
+  transform-style: flat;
 }
-@keyframes sway {
-  0%, 100% { transform: rotateY(var(--tilt, 14deg)) rotateX(6deg) scale(0.9); }
-  50% { transform: rotateY(calc(var(--tilt, 14deg) * 0.7)) rotateX(3deg) scale(0.9); }
-}
-.fx-tilt:not(.fx-cheap) .l {
-  text-shadow: 1px 1px 0 color-mix(in srgb, currentColor 45%, var(--bg)), 2px 2px 0 color-mix(in srgb, currentColor 30%, var(--bg)),
-    3px 3px 0 color-mix(in srgb, currentColor 18%, var(--bg));
-}
+.fx-tilt .words { will-change: auto; }
+.fx-tilt:not(.fx-cheap):not(.fx-fire) .l.ok { text-shadow: 2px 2px 0 color-mix(in srgb, currentColor 30%, var(--bg)); }
 
 /* letters pop in on a right key */
 /* squash and stretch: a letter lands like a cartoon ball */
@@ -459,58 +454,37 @@ input.inline { font: inherit; background: var(--panel-2); color: var(--accent); 
 
 /* ---------------------------------------------------------------- the drawn flame (flame.js) */
 
+/* one connected flame; it sits first in the words, z-index 0, the words over it at 1 */
 .flame-row {
   position: absolute;
   height: 0;
-  display: flex;
-  justify-content: space-around;
-  align-items: flex-end;
   pointer-events: none;
   z-index: 0;
-  transform-origin: 50% 0;
-  scale: calc(1 + var(--f-squash, 0) * 0.25) calc(var(--f-grow, 1) * (1 - var(--f-squash, 0) * 0.25));
+  transform-origin: 0 0;
+  scale: calc(1 + var(--f-squash, 0) * 0.12) calc(var(--f-grow, 1) * (1 - var(--f-squash, 0) * 0.25));
   transition: opacity 0.25s;
   filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.35));
 }
 .fx-cheap .flame-row, .fx-cheap.flame-row { filter: none; }
-.tongue-wrap { position: relative; flex: 1 1 0; height: 0; }
-.tongue {
-  position: absolute;
-  bottom: 0;
-  left: -40%;
-  width: 180%;
-  height: calc(var(--em, 28px) * 1.75 * var(--h, 1));
-  transform-origin: 50% 100%;
-  animation: lick var(--lick, 0.7s) ease-in-out infinite alternate;
-  animation-delay: var(--lick-delay, 0s);
-  overflow: visible;
-}
-@keyframes lick {
-  0% { transform: scale(0.9, 0.84) skewX(-6deg); }
-  50% { transform: scale(1.04, 1.04) skewX(2deg); }
-  100% { transform: scale(0.96, 1.14) skewX(7deg); }
-}
-.tongue .rim, .flick .rim { fill: var(--f-rim); stroke: var(--f-line); stroke-width: 7; stroke-linejoin: round; paint-order: stroke; }
-.flick .rim { stroke-width: 3.5; }
-.tongue .mid { fill: var(--f-mid); }
-.tongue .core, .flick .core { fill: var(--f-core); }
-/* the boil: three hand-drawn frames, one at a time, like drawn animation on twos */
-.boil { animation: boil 0.3s steps(1, end) infinite; }
-.boil.b1 { animation-delay: -0.1s; }
-.boil.b2 { animation-delay: -0.2s; }
-@keyframes boil { 0% { opacity: 1; } 33.33% { opacity: 0; } 100% { opacity: 0; } }
-.fx-cheap .boil { animation: none; opacity: 0; }
-.fx-cheap .boil.b0 { opacity: 1; }
+.flame-svg { position: absolute; left: 0; bottom: 0; overflow: visible; }
+.flame-svg .rim, .flick .rim { fill: var(--f-rim); stroke: var(--f-line); stroke-width: 3.5; stroke-linejoin: round; paint-order: stroke; }
+.flame-svg .mid { fill: var(--f-mid); }
+.flame-svg .core, .flick .core { fill: var(--f-core); }
+/* the lick loop: six drawings of the whole flame, one at a time, like drawn animation on twos */
+.lick-frame { animation: lickframe 0.6s steps(1, end) infinite; opacity: 0; }
+@keyframes lickframe { 0% { opacity: 1; } 16.667% { opacity: 0; } 100% { opacity: 0; } }
+.fx-cheap .lick-frame { animation: none; opacity: 0; }
+.fx-cheap .lick-frame:first-child { opacity: 1; }
 .flick {
   position: absolute;
-  left: 34%;
-  bottom: calc(var(--em, 28px) * 0.95);
+  bottom: calc(var(--em, 28px) * 0.9);
   width: calc(var(--em, 28px) * 0.3);
   overflow: visible;
   animation: flick var(--flick, 1s) cubic-bezier(.2,.7,.4,1) infinite;
   animation-delay: var(--flick-delay, 0s);
   opacity: 0;
 }
+.flick .rim { stroke-width: 3.5; }
 @keyframes flick {
   0% { transform: translate(0, 0) scale(0.2); opacity: 0; }
   12% { transform: translate(0, -0.15em) scale(1.1); opacity: 1; }
@@ -518,10 +492,10 @@ input.inline { font: inherit; background: var(--panel-2); color: var(--accent); 
   100% { transform: translate(var(--flick-x, 0), calc(var(--em, 28px) * -1.1)) scale(0) rotate(50deg); opacity: 0; }
 }
 .fx-cheap .flick { display: none; }
-/* letters on fire keep a dark edge and a hard shadow, so they read over the flame */
-.fx-fire .w { z-index: 1; }
+/* the words over the flame: their own layer above it, letters with a crisp dark edge */
+.fx-fire .w, .fx-fire .g { position: relative; z-index: 1; }
 .fx-fire:not(.fx-cheap) .l.ok {
-  text-shadow: -1px -1px 0 #1b0f14, 1px -1px 0 #1b0f14, -1px 1px 0 #1b0f14, 1px 1px 0 #1b0f14, 3px 3px 0 rgba(0, 0, 0, 0.55);
+  text-shadow: -1px -1px 0 #1b0f14, 1px -1px 0 #1b0f14, -1px 1px 0 #1b0f14, 1px 1px 0 #1b0f14, 2px 2px 0 #1b0f14;
 }
 
 /* the combo's number: outlined, a hard coloured shadow, its flame behind */

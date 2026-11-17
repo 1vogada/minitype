@@ -196,7 +196,15 @@ export class WordsView {
       this.caret.style.transition = "none";
       this.words.style.transition = "none";
     }
+    // a new line: the caret jumps there instead of gliding across the lines in between
+    const jump = !instant && this.caretY !== undefined && y !== this.caretY;
+    this.caretY = y;
+    if (jump) this.caret.style.transition = "none";
     this.caret.style.transform = `translate(${x}px, ${y}px)`;
+    if (jump) {
+      void this.caret.offsetWidth;
+      this.caret.style.transition = "";
+    }
     this.caret.style.width = `${width}px`;
     this.caret.style.height = this.s.caret === "block" ? `${Math.round(this.lineH * 0.82)}px` : "";
     if (this.tapeMode !== "off") {
