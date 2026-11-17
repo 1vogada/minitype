@@ -12,6 +12,7 @@ With it on, each test's keystrokes go to the app as the test ends
 of your mistakes ("patterns"), and the results show that in a line or two.
 """
 
+import threading
 import time
 
 from .. import keyboard_app
@@ -41,19 +42,24 @@ def send(app):
 
 def refresh(app, wait=WAIT):
     """The results screen: wait (WAIT at most) for the test's keystrokes'
-    answer, which is the status too; without one, one status call. Only when
-    learning is meant to be on, so someone without the keyboard never waits."""
+    answer, which is the status too. Nothing here blocks longer: a send still
+    going lands by itself (runner._send_keystrokes' done), and without a send
+    the status call runs in the background (an app that isn't running costs
+    seconds on Windows). Only when learning is meant to be on."""
     s = app.settings
     if not s.keyboard_learn:
         return app.keyboard_app
     sent = app.keyboard_sent
     if sent is not None and sent[1] is not None:
         sent[1].join(max(0.0, sent[0] + wait - time.time()))
-        if not sent[1].is_alive() and app.keyboard_patterns is not None:
-            return app.keyboard_app            # answered: no second call
-    app.keyboard_app = keyboard_app.status(s.keyboard_server)
-    if app.keyboard_app.ok:                    # status answers carry the patterns too
-        app.keyboard_patterns = app.keyboard_app.state.get("patterns")
+        return app.keyboard_app                # answered, or it lands when it does
+
+    def ask():
+        answer = keyboard_app.status(s.keyboard_server)
+        app.keyboard_app = answer
+        if answer.ok:                          # status answers carry the patterns too
+            app.keyboard_patterns = answer.state.get("patterns")
+    threading.Thread(target=ask, daemon=True).start()
     return app.keyboard_app
 
 

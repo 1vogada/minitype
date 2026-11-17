@@ -242,7 +242,7 @@ with p:
     kl.refresh(app)
 assert [b["action"] for b in f.sent] == ["events"], "the answer is the status: no second call"
 assert app.keyboard_patterns == PATTERNS
-# an answer that's late: the results go on after WAIT and ask the status
+# an answer that's late: the results go on after WAIT, no second call (it lands by itself)
 gate3 = threading.Event()
 calls = []
 
@@ -263,5 +263,25 @@ with mock.patch("urllib.request.urlopen", late):
     gate3.set()
     ka.flush()
 assert kl.WAIT - 0.05 < took < kl.WAIT + 0.5, took
-assert calls == ["events", "status"], calls
+assert calls == ["events"], calls
+# no keystrokes sent: the status call runs in the background, the results never wait on it
+gate4 = threading.Event()
+calls = []
+
+
+def slow(req, timeout=None):
+    calls.append(json.loads(req.data)["action"])
+    gate4.wait(5)
+    return Fake(STATE)(req, timeout)
+
+
+app.keyboard_sent = None
+with mock.patch("urllib.request.urlopen", slow):
+    t0 = time.monotonic()
+    kl.refresh(app)
+    took = time.monotonic() - t0
+    gate4.set()
+    time.sleep(0.2)
+assert took < 0.1, took
+assert calls == ["status"] and app.keyboard_app.ok, calls
 print("ALL OK")
