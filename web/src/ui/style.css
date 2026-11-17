@@ -454,7 +454,7 @@ input.inline { font: inherit; background: var(--panel-2); color: var(--accent); 
 
 /* ---------------------------------------------------------------- the drawn flame (flame.js) */
 
-/* one connected flame; it sits first in the words, z-index 0, the words over it at 1 */
+/* a flame (the combo's, or one of a burning word's); behind what it burns out of, z-index 0 */
 .flame-row {
   position: absolute;
   height: 0;
@@ -471,7 +471,11 @@ input.inline { font: inherit; background: var(--panel-2); color: var(--accent); 
 .flame-svg .mid { fill: var(--f-mid); }
 .flame-svg .core, .flick .core { fill: var(--f-core); }
 /* the lick loop: six drawings of the whole flame, one at a time, like drawn animation on twos */
-.lick-frame { animation: lickframe 0.6s steps(1, end) infinite; opacity: 0; }
+.lick-frame {
+  animation: lickframe var(--lick, 0.6s) steps(1, end) infinite;
+  animation-delay: calc(var(--lick, 0.6s) * var(--fi, 0) / -6);
+  opacity: 0;
+}
 @keyframes lickframe { 0% { opacity: 1; } 16.667% { opacity: 0; } 100% { opacity: 0; } }
 .fx-cheap .lick-frame { animation: none; opacity: 0; }
 .fx-cheap .lick-frame:first-child { opacity: 1; }
@@ -492,10 +496,31 @@ input.inline { font: inherit; background: var(--panel-2); color: var(--accent); 
   100% { transform: translate(var(--flick-x, 0), calc(var(--em, 28px) * -1.1)) scale(0) rotate(50deg); opacity: 0; }
 }
 .fx-cheap .flick { display: none; }
-/* the words over the flame: their own layer above it, letters with a crisp dark edge */
+/* the text's fire (textFire.js): flames rising out of the burning words'
+   letters. One layer holds them all, so the glow is one filter, not one a word */
+.text-fire {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 0;
+  pointer-events: none;
+  filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.35)) drop-shadow(0 0 var(--fire-glow, 0px) var(--fire-tint, #ff8c1a)) brightness(var(--fire-bright, 1));
+}
+.fx-cheap .text-fire { filter: none; }
+.text-fire .flame-row { filter: none; transition: opacity 0.25s; }
+.text-fire .flame-row.out { opacity: 0 !important; }
+.text-fire .flick { bottom: calc(var(--em, 28px) * 0.55); }
+/* the flames have room above the box (lines scrolled off the top stay hidden) */
+.fx-fire .viewport { overflow: visible; clip-path: inset(-2.8em 0 0 0); }
+.fx-fire .w.above, .fx-fire .g.above { visibility: hidden; }
+/* the words over the flames, letters with a crisp dark edge; burning ones heat-tinted and glowing */
 .fx-fire .w, .fx-fire .g { position: relative; z-index: 1; }
 .fx-fire:not(.fx-cheap) .l.ok {
   text-shadow: -1px -1px 0 #1b0f14, 1px -1px 0 #1b0f14, -1px 1px 0 #1b0f14, 1px 1px 0 #1b0f14, 2px 2px 0 #1b0f14;
+}
+.fx-fire .w.burning .l.ok { color: color-mix(in srgb, var(--ok) 35%, var(--fire-tint, #ff8c1a)); transition: color 0.2s; }
+.fx-fire:not(.fx-cheap) .w.burning .l.ok {
+  text-shadow: -1px -1px 0 #1b0f14, 1px -1px 0 #1b0f14, -1px 1px 0 #1b0f14, 1px 1px 0 #1b0f14, 2px 2px 0 #1b0f14, 0 0 var(--fire-glow, 0px) var(--fire-tint, #ff8c1a);
 }
 
 /* the combo's number: outlined, a hard coloured shadow, its flame behind */

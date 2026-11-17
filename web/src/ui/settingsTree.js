@@ -95,7 +95,7 @@ export const TREE = [
     ["3d and fire", [
       ["fx_tilt", "3d tilt", "the words turn a little to the side and go 3D"],
       ["fx_tilt_angle", "tilt angle", "how far they turn, in degrees"],
-      ["fx_fire", "fire", "the line is set ablaze: on a streak and at high speed, or always"],
+      ["fx_fire", "fire", "the typed words give off flames that climb with the combo (hue, size, layers), on a streak and at high speed, or always"],
       ["fx_fire_wpm", "fire from", "the speed (wpm) that lights the fire on a streak"],
     ]],
     ["shine", [

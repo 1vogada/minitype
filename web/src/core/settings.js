@@ -90,7 +90,7 @@ export const DEFAULTS = {
   // ---- the browser's own: effects (all off by default, for speed)
   fx_tilt: false,        // the words turn a little to the side, in 3D
   fx_tilt_angle: 14,
-  fx_fire: "off",        // flames on the line: off, on a streak / high speed, always
+  fx_fire: "off",        // flames out of the typed words: off, on a streak / high speed, always
   fx_fire_wpm: 100,
   fx_shine: false,       // a band of light sweeps the words now and then, a star twinkles
   fx_combo: false,       // the combo counter escalates: flashes, shakes, burns

@@ -47,7 +47,7 @@ export class Shine {
     this.layer?.remove();
     const layer = v.words.cloneNode(true);
     layer.className = "words shine-layer";
-    layer.querySelectorAll(".caret, .mark, .shine-star, .flame-row").forEach((n) => n.remove());
+    layer.querySelectorAll(".caret, .mark, .shine-star, .flame-row, .text-fire").forEach((n) => n.remove());
     layer.style.transition = "none";
     v.viewport.append(layer);
     this.layer = layer;

@@ -3,7 +3,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { MILESTONES, comboHeat } from "../src/fx/combo.js";
-import { FLAME_BANDS, FRAMES, flameBands, flamePath, seeded, tongues } from "../src/fx/flame.js";
+import { FLAME_BANDS, FRAMES, flameBands, flamePath, letterTongues, seeded, tongues } from "../src/fx/flame.js";
+import { fireLook, fireTier } from "../src/fx/textFire.js";
 import { FxMonitor } from "../src/fx/monitor.js";
 
 test("combo heat: a step per milestone, smooth ramps between", () => {
@@ -50,6 +51,40 @@ test("the flame is one connected shape, taller towards the caret, licking", () =
   assert.ok(pts.every(([, y]) => y >= 0), "nothing below its base");
   assert.notEqual(flamePath(ts, width, em, bottom, 1), d, "the frames of the lick differ");
   assert.equal(FRAMES, 6);
+});
+
+test("the text's fire climbs in tiers: hue, size, speed, glow, layers, shake", () => {
+  assert.equal(fireTier(0), 0);
+  MILESTONES.forEach((m, i) => {
+    assert.equal(fireTier(m - 1), i);
+    assert.equal(fireTier(m), i + 1);
+  });
+  const looks = [0, ...MILESTONES].map((c) => fireLook(c));
+  for (let i = 1; i < looks.length; i++) {
+    const a = looks[i - 1], b = looks[i];
+    assert.ok(b.size > a.size && b.lick < a.lick && b.glow > a.glow && b.shake > a.shake, `tier ${i} is fiercer`);
+    assert.ok(b.layers >= a.layers);
+    assert.ok(b.heat > a.heat, "a new hue");
+  }
+  assert.equal(looks[0].layers, 1, "one layer to start");
+  assert.ok(looks[5].layers >= 3, "several stacked at the top");
+  assert.ok(fireLook(40).size > fireLook(25).size, "growing between tiers too");
+  assert.ok(fireLook(30, 20).size > fireLook(30, 0).size, "and as the run gets longer");
+});
+
+test("a word's flame: a tongue per letter, layers behind bigger", () => {
+  const em = 30, centres = [9, 27, 45, 63], width = 72, bottom = 100;
+  const kept = [];
+  const ts = letterTongues(centres, em, width / em, kept, seeded(3));
+  assert.equal(ts.length, 4);
+  ts.forEach((t, i) => assert.ok(Math.abs(t.x * em - centres[i]) < 0.2 * em, "over its letter"));
+  const again = letterTongues(centres.concat([81]), em, 90 / em, kept, seeded(99));
+  assert.deepEqual(again.slice(0, 4).map((t) => t.h), ts.map((t) => t.h), "keeps its shape as letters are typed");
+  const tallest = (d) => Math.max(...d.match(/-?[\d.]+ -?[\d.]+/g).map((p) => bottom - Number(p.split(" ")[1])));
+  const front = flamePath(ts, width, em, bottom, 0, 1, { ramp: false, height: 1.1 });
+  const back = flamePath(ts, width, em, bottom, 0, 1, { ramp: false, height: 1.1, tall: 1.6, wide: 1.3 });
+  assert.equal((front.match(/M/g) || []).length, 1, "one connected shape");
+  assert.ok(tallest(back) > tallest(front), "the layer behind is taller");
 });
 
 test("fx quality auto drops to cheap after slow frames, and comes back", () => {
