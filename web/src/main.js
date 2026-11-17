@@ -92,6 +92,7 @@ class UI {
     screenEl.replaceChildren(this.screen.el);
     hints(app.settings.hints ? this.screen.hints : "");
     this.navOn("settings");
+    this.screen.shown?.();
   }
 
   back() {

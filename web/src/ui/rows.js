@@ -23,7 +23,7 @@ export class RowList {
     this.items.forEach((it, i) => {
       if (it.section && it.section !== section) {
         section = it.section;
-        this.el.append(h("div.section-title", section));
+        this.el.append(h("div.section-title", { "data-section": section }, it.sectionLabel ?? section));
       }
       const row = h("div.row", {
         on: {

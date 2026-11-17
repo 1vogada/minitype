@@ -1,15 +1,20 @@
-// The settings (ui/settings_menu.py + tree_menu.py, for the browser): tabs on
-// the left, each tab's pages as headings with their rows, the help on the
-// right. ←/→ change a value, tab or [ ] switch tabs, / searches, esc goes back.
+// The settings (ui/settings_menu.py + tree_menu.py, for the browser): every
+// setting in one column, grouped by tab and page; a sidebar with the outline
+// (tabs, their pages and sub-pages) jumps there and follows where you are as
+// you scroll; the help on the right. ←/→ change a value, tab or [ ] jump a
+// tab, / searches, esc goes back. On a narrow screen the sidebar folds into a
+// "sections" button.
 
 import { CHOICES, DEFAULTS, cycle } from "../core/settings.js";
 import { WORD_SOURCES } from "../core/settings.js";
 import { MENU } from "../core/test.js";
 import { h, toast, NAV } from "./dom.js";
 import { RowList } from "./rows.js";
-import { TREE } from "./settingsTree.js";
+import { TREE, flatten, outline } from "./settingsTree.js";
 
 const RESTYLE = /^(theme|accent_text|untyped_lighten|fun_|effect_speed|flow_direction|smooth_caret|caret$|lowkey)/;
+const SEP = " › ";
+const SPY_TOP = 120;      // px from the top of the window where "you are here" is read
 
 function download(name, obj) {
   const url = URL.createObjectURL(new Blob([JSON.stringify(obj, null, 1)], { type: "application/json" }));
@@ -27,42 +32,143 @@ export class SettingsScreen {
     this.over = over;          // the screen under it (ctrl-o), or null
     this.navName = "settings";
     this.hints = "←/→ change   ↑/↓ choose   tab next tab   / search   esc back";
-    this.tab = Math.max(0, TREE.findIndex(([name]) => name === tab));
-    if (tab === null) this.tab = this.app.cursors.settingsTab ?? 0;
     this.query = "";
-    this.tabsEl = h("div.tabs");
-    this.search = h("input.search", { type: "search", placeholder: "/ search", on: { input: () => { this.query = this.search.value.trim().toLowerCase(); this.drawRows(); } } });
-    this.rowsBox = h("div");
+    this.here = "";            // the section (its path joined by SEP) you're looking at
+    this.open = new Set([TREE[0][0]]);   // tabs whose pages show in the sidebar
+    this.outlineEls = new Map();         // path -> sidebar entry
+    this.side = h("nav.side-tree");
+    this.menuBtn = h("button.btn.sections-btn", { on: { click: () => this.el.classList.toggle("tree-open") } }, "☰ sections");
+    this.search = h("input.search", {
+      type: "search", placeholder: "/ search all settings",
+      on: { input: () => { this.query = this.search.value.trim().toLowerCase(); this.drawRows(); } },
+    });
+    this.rowsBox = h("div.settings-rows");
     this.help = h("div.help");
-    this.el = h("div.settings", this.tabsEl, h("div", this.search, this.rowsBox), h("div.side", this.help));
-    this.drawTabs();
+    this.el = h("div.settings",
+      h("div.side-col", this.side),
+      h("div.main-col", h("div.settings-top", this.menuBtn, this.search), this.rowsBox),
+      h("div.side", this.help));
     this.drawRows();
+    this.drawSide();
+    this.start = tab ? [tab] : this.app.cursors.settingsAt ?? null;
   }
 
-  drawTabs() {
-    this.tabsEl.replaceChildren(...TREE.map(([name], i) => h(`div.tab${i === this.tab && !this.query ? ".on" : ""}`,
-      { on: { click: () => { this.query = ""; this.search.value = ""; this.setTab(i); } } }, name)));
+  shown() {
+    this.onScroll = () => {
+      if (this.spyQueued) return;
+      this.spyQueued = true;
+      requestAnimationFrame(() => { this.spyQueued = false; this.spy(); });
+    };
+    window.addEventListener("scroll", this.onScroll, { passive: true });
+    if (this.start) this.jump(this.start, false);
+    else {
+      window.scrollTo({ top: 0 });
+      this.spy();
+    }
   }
 
-  setTab(i) {
-    this.tab = (i + TREE.length) % TREE.length;
-    this.app.cursors.settingsTab = this.tab;
-    this.drawTabs();
-    this.drawRows();
+  resume() { this.shown(); }
+
+  destroy() {
+    window.removeEventListener("scroll", this.onScroll);
+  }
+
+  /** The sidebar: each tab, and under the open ones their pages and sub-pages. */
+  drawSide() {
+    this.outlineEls.clear();
+    const entry = (node) => {
+      const key = node.path.join(SEP);
+      const isTab = node.depth === 0;
+      const el = h(`a.tree-item.d${node.depth}`, {
+        href: "#",
+        on: {
+          click: (e) => {
+            e.preventDefault();
+            if (isTab && this.open.has(node.name) && this.here.startsWith(key)) {
+              this.open.delete(node.name);              // the tab you're in: fold it
+              return this.drawSide();
+            }
+            this.jump(node.path);
+            this.el.classList.remove("tree-open");
+          },
+        },
+      }, isTab ? h("span.caret-ico", this.open.has(node.name) ? "▾" : "▸") : null, node.name);
+      this.outlineEls.set(key, el);
+      const kids = isTab && !this.open.has(node.name) ? [] : node.children.map(entry);
+      return [el, ...kids];
+    };
+    this.side.replaceChildren(...outline().map(entry).flat(Infinity));
+    this.mark();
+  }
+
+  /** Scroll to a group (its first section) and select its first row. */
+  jump(path, smooth = true) {
+    const key = path.join(SEP);
+    if (this.query) {
+      this.query = "";
+      this.search.value = "";
+      this.drawRows();
+    }
+    if (!this.open.has(path[0])) {
+      this.open.add(path[0]);
+      this.drawSide();
+    }
+    const title = [...this.rowsBox.querySelectorAll(".section-title")]
+      .find((t) => t.dataset.section === key || t.dataset.section.startsWith(key + SEP));
+    if (!title) return;
+    const y = title.getBoundingClientRect().top + window.scrollY - 70;
+    window.scrollTo({ top: Math.max(0, y), behavior: smooth ? "smooth" : "auto" });
+    const i = this.list.items.findIndex((it) => it.section === title.dataset.section);
+    if (i >= 0) this.list.select(i);
+    this.setHere(title.dataset.section);
+    this.pinned = performance.now() + (smooth ? 700 : 50);   // the smooth scroll doesn't move "here" on the way
+  }
+
+  /** Where you are: the last section heading above the reading line. */
+  spy() {
+    if (this.pinned && performance.now() < this.pinned) return;
+    const titles = [...this.rowsBox.querySelectorAll(".section-title")];
+    if (!titles.length) return;
+    let here = titles[0].dataset.section;
+    for (const t of titles) {
+      if (t.getBoundingClientRect().top <= SPY_TOP) here = t.dataset.section;
+      else break;
+    }
+    if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) {
+      here = titles[titles.length - 1].dataset.section;    // the bottom: the last section, however short
+    }
+    this.setHere(here);
+  }
+
+  setHere(here) {
+    if (here === this.here) return;
+    this.here = here;
+    if (!this.query) this.app.cursors.settingsAt = here.split(SEP);
+    const tab = here.split(SEP)[0];
+    if (!this.open.has(tab) && !this.query) {
+      this.open.add(tab);
+      this.drawSide();
+    } else this.mark();
+  }
+
+  /** Light up the sidebar entries for where you are: the tab, page and sub-page. */
+  mark() {
+    for (const [key, el] of this.outlineEls) {
+      const on = this.here === key || this.here.startsWith(key + SEP);
+      el.classList.toggle("on", on);
+      el.classList.toggle("exact", this.here === key);
+      if (this.here === key) el.scrollIntoView({ block: "nearest" });
+    }
   }
 
   items() {
     const out = [];
-    const tabs = this.query ? TREE : [TREE[this.tab]];
-    for (const [tabName, pages] of tabs) {
-      for (const [page, rows] of pages) {
-        for (const row of rows) {
-          const it = Array.isArray(row) ? this.settingItem(row) : this.actionItem(row);
-          it.section = this.query ? `${tabName} › ${page}` : page;
-          if (this.query && !`${it.label} ${it.help} ${page}`.toLowerCase().includes(this.query)) continue;
-          out.push(it);
-        }
-      }
+    for (const { path, row } of flatten()) {
+      const it = Array.isArray(row) ? this.settingItem(row) : this.actionItem(row);
+      it.section = path.join(SEP);
+      it.sectionLabel = h("span", ...path.slice(0, -1).map((p) => h("span.sub", p + SEP)), path[path.length - 1]);
+      if (this.query && !`${it.label} ${it.help} ${path.join(" ")}`.toLowerCase().includes(this.query)) continue;
+      out.push(it);
     }
     return out;
   }
@@ -169,14 +275,28 @@ export class SettingsScreen {
 
   drawRows() {
     const items = this.items();
+    const sel = this.list?.current()?.label;
     this.list = new RowList(items, {
-      cursor: 0,
+      cursor: Math.max(0, items.findIndex((it) => it.label === sel)),
       labelWidth: "15em",
-      onSelect: (it) => { this.help.textContent = it.help ?? ""; },
+      onSelect: (it) => {
+        this.help.textContent = it.help ?? "";
+        if (!this.query && document.activeElement !== this.search) this.setHere(it.section);
+      },
     });
     this.rowsBox.replaceChildren(this.list.el);
-    this.help.textContent = items[0]?.help ?? (this.query ? "nothing found" : "");
-    this.drawTabs();
+    if (!items.length) this.rowsBox.append(h("p.dim", "nothing found"));
+    this.help.textContent = this.list.current()?.help ?? "";
+    this.here = "";
+    if (this.query) window.scrollTo({ top: 0 });
+    requestAnimationFrame(() => this.spy());
+  }
+
+  /** The first row of the next (or previous) tab. */
+  tabStep(step) {
+    const tabs = TREE.map(([name]) => name);
+    const cur = (this.list.current()?.section ?? this.here).split(SEP)[0];
+    this.jump([tabs[(tabs.indexOf(cur) + step + tabs.length) % tabs.length]]);
   }
 
   fieldKey(key) {
@@ -188,10 +308,13 @@ export class SettingsScreen {
   }
 
   onKey(key) {
-    if (key === "ESC") return this.leave();
+    if (key === "ESC") {
+      if (this.el.classList.contains("tree-open")) return this.el.classList.remove("tree-open");
+      return this.leave();
+    }
     if (key === "/") return this.search.focus();
-    if (key === "TAB" || key === "]") return this.setTab(this.tab + 1);
-    if (key === NAV.SHIFT_TAB || key === "[") return this.setTab(this.tab - 1);
+    if (key === "TAB" || key === "]") return this.tabStep(1);
+    if (key === NAV.SHIFT_TAB || key === "[") return this.tabStep(-1);
     this.list.key(key);
   }
 
@@ -199,6 +322,4 @@ export class SettingsScreen {
     if (this.over) return this.ui.back();
     this.ui.go(MENU);
   }
-
-  destroy() {}
 }
