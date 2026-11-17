@@ -18,6 +18,7 @@ from .render import draw
 from .result import TestResult
 from .scoring import correct_chars, score
 
+REPLAY_BELOW = 95          # % accuracy: a finished test under it replays on tab, at or over it gives new words
 FOOTER = "esc menu   tab restart   ctrl-bksp word   ctrl-o settings   ctrl-q hide"
 ZEN_FOOTER = "enter finish   esc menu   ctrl-o settings   ctrl-q hide"
 LYRICS_FOOTER = ("esc menu   tab sync to the song   ctrl-i song start   ctrl-p pause music   "
@@ -738,8 +739,10 @@ class TypingTest:
             self.app.stats.history.append(wpm)
             if self.spec.source == "book":
                 books.finished_page(self.app, self.spec)
-        # tab on the results: the same words again with "tab: same words" on (you typed them), else new ones
-        again = replace(self.spec, replay=tuple(self.words) if self.app.settings.tab_same else ())
+        # tab on the results: new words once it went well (REPLAY_BELOW accuracy or better, or "tab replays"
+        # off); below that, with "tab replays" on, the same words again to have another go
+        retry = self.app.settings.tab_same and (self.failed or acc < REPLAY_BELOW)
+        again = replace(self.spec, replay=tuple(self.words) if retry else ())
         result = TestResult(again, wpm, raw, acc, elapsed, self.bad_keys,
                             self.best_combo, self.misses, self.failed, self.diff,
                             self.fail_reason, self.note, self.events, self.presses)

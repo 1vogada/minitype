@@ -150,7 +150,8 @@ def raw_items(app):
                  tags=("mistakes", "errors", "cursor", "letter", "word")),
         b.flag("tab replays", "tab_same",
                "tab once you've typed something restarts with the same words; "
-               "tab with nothing typed yet gives new ones",
+               "tab with nothing typed yet gives new ones. After a finished test: "
+               "new words at 95%+ accuracy, the same again below that",
                tags=("tab", "restart", "repeat", "again", "new", "words")),
         b.flag("pause on esc", "esc_pause",
                "esc in the middle of a test pauses it (its clock stops) and "

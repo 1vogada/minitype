@@ -1,4 +1,4 @@
-"""Tab restarts: with "tab: same words" on (the default), tab after typing something
+"""Tab restarts (a finished test: new words at 95%+ accuracy, else the same): with "tab: same words" on (the default), tab after typing something
 gives the same words again, tab with nothing typed gives new ones; off, always new."""
 
 import os
@@ -42,7 +42,10 @@ assert TypingTest(app, t2.handle(keys.TAB, time.time())).words == first
 # finished test: the results' tab spec carries the words
 t3 = TypingTest(app, TestSpec("2 words", "words", 2, "custom", words=("ok", "go")))
 press(t3, "ok go")
-assert t3.result().spec.replay == ("ok", "go")
+assert t3.result().spec.replay == (), "95%+ accuracy: new words next"
+t5 = TypingTest(app, TestSpec("2 words", "words", 2, "custom", words=("ok", "go")))
+press(t5, "oxk go")
+assert t5.result().acc < 95 and t5.result().spec.replay == ("ok", "go"), "under 95%: the same again"
 # off: always new
 app.settings.tab_same = False
 t4 = TypingTest(app, spec)
