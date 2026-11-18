@@ -8,7 +8,34 @@ The last long session ran on the owner's work laptop. Its chat and the
 agent's memory don't travel, so this section is the memory.
 
 **Do next, in order:**
-00. 2026-11-16 (home PC), branch `learn-mistakes`, not merged or pushed:
+000. 2026-11-17/18 (as of 18 Nov). main = `8bc7a24` = origin/main. Branch
+   `web-port` (home PC session, pushed, NOT merged, latest `2df5337`) is the
+   browser version, served by GitHub Pages at 1vogada.github.io/minitype
+   (workflow `.github/workflows/web-pages.yml` builds `web/dist` into
+   gh-pages). Its own docs/HANDOFF.md on that branch has the details; the
+   fire now comes out of the typed letters in tiers at combo 10 / 25 / 50 /
+   100 / 200 (39aac26), then flame rings per letter, background scenes and
+   glass cards (a345081, 2df5337). Ivo has not judged 2df5337 yet. The
+   Pages CDN can serve an old index for a while: Ctrl+F5, or check which
+   `assets/index-*.js` loaded.
+   Work PC, on main, all pushed:
+   - best words (847febc): from the existing history; speed from
+     `word_speed`, clean from `word_clean` (5+ finishes, 90%+) or estimated
+     from learn's per-key error rates (least clean 40% out); fastest 150,
+     faster drawn more often (BIAS 2). Goal: push from ~120 to 180 wpm.
+   - tab replays (8b7c815, setting `tab_same`, on): tab with nothing typed =
+     new words, tab after typing = the same words. After a finished test:
+     new words at 90%+ accuracy (`REPLAY_BELOW`, 8bc7a24), same again below.
+   - no freeze at the end of a test (b616279): the keyboard status call runs
+     in the background; `keyboard_app._url` sends localhost to 127.0.0.1
+     (ac73b07; Windows tried IPv6 first, ~2-4 s per call).
+   - offline queue (6948574): keystrokes the keyboard app can't take go to
+     `keyboard_queue.json` (git-ignored, max 20000) and are sent first once it
+     answers; the status line says how many wait. Tests with under 60% right
+     keystrokes (`LEARN_MIN_ACC`), finished or not, aren't sent; unfinished
+     ones at 60%+ are.
+   Not tried by Ivo on purpose yet: the offline queue with the app down.
+00. 2026-11-16 (home PC), branch `learn-mistakes`, MERGED into main (a0129c6), pushed:
    **best words** mode (`minitype/words/best_words.py`, main menu w; runs tagged
    "best" in the history, kept out of normal stats, word / key stats and
    keyboard learn; `stats.word_clean` is new in save.json) and the keyboard
